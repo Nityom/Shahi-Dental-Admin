@@ -79,6 +79,7 @@ export default defineSchema({
     treatment_done: v.optional(v.any()), // JSON array
     advice: v.optional(v.string()),
     followup_date: v.optional(v.string()), // YYYY-MM-DD
+    doctor_name: v.optional(v.string()),
   })
     .index("by_phone", ["phone_number"])
     .index("by_date", ["prescription_date"])

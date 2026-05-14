@@ -42,8 +42,8 @@ const validateBillData = (bill: Bill) => {
   if (typeof bill.paid_amount !== 'number' || bill.paid_amount < 0) {
     errors.push('Paid amount must be a non-negative number');
   }
-  if (!Array.isArray(bill.items) || bill.items.length === 0) {
-    errors.push('Bill must contain at least one item');
+  if (!Array.isArray(bill.items)) {
+    errors.push('Bill items must be an array');
   }
   if (bill.paid_amount > bill.total_amount) {
     errors.push('Paid amount cannot exceed total amount');

@@ -6,18 +6,21 @@ import { Button } from "./ui/button";
 import { formatDate } from "@/lib/utils";
 import PaymentHistory from "./PaymentHistory";
 import AddPaymentDialog from "./AddPaymentDialog";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Printer } from "lucide-react";
 import { Bill } from "@/services/bills";
 
 interface BillHistoryWithPaymentsProps {
   bills: Bill[];
   onBillUpdated?: () => void;
+  defaultSignature?: string;
+  defaultDoctorName?: string;
 }
 
-export function BillHistoryWithPayments({ bills, onBillUpdated }: BillHistoryWithPaymentsProps) {
+export function BillHistoryWithPayments({ bills, onBillUpdated, defaultSignature = 'sign.png', defaultDoctorName = 'Dr. Kautilya Swaroop' }: BillHistoryWithPaymentsProps) {
   const [expandedBillId, setExpandedBillId] = useState<string | null>(null);
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
+  const [selectedBillIds, setSelectedBillIds] = useState<Set<string>>(new Set());
 
   if (!bills || bills.length === 0) {
     return (
@@ -26,6 +29,48 @@ export function BillHistoryWithPayments({ bills, onBillUpdated }: BillHistoryWit
       </Card>
     );
   }
+
+  // Overall totals
+  const overallTotal = bills.reduce((s, b) => s + (b.total_amount || 0), 0);
+  const overallPaid = bills.reduce((s, b) => s + (b.paid_amount || 0), 0);
+  const overallBalance = bills.reduce((s, b) => s + (Number(b.balance_amount) || 0), 0);
+
+  const toggleSelect = (id: string) => {
+    setSelectedBillIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    const ids = bills.map((b) => b.id).filter(Boolean) as string[];
+    setSelectedBillIds(new Set(ids));
+  };
+
+  const clearSelection = () => setSelectedBillIds(new Set());
+
+  const handlePrintSelected = () => {
+    const ids = Array.from(selectedBillIds);
+    if (ids.length === 0) return;
+    const params = new URLSearchParams({
+      billIds: ids.join(','),
+      signature: defaultSignature,
+      doctorName: defaultDoctorName,
+    });
+    window.open(`/print-bill/statement?${params.toString()}`, '_blank');
+  };
+
+  const handlePrintAll = () => {
+    const ids = bills.map((b) => b.id).filter(Boolean) as string[];
+    const params = new URLSearchParams({
+      billIds: ids.join(','),
+      signature: defaultSignature,
+      doctorName: defaultDoctorName,
+    });
+    window.open(`/print-bill/statement?${params.toString()}`, '_blank');
+  };
 
   const toggleBillExpansion = (billId: string) => {
     setExpandedBillId(expandedBillId === billId ? null : billId);
@@ -45,6 +90,50 @@ export function BillHistoryWithPayments({ bills, onBillUpdated }: BillHistoryWit
 
   return (
     <>
+      {/* Overall Summary */}
+      <Card className="p-4 mb-4 bg-blue-50 border-blue-200">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="font-semibold text-blue-800">Overall Bill Summary</h3>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={selectAll} className="text-xs">
+              Select All
+            </Button>
+            {selectedBillIds.size > 0 && (
+              <Button size="sm" variant="outline" onClick={clearSelection} className="text-xs">
+                Clear
+              </Button>
+            )}
+            {selectedBillIds.size > 0 ? (
+              <Button size="sm" onClick={handlePrintSelected} className="flex items-center gap-1 text-xs">
+                <Printer className="h-3 w-3" />
+                Print {selectedBillIds.size} Bill{selectedBillIds.size > 1 ? 's' : ''}
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" onClick={handlePrintAll} className="flex items-center gap-1 text-xs">
+                <Printer className="h-3 w-3" />
+                Print All
+              </Button>
+            )}
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-3 text-center text-sm">
+          <div className="bg-white rounded p-2 border">
+            <div className="text-xs text-gray-500">Total Billed</div>
+            <div className="font-bold">₹{overallTotal.toLocaleString('en-IN')}</div>
+          </div>
+          <div className="bg-white rounded p-2 border">
+            <div className="text-xs text-gray-500">Total Paid</div>
+            <div className="font-bold text-green-600">₹{overallPaid.toLocaleString('en-IN')}</div>
+          </div>
+          <div className="bg-white rounded p-2 border">
+            <div className="text-xs text-gray-500">Balance Due</div>
+            <div className={`font-bold ${overallBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+              ₹{overallBalance.toLocaleString('en-IN')}
+            </div>
+          </div>
+        </div>
+      </Card>
+
       <div className="space-y-4">
         {bills.map((bill) => {
           if (!bill.id) return null; // Skip bills without IDs
@@ -54,8 +143,14 @@ export function BillHistoryWithPayments({ bills, onBillUpdated }: BillHistoryWit
 
           return (
             <div key={bill.id} className="space-y-2">
-              <Card className="p-4">
-                <div className="flex justify-between items-start">
+              <Card className={`p-4 ${selectedBillIds.has(bill.id!) ? 'ring-2 ring-blue-400' : ''}`}>
+                <div className="flex justify-between items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedBillIds.has(bill.id!)}
+                    onChange={() => bill.id && toggleSelect(bill.id)}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 cursor-pointer flex-shrink-0"
+                  />
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <p className="font-medium">
@@ -87,7 +182,7 @@ export function BillHistoryWithPayments({ bills, onBillUpdated }: BillHistoryWit
                       Created on {bill.created_at ? formatDate(bill.created_at) : 'N/A'}
                     </p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex-shrink-0">
                     <p className="font-bold text-lg">₹{bill.total_amount.toLocaleString()}</p>
                   </div>
                 </div>

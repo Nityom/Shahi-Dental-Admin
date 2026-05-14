@@ -52,13 +52,14 @@ export interface Prescription {
   medical_history?: string;
   investigation?: string;
   diagnosis?: string;
-  treatment_plan?: string[];
+  treatment_plan?: any; // can be string[] (legacy) or TreatmentPlanItem[]
   oral_exam_notes?: string;
   selected_teeth?: ToothData[];
   medicines?: MedicineEntry[];
   treatment_done?: TreatmentItem[];
   advice?: string;
   followup_date?: string;
+  doctor_name?: string;
   created_at?: string;
   updated_at?: string;
   bills?: Bill[];

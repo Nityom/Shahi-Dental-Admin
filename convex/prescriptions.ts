@@ -20,6 +20,7 @@ export const create = mutation({
         treatment_done: v.optional(v.any()), // JSON
         advice: v.optional(v.string()),
         followup_date: v.optional(v.string()),
+        doctor_name: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const newPrescriptionId = await ctx.db.insert("prescriptions", args);
@@ -54,6 +55,7 @@ export const update = mutation({
         treatment_done: v.optional(v.any()), // JSON
         advice: v.optional(v.string()),
         followup_date: v.optional(v.string()),
+        doctor_name: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const { id, ...updates } = args;

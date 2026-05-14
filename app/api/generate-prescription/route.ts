@@ -44,8 +44,20 @@ const MARGIN_L = 50;
 const MARGIN_R = 50;
 const CONTENT_W = PAGE_W - MARGIN_L - MARGIN_R;
 
+/** Replace characters outside WinAnsi range so pdf-lib standard fonts can encode them */
+function sanitize(text: string): string {
+  return text
+    .replace(/₹/g, 'Rs.')
+    .replace(/\u2014/g, '-')   // em dash
+    .replace(/\u2013/g, '-')   // en dash
+    .replace(/\u2018|\u2019/g, "'")  // smart single quotes
+    .replace(/\u201C|\u201D/g, '"')  // smart double quotes
+    .replace(/[^\x00-\xFF]/g, '?'); // fallback for anything else
+}
+
 function wrapText(text: string, font: PDFFont, size: number, maxW: number): string[] {
-  const paragraphs = text.split('\n');
+  const safe = sanitize(text);
+  const paragraphs = safe.split('\n');
   const result: string[] = [];
   for (const paragraph of paragraphs) {
     const words = paragraph.split(' ');
@@ -159,7 +171,7 @@ export async function POST(req: NextRequest) {
     const lblW = 100;
 
     const infoRows: [string, string, string, string][] = [
-      ['Patient Name', data.patientName, 'Reg. No.', data.referenceNumber || '—'],
+      ['Patient Name', data.patientName, 'Patient Number', data.referenceNumber || '—'],
       ['Age', data.age, 'Date', formatDate(data.date)],
       ['Sex', data.sex, 'Contact', '—'],
     ];

@@ -92,6 +92,20 @@ const DEFAULT_DENTAL_PROCEDURES = [
   { id: 10, name: 'Braces Consultation', price: 1000 },
 ];
 
+// Treatment plan item with catalog reference, cost, and optional notes
+interface TreatmentPlanItem {
+  name: string;
+  cost: number;
+  notes?: string;
+}
+
+// Treatment plan item with catalog reference, cost, and optional notes
+interface TreatmentPlanItem {
+  name: string;
+  cost: number;
+  notes?: string;
+}
+
 // Define ToothData interface to match the prescription service
 interface ToothData {
   id: number;  // Changed to number only
@@ -110,7 +124,7 @@ interface FormData {
   mh: string;
   investigation: string;
   de: string;
-  treatmentPlan: string[];
+  treatmentPlan: TreatmentPlanItem[];
   advice: string;
   followupDate: string;
   reference_number?: string;
@@ -204,6 +218,25 @@ const PrescriptionPage = () => {
     discountPercent: 0,
   });
 
+  // Doctor / signature selector
+  const [selectedDoctor, setSelectedDoctor] = useState<'kautilya' | 'anjali'>('kautilya');
+
+  // Consultation charge
+  const [applyConsultationCharge, setApplyConsultationCharge] = useState<boolean>(true);
+  const [consultationCharge, setConsultationCharge] = useState<number>(300);
+  const [consultationDiscount, setConsultationDiscount] = useState<number>(0);
+
+  // Treatment plan catalog search
+  const [tpSearchQuery, setTpSearchQuery] = useState('');
+  const [showTpDropdown, setShowTpDropdown] = useState(false);
+  // Custom cost/notes for a pending plan-item addition
+  const [tpPendingName, setTpPendingName] = useState('');
+  const [tpPendingCost, setTpPendingCost] = useState<number>(0);
+  const [tpPendingNotes, setTpPendingNotes] = useState('');
+
+  // Track last loaded CC to detect changes and reset dependent fields
+  const [prevLoadedCC, setPrevLoadedCC] = useState<string>('');
+
   useEffect(() => {
     const fetchMedicines = async () => {
       try {
@@ -243,46 +276,98 @@ const PrescriptionPage = () => {
     }));
   };
 
+  // When CC field loses focus and the value changed from what was prefilled,
+  // clear all dependent clinical fields so the doctor starts fresh.
+  const handleCCBlur = () => {
+    if (prevLoadedCC && formData.cc.trim() !== prevLoadedCC.trim()) {
+      setPrevLoadedCC('');
+      setFormData(prevData => ({
+        ...prevData,
+        investigation: '',
+        de: '',
+        treatmentPlan: [],
+      }));
+      setOralExamNotes('');
+      setSelectedTeeth([]);
+      setTreatmentItems([]);
+    }
+  };
+
   // Handle phone number change with patient lookup
   const handlePhoneNumberChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const phoneNumber = e.target.value;
 
-    // Update the phone number in form data
-    setFormData(prevData => ({
-      ...prevData,
-      phoneNumber: phoneNumber
-    }));
+    setFormData(prevData => ({ ...prevData, phoneNumber: phoneNumber }));
 
-    // If phone number is at least 10 digits, try to fetch patient data
     if (phoneNumber.length >= 10) {
       try {
         const existingPatient = await getPatientByPhoneNumber(phoneNumber);
 
         if (existingPatient) {
-          // Auto-populate patient data
           setFormData(prevData => ({
             ...prevData,
             patientName: existingPatient.name,
             age: existingPatient.age?.toString() || '',
             sex: existingPatient.sex || '',
             phoneNumber: existingPatient.phone_number,
-            reference_number: existingPatient.reference_number
+            reference_number: existingPatient.reference_number,
           }));
-
-          // Set patient reference number
           setPatientReferenceNumber(existingPatient.reference_number);
 
-          // Prefill M/H from the latest prescription for this patient
+          // Pre-fill clinical fields from the latest prescription
           try {
             const latestRx = await convexClient.query(api.prescriptions.getLatestByPhone, { phone_number: phoneNumber });
-            if (latestRx?.medical_history) {
-              setFormData(prevData => ({ ...prevData, mh: latestRx.medical_history ?? '' }));
+            if (latestRx) {
+              const safeParse = (data: any, fallback: any = []) => {
+                if (typeof data === 'string') { try { return JSON.parse(data); } catch { return fallback; } }
+                return data || fallback;
+              };
+              const normTreatmentPlan = (raw: any): TreatmentPlanItem[] => {
+                if (!Array.isArray(raw)) return [];
+                return raw.map((item: any) => {
+                  if (typeof item === 'string') return { name: item, cost: 0, notes: '' };
+                  return { name: item.name || String(item), cost: item.cost || 0, notes: item.notes || '' };
+                });
+              };
+
+              const loadedCC = latestRx.chief_complaint || '';
+              setPrevLoadedCC(loadedCC);
+
+              setFormData(prevData => ({
+                ...prevData,
+                cc: loadedCC,
+                mh: latestRx.medical_history || '',
+                investigation: latestRx.investigation || '',
+                de: latestRx.diagnosis || '',
+                treatmentPlan: normTreatmentPlan(safeParse(latestRx.treatment_plan)),
+              }));
+
+              if (latestRx.oral_exam_notes) setOralExamNotes(latestRx.oral_exam_notes);
+
+              const teethRaw = safeParse(latestRx.selected_teeth);
+              if (Array.isArray(teethRaw) && teethRaw.length > 0) {
+                setSelectedTeeth(teethRaw.map((t: any) => ({
+                  id: t.id, type: t.type || 'Permanent', category: t.category || '', disease: t.disease || '',
+                })));
+              }
+
+              const medsRaw = safeParse(latestRx.medicines);
+              if (Array.isArray(medsRaw) && medsRaw.length > 0) setMedicines(medsRaw);
+
+              const doneRaw = safeParse(latestRx.treatment_done);
+              if (Array.isArray(doneRaw) && doneRaw.length > 0) {
+                setTreatmentItems(doneRaw.map((item: any) => ({
+                  id: item.id || Math.random(),
+                  description: item.description || '',
+                  quantity: item.quantity || 1,
+                  unitPrice: item.unit_price || item.unitPrice || 0,
+                  total: item.total || 0,
+                })));
+              }
             }
           } catch (rxError) {
-            console.error('Error fetching latest prescription for M/H prefill:', rxError);
+            console.error('Error fetching latest prescription for prefill:', rxError);
           }
-
-          console.log('Patient found and data auto-populated:', existingPatient);
         }
       } catch (error) {
         console.error('Error fetching patient by phone:', error);
@@ -513,6 +598,11 @@ const PrescriptionPage = () => {
 
         // Also ensure treatment plan is safely parsed in the main formData setting
         const treatmentPlanRaw = safeParse(prescription.treatment_plan);
+        const normTreatmentPlan = (raw: any[]): TreatmentPlanItem[] =>
+          raw.map((item: any) => {
+            if (typeof item === 'string') return { name: item, cost: 0, notes: '' };
+            return { name: item.name || String(item), cost: item.cost || 0, notes: item.notes || '' };
+          });
 
         setFormData({
           patientName: prescription.patient_name || '',
@@ -524,7 +614,7 @@ const PrescriptionPage = () => {
           mh: prescription.medical_history || '',
           investigation: prescription.investigation || '',
           de: prescription.diagnosis || '',
-          treatmentPlan: Array.isArray(treatmentPlanRaw) ? treatmentPlanRaw : [],
+          treatmentPlan: Array.isArray(treatmentPlanRaw) ? normTreatmentPlan(treatmentPlanRaw) : [],
           advice: prescription.advice || '',
           followupDate: prescription.followup_date || '',
           reference_number: prescription.reference_number || ''
@@ -619,7 +709,8 @@ const PrescriptionPage = () => {
           total: item.total
         })),
         advice: formData.advice,
-        followup_date: formData.followupDate || undefined
+        followup_date: formData.followupDate || undefined,
+        doctor_name: selectedDoctor === 'anjali' ? 'Dr. Anjali Swaroop' : 'Dr. Kautilya Swaroop',
       };
 
       let savedPrescription;
@@ -783,19 +874,42 @@ const PrescriptionPage = () => {
       // Always ensure a bill exists for the prescription
       if (savedPrescription?.id && patient?.id) {
         try {
-          const consultationFee = 0; // Changed from 500 to 0 to avoid hiding charges not shown in the UI
-          const treatmentTotal = treatmentItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+          const consultationFee = applyConsultationCharge
+            ? Math.round(consultationCharge * (1 - consultationDiscount / 100) * 100) / 100
+            : 0;
 
-          // Calculate medicine total cost
+          // Treatment Done items
+          const treatmentDoneItems = treatmentItems.map((item, index) => ({
+            id: index + 2,
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            total: item.unitPrice * item.quantity,
+            item_type: 'procedure' as const
+          }));
+
+          // Treatment Plan items (with cost) — included only if not already covered by Treatment Done
+          const treatmentDoneNames = new Set(treatmentItems.map(i => i.description.toLowerCase()));
+          const treatmentPlanBillItems = formData.treatmentPlan
+            .filter(tp => tp.cost > 0 && !treatmentDoneNames.has(tp.name.toLowerCase()))
+            .map((tp, index) => ({
+              id: treatmentItems.length + index + 2,
+              description: tp.name + (tp.notes ? ` (${tp.notes})` : ''),
+              quantity: 1,
+              unit_price: tp.cost,
+              total: tp.cost,
+              item_type: 'procedure' as const
+            }));
+
+          // Medicine items
           const medicineItems = medicines
             .filter(med => med.name && med.quantity && med.quantity > 0)
             .map((med, index) => {
               const medicineDetail = medicineOptions.find(m => m.name === med.name);
               const unitPrice = medicineDetail?.price || 0;
               const quantity = med.quantity || 1;
-
               return {
-                id: treatmentItems.length + index + 2,
+                id: treatmentItems.length + treatmentPlanBillItems.length + index + 2,
                 description: `${med.name} (${med.dosage})`,
                 quantity: quantity,
                 unit_price: unitPrice,
@@ -804,26 +918,24 @@ const PrescriptionPage = () => {
               };
             });
 
-          const medicineTotal = medicineItems.reduce((sum, item) => sum + item.total, 0);
-          const totalAmount = consultationFee + treatmentTotal + medicineTotal;
+          const treatmentTotal = treatmentDoneItems.reduce((s, i) => s + i.total, 0);
+          const planTotal = treatmentPlanBillItems.reduce((s, i) => s + i.total, 0);
+          const medicineTotal = medicineItems.reduce((s, i) => s + i.total, 0);
+          const totalAmount = consultationFee + treatmentTotal + planTotal + medicineTotal;
 
           const billItems = [
             ...(consultationFee > 0 ? [{
               id: 1,
-              description: 'Consultation Fee',
+              description: consultationDiscount > 0
+                ? `Consultation Fee (${consultationDiscount}% discount)`
+                : 'Consultation Fee',
               quantity: 1,
               unit_price: consultationFee,
               total: consultationFee,
               item_type: 'consultation' as const
             }] : []),
-            ...treatmentItems.map((item, index) => ({
-              id: index + 2,
-              description: item.description,
-              quantity: item.quantity,
-              unit_price: item.unitPrice,
-              total: item.unitPrice * item.quantity,
-              item_type: 'procedure' as const
-            })),
+            ...treatmentDoneItems,
+            ...treatmentPlanBillItems,
             ...medicineItems
           ];
 
@@ -897,13 +1009,17 @@ const PrescriptionPage = () => {
       // Prepare data for API, considering the pre-existing template fields
       const prescriptionData = {
         ...formData,
+        referenceNumber: formData.reference_number || patientReferenceNumber || '',
         medicines: medicines.length > 0 ? medicines : undefined,
         dentalNotation: teethInfo,
         clinicalNotes: oralExamNotes
           ? `${formData.de}${formData.de ? '; ' : ''}${oralExamNotes}`
           : formData.de,
         investigation: formData.investigation,
-        treatmentPlan: formData.treatmentPlan
+        // Convert TreatmentPlanItem[] → string[] for the PDF generator
+        treatmentPlan: formData.treatmentPlan.map(item =>
+          `${item.name}${item.cost ? ` (Rs.${item.cost})` : ''}${item.notes ? ' - ' + item.notes : ''}`
+        ),
       };
 
       console.log('Sending prescription data to API:', prescriptionData);
@@ -977,7 +1093,9 @@ const PrescriptionPage = () => {
       alert('Please save the prescription first.');
       return;
     }
-    window.open(`/print-prescription?prescriptionId=${prescriptionId}`, '_blank');
+    const sigFile = selectedDoctor === 'anjali' ? 'sign1.png' : 'sign.png';
+    const docName = selectedDoctor === 'anjali' ? 'Dr. Anjali Swaroop' : 'Dr. Kautilya Swaroop';
+    window.open(`/print-prescription?prescriptionId=${prescriptionId}&signature=${sigFile}&doctorName=${encodeURIComponent(docName)}`, '_blank');
   };
 
   // Function to generate and print bill with payment details
@@ -999,11 +1117,60 @@ const PrescriptionPage = () => {
       console.log('Fetched bill data:', billData);
 
       // getBillByPrescriptionId returns an array, get the first bill
-      const bill = Array.isArray(billData) ? billData[0] : billData;
+      let bill = Array.isArray(billData) ? billData[0] : billData;
 
+      // If no bill exists yet, create one now from whatever data we have
       if (!bill || !bill.id) {
-        alert('No bill found for this prescription. Please add treatments in the "Treatment Done" section and save the prescription.');
-        return;
+        if (!patientReferenceNumber) {
+          alert('Patient reference number is missing. Please save the prescription again.');
+          return;
+        }
+        try {
+          const planItems = formData.treatmentPlan
+            .filter(tp => tp.cost > 0)
+            .map((tp, i) => ({
+              id: i + 1,
+              description: tp.name + (tp.notes ? ` (${tp.notes})` : ''),
+              quantity: 1,
+              unit_price: tp.cost,
+              total: tp.cost,
+              item_type: 'procedure' as const,
+            }));
+          const doneItems = treatmentItems.map((item, i) => ({
+            id: planItems.length + i + 1,
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            total: item.total,
+            item_type: 'procedure' as const,
+          }));
+          const allItems = [...planItems, ...doneItems];
+          if (allItems.length === 0) {
+            alert('Please add at least one item in Treatment Plan or Treatment Done before generating a bill.');
+            return;
+          }
+          const total = allItems.reduce((s, i) => s + i.total, 0);
+          // Find patient id from a fresh patient lookup
+          const pt = await getPatientByReference(patientReferenceNumber);
+          if (!pt?.id) {
+            alert('Patient not found. Please save the prescription first.');
+            return;
+          }
+          const created = await createBill({
+            prescription_id: prescriptionId!,
+            patient_id: pt.id,
+            reference_number: patientReferenceNumber,
+            total_amount: total,
+            paid_amount: 0,
+            payment_status: 'PENDING',
+            items: allItems,
+          });
+          bill = created;
+        } catch (createErr) {
+          console.error('Failed to auto-create bill:', createErr);
+          alert('Failed to create bill. Please save the prescription first.');
+          return;
+        }
       }
 
       console.log('Using bill:', bill);
@@ -1020,7 +1187,7 @@ const PrescriptionPage = () => {
       setShowPaymentModal(true);
     } catch (error) {
       console.error('Error generating bill:', error);
-      alert('Failed to generate bill. Please ensure you have added treatments in the "Treatment Done" section and saved the prescription.');
+      alert('Failed to generate bill. Please save the prescription first.');
     }
   };
 
@@ -1045,8 +1212,12 @@ const PrescriptionPage = () => {
       // Close modal
       setShowPaymentModal(false);
 
-      // Open new printable bill page
-      window.open(`/print-bill?billId=${currentBill.id}`, '_blank');
+      // Build signature params from selected doctor
+      const sigFile = selectedDoctor === 'anjali' ? 'sign1.png' : 'sign.png';
+      const docName = selectedDoctor === 'anjali' ? 'Dr. Anjali Swaroop' : 'Dr. Kautilya Swaroop';
+
+      // Open new printable bill page (fresh fetch ensures updated balance)
+      window.open(`/print-bill?billId=${currentBill.id}&signature=${sigFile}&doctorName=${encodeURIComponent(docName)}`, '_blank');
     } catch (error) {
       console.error('Error updating bill:', error);
       alert('Failed to update bill payment details.');
@@ -1065,11 +1236,12 @@ const PrescriptionPage = () => {
         setPrescriptionId(id);
         loadPrescriptionData(id);
       } else {
+        const phoneFromUrl = params.get('phone') || params.get('phoneNumber') || '';
         const newFormData = {
           patientName: params.get('patientName') || '',
           age: params.get('age') || '',
           sex: params.get('sex') || '',
-          phoneNumber: params.get('phone') || params.get('phoneNumber') || '',
+          phoneNumber: phoneFromUrl,
           date: params.get('date') || new Date().toISOString().slice(0, 10),
           cc: params.get('chiefComplaint') || '',
           mh: params.get('medicalHistory') || '',
@@ -1079,6 +1251,65 @@ const PrescriptionPage = () => {
         };
 
         setFormData(prev => ({ ...prev, ...newFormData }));
+
+        // If a phone number was passed via URL, prefill clinical fields from latest prescription
+        if (phoneFromUrl && phoneFromUrl.length >= 10) {
+          (async () => {
+            try {
+              const latestRx = await convexClient.query(api.prescriptions.getLatestByPhone, { phone_number: phoneFromUrl });
+              if (latestRx) {
+                const safeParse = (data: any, fallback: any = []) => {
+                  if (typeof data === 'string') { try { return JSON.parse(data); } catch { return fallback; } }
+                  return data || fallback;
+                };
+                const normTreatmentPlan = (raw: any): TreatmentPlanItem[] => {
+                  if (!Array.isArray(raw)) return [];
+                  return raw.map((item: any) => {
+                    if (typeof item === 'string') return { name: item, cost: 0, notes: '' };
+                    return { name: item.name || String(item), cost: item.cost || 0, notes: item.notes || '' };
+                  });
+                };
+
+                const loadedCC = latestRx.chief_complaint || '';
+                setPrevLoadedCC(loadedCC);
+
+                setFormData(prevData => ({
+                  ...prevData,
+                  cc: loadedCC,
+                  mh: latestRx.medical_history || prevData.mh,
+                  investigation: latestRx.investigation || '',
+                  de: latestRx.diagnosis || '',
+                  treatmentPlan: normTreatmentPlan(safeParse(latestRx.treatment_plan)),
+                }));
+
+                if (latestRx.oral_exam_notes) setOralExamNotes(latestRx.oral_exam_notes);
+
+                const teethRaw = safeParse(latestRx.selected_teeth);
+                if (Array.isArray(teethRaw) && teethRaw.length > 0) {
+                  setSelectedTeeth(teethRaw.map((t: any) => ({
+                    id: t.id, type: t.type || 'Permanent', category: t.category || '', disease: t.disease || '',
+                  })));
+                }
+
+                const medsRaw = safeParse(latestRx.medicines);
+                if (Array.isArray(medsRaw) && medsRaw.length > 0) setMedicines(medsRaw);
+
+                const doneRaw = safeParse(latestRx.treatment_done);
+                if (Array.isArray(doneRaw) && doneRaw.length > 0) {
+                  setTreatmentItems(doneRaw.map((item: any) => ({
+                    id: item.id || Math.random(),
+                    description: item.description || '',
+                    quantity: item.quantity || 1,
+                    unitPrice: item.unit_price || item.unitPrice || 0,
+                    total: item.total || 0,
+                  })));
+                }
+              }
+            } catch (rxError) {
+              console.error('Error prefilling clinical fields from URL phone:', rxError);
+            }
+          })();
+        }
       }
     }
   }, [loadPrescriptionData]); // Include loadPrescriptionData as a dependency
@@ -1201,6 +1432,7 @@ const PrescriptionPage = () => {
                       name="cc"
                       value={formData.cc}
                       onChange={handleChange}
+                      onBlur={handleCCBlur}
                       className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
                       rows={3}
                       placeholder="Patient's main complaint"
@@ -1246,69 +1478,169 @@ const PrescriptionPage = () => {
                   />
                 </div>
 
-                {/* Treatment Plan Section */}
+                {/* Treatment Plan Section — catalog-based with cost + notes */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Treatment Plan <span className="text-gray-500 text-xs">(Optional)</span>
                   </label>
-                  <div className="space-y-2">
-                    {formData.treatmentPlan.map((step, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <span className="text-sm text-gray-600 w-6">{index + 1}.</span>
+
+                  {/* Existing plan items */}
+                  {formData.treatmentPlan.length > 0 && (
+                    <div className="mb-3 space-y-2">
+                      {formData.treatmentPlan.map((item, index) => (
+                        <div key={index} className="flex items-start gap-2 p-3 bg-white border border-gray-200 rounded-lg">
+                          <span className="text-sm text-gray-500 mt-1 w-5 flex-shrink-0">{index + 1}.</span>
+                          <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
+                            <input
+                              type="text"
+                              value={item.name}
+                              onChange={(e) => {
+                                const newPlan = [...formData.treatmentPlan];
+                                newPlan[index] = { ...newPlan[index], name: e.target.value };
+                                setFormData({ ...formData, treatmentPlan: newPlan });
+                              }}
+                              className="p-2 border border-gray-300 rounded-lg text-sm"
+                              placeholder="Treatment name"
+                            />
+                            <div className="relative">
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
+                              <input
+                                type="number"
+                                value={item.cost || ''}
+                                onChange={(e) => {
+                                  const newPlan = [...formData.treatmentPlan];
+                                  newPlan[index] = { ...newPlan[index], cost: parseFloat(e.target.value) || 0 };
+                                  setFormData({ ...formData, treatmentPlan: newPlan });
+                                }}
+                                className="w-full pl-6 p-2 border border-gray-300 rounded-lg text-sm"
+                                placeholder="Cost"
+                                min="0"
+                              />
+                            </div>
+                            <input
+                              type="text"
+                              value={item.notes || ''}
+                              onChange={(e) => {
+                                const newPlan = [...formData.treatmentPlan];
+                                newPlan[index] = { ...newPlan[index], notes: e.target.value };
+                                setFormData({ ...formData, treatmentPlan: newPlan });
+                              }}
+                              className="p-2 border border-gray-300 rounded-lg text-sm"
+                              placeholder="Notes (optional)"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newPlan = formData.treatmentPlan.filter((_, i) => i !== index);
+                              setFormData({ ...formData, treatmentPlan: newPlan });
+                            }}
+                            className="text-red-500 hover:text-red-700 mt-1 text-lg leading-none flex-shrink-0"
+                            title="Remove"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Search / add new plan item */}
+                  <div className="relative">
+                    <div className="flex gap-2">
+                      <div className="flex-1 relative">
                         <input
                           type="text"
-                          value={step}
+                          value={tpSearchQuery}
                           onChange={(e) => {
-                            const newPlan = [...formData.treatmentPlan];
-                            newPlan[index] = e.target.value;
-                            setFormData({ ...formData, treatmentPlan: newPlan });
+                            setTpSearchQuery(e.target.value);
+                            setTpPendingName(e.target.value);
+                            setShowTpDropdown(true);
                           }}
-                          className="flex-1 p-2 border border-gray-300 rounded-lg"
-                          placeholder="Treatment step"
+                          onFocus={() => setShowTpDropdown(true)}
+                          onBlur={() => setTimeout(() => setShowTpDropdown(false), 150)}
+                          className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                          placeholder="Search or type treatment name..."
                         />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newPlan = formData.treatmentPlan.filter((_, i) => i !== index);
-                            setFormData({ ...formData, treatmentPlan: newPlan });
-                          }}
-                          className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-                        >
-                          Remove
-                        </button>
+                        {showTpDropdown && tpSearchQuery.length > 0 && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                            {dentalProcedures
+                              .filter(p => p.name.toLowerCase().includes(tpSearchQuery.toLowerCase()))
+                              .map(proc => (
+                                <button
+                                  key={proc.id}
+                                  type="button"
+                                  onMouseDown={() => {
+                                    setTpPendingName(proc.name);
+                                    setTpPendingCost(proc.price);
+                                    setTpSearchQuery(proc.name);
+                                    setShowTpDropdown(false);
+                                  }}
+                                  className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm flex justify-between"
+                                >
+                                  <span>{proc.name}</span>
+                                  <span className="text-gray-500">₹{proc.price}</span>
+                                </button>
+                              ))}
+                            {dentalProcedures.filter(p => p.name.toLowerCase().includes(tpSearchQuery.toLowerCase())).length === 0 && (
+                              <div className="px-3 py-2 text-xs text-gray-500">No match — will add as custom</div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    ))}
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600 w-6"></span>
+                      <div className="relative w-28">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
+                        <input
+                          type="number"
+                          value={tpPendingCost || ''}
+                          onChange={(e) => setTpPendingCost(parseFloat(e.target.value) || 0)}
+                          className="w-full pl-6 p-2 border border-gray-300 rounded-lg text-sm"
+                          placeholder="Cost"
+                          min="0"
+                        />
+                      </div>
                       <input
                         type="text"
-                        value={newTreatmentStep}
-                        onChange={(e) => setNewTreatmentStep(e.target.value)}
-                        className="flex-1 p-2 border border-gray-300 rounded-lg"
-                        placeholder="Add new treatment step"
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            if (newTreatmentStep.trim()) {
-                              setFormData({ ...formData, treatmentPlan: [...formData.treatmentPlan, newTreatmentStep] });
-                              setNewTreatmentStep('');
-                            }
-                          }
-                        }}
+                        value={tpPendingNotes}
+                        onChange={(e) => setTpPendingNotes(e.target.value)}
+                        className="flex-1 p-2 border border-gray-300 rounded-lg text-sm"
+                        placeholder="Notes (optional)"
                       />
                       <button
                         type="button"
                         onClick={() => {
-                          if (newTreatmentStep.trim()) {
-                            setFormData({ ...formData, treatmentPlan: [...formData.treatmentPlan, newTreatmentStep] });
-                            setNewTreatmentStep('');
-                          }
+                          const name = tpPendingName.trim() || tpSearchQuery.trim();
+                          if (!name) return;
+                          const newItem: TreatmentPlanItem = { name, cost: tpPendingCost, notes: tpPendingNotes.trim() };
+                          setFormData({ ...formData, treatmentPlan: [...formData.treatmentPlan, newItem] });
+                          setTpSearchQuery('');
+                          setTpPendingName('');
+                          setTpPendingCost(0);
+                          setTpPendingNotes('');
                         }}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm whitespace-nowrap"
                       >
-                        Add Step
+                        + Add
                       </button>
                     </div>
+                  </div>
+
+                  {/* Quick-add frequent treatments */}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {dentalProcedures.slice(0, 6).map(proc => (
+                      <button
+                        key={proc.id}
+                        type="button"
+                        onClick={() => {
+                          const newItem: TreatmentPlanItem = { name: proc.name, cost: proc.price, notes: '' };
+                          setFormData({ ...formData, treatmentPlan: [...formData.treatmentPlan, newItem] });
+                        }}
+                        className="px-2 py-1 text-xs bg-green-50 border border-green-200 text-green-700 rounded-full hover:bg-green-100 transition"
+                        title={`₹${proc.price}`}
+                      >
+                        + {proc.name}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1522,110 +1854,6 @@ const PrescriptionPage = () => {
             </div>
 
 
-            {/* Medicines Section */}
-            <div className="bg-purple-50 p-6 rounded-lg border border-purple-100">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-xl font-semibold text-purple-800">Prescribed Medicines (Optional)</h3>
-                {medicines.length === 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => setMedicines([{ name: '', dosage: '', duration: '', quantity: 1 }])}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition shadow-sm"
-                  >
-                    Add Medicine
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={addMedicine}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition shadow-sm"
-                  >
-                    Add Another Medicine
-                  </button>
-                )}
-              </div>
-              <p className="text-sm text-purple-700 mb-4">
-                💡 Medicine sales are automatically recorded and inventory is updated when you save this prescription.
-              </p>
-
-              {medicines.length > 0 && (
-                <div className="space-y-4">
-                  {medicines.map((medicine, index) => (
-                    <div key={index} className="flex items-center space-x-3 p-4 border rounded-lg bg-white shadow-sm">
-                      <div className="flex-grow grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Medicine</label>
-                          <select
-                            value={medicine.name}
-                            onChange={(e) => handleMedicineChange(index, 'name', e.target.value)}
-                            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
-                            required
-                          >
-                            <option value="">Select Medicine</option>
-                            {medicineOptions.map((med) => (
-                              <option key={med.id} value={med.name}>{med.name}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Quantity
-                            <span className="ml-1 text-xs text-gray-500">(Auto-calculated)</span>
-                          </label>
-                          <input
-                            type="number"
-                            value={medicine.quantity || 1}
-                            onChange={(e) => handleMedicineChange(index, 'quantity', parseInt(e.target.value) || 1)}
-                            min="1"
-                            placeholder="Auto-calculated"
-                            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition bg-blue-50"
-                            title="Automatically calculated from dosage × duration. You can still edit manually if needed."
-                          />
-                          {medicine.dosage && medicine.duration && (
-                            <p className="text-xs text-gray-600 mt-1">
-                              {parseDosage(medicine.dosage)} pills/day × {parseDuration(medicine.duration)} days
-                            </p>
-                          )}
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Dosage</label>
-                          <input
-                            type="text"
-                            value={medicine.dosage}
-                            onChange={(e) => handleMedicineChange(index, 'dosage', e.target.value)}
-                            placeholder="e.g., 1-0-1"
-                            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
-                            required
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
-                          <input
-                            type="text"
-                            value={medicine.duration}
-                            onChange={(e) => handleMedicineChange(index, 'duration', e.target.value)}
-                            placeholder="e.g., 7 days"
-                            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
-                            required
-                          />
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeMedicine(index)}
-                        className="mt-6 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
             {/* Treatment Done Section */}
             <div className="bg-teal-50 p-6 rounded-lg border border-teal-100">
               <div className="flex items-center justify-between mb-4 gap-3">
@@ -1830,6 +2058,110 @@ const PrescriptionPage = () => {
               )}
             </div>
 
+            {/* Medicines Section */}
+            <div className="bg-purple-50 p-6 rounded-lg border border-purple-100">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-xl font-semibold text-purple-800">Prescribed Medicines (Optional)</h3>
+                {medicines.length === 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setMedicines([{ name: '', dosage: '', duration: '', quantity: 1 }])}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition shadow-sm"
+                  >
+                    Add Medicine
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={addMedicine}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition shadow-sm"
+                  >
+                    Add Another Medicine
+                  </button>
+                )}
+              </div>
+              <p className="text-sm text-purple-700 mb-4">
+                💡 Medicine sales are automatically recorded and inventory is updated when you save this prescription.
+              </p>
+
+              {medicines.length > 0 && (
+                <div className="space-y-4">
+                  {medicines.map((medicine, index) => (
+                    <div key={index} className="flex items-center space-x-3 p-4 border rounded-lg bg-white shadow-sm">
+                      <div className="flex-grow grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Medicine</label>
+                          <select
+                            value={medicine.name}
+                            onChange={(e) => handleMedicineChange(index, 'name', e.target.value)}
+                            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
+                            required
+                          >
+                            <option value="">Select Medicine</option>
+                            {medicineOptions.map((med) => (
+                              <option key={med.id} value={med.name}>{med.name}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Quantity
+                            <span className="ml-1 text-xs text-gray-500">(Auto-calculated)</span>
+                          </label>
+                          <input
+                            type="number"
+                            value={medicine.quantity || 1}
+                            onChange={(e) => handleMedicineChange(index, 'quantity', parseInt(e.target.value) || 1)}
+                            min="1"
+                            placeholder="Auto-calculated"
+                            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition bg-blue-50"
+                            title="Automatically calculated from dosage × duration. You can still edit manually if needed."
+                          />
+                          {medicine.dosage && medicine.duration && (
+                            <p className="text-xs text-gray-600 mt-1">
+                              {parseDosage(medicine.dosage)} pills/day × {parseDuration(medicine.duration)} days
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Dosage</label>
+                          <input
+                            type="text"
+                            value={medicine.dosage}
+                            onChange={(e) => handleMedicineChange(index, 'dosage', e.target.value)}
+                            placeholder="e.g., 1-0-1"
+                            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
+                          <input
+                            type="text"
+                            value={medicine.duration}
+                            onChange={(e) => handleMedicineChange(index, 'duration', e.target.value)}
+                            placeholder="e.g., 7 days"
+                            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeMedicine(index)}
+                        className="mt-6 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Additional Information Section */}
             <div className="bg-amber-50 p-6 rounded-lg border border-amber-100">
               <h3 className="text-xl font-semibold mb-4 text-amber-800">Additional Information</h3>
@@ -1861,7 +2193,82 @@ const PrescriptionPage = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col md:flex-row justify-center gap-4 mt-8">
+            {/* Doctor / Signature Selector */}
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Signing Doctor</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="selectedDoctor"
+                    value="kautilya"
+                    checked={selectedDoctor === 'kautilya'}
+                    onChange={() => setSelectedDoctor('kautilya')}
+                    className="h-4 w-4 text-blue-600"
+                  />
+                  <span className="text-sm">Dr. Kautilya Swaroop</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="selectedDoctor"
+                    value="anjali"
+                    checked={selectedDoctor === 'anjali'}
+                    onChange={() => setSelectedDoctor('anjali')}
+                    className="h-4 w-4 text-blue-600"
+                  />
+                  <span className="text-sm">Dr. Anjali Swaroop</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Consultation Charge */}
+            <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+              <div className="flex items-center gap-3 mb-3">
+                <input
+                  type="checkbox"
+                  id="applyConsultationCharge"
+                  checked={applyConsultationCharge}
+                  onChange={e => setApplyConsultationCharge(e.target.checked)}
+                  className="h-4 w-4 text-amber-600 cursor-pointer"
+                />
+                <label htmlFor="applyConsultationCharge" className="text-sm font-semibold text-amber-800 cursor-pointer">
+                  Apply Consultation Charge
+                </label>
+              </div>
+              {applyConsultationCharge && (
+                <div className="flex flex-wrap gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Charge (₹)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={consultationCharge}
+                      onChange={e => setConsultationCharge(Math.max(0, Number(e.target.value)))}
+                      className="w-28 border border-gray-300 rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Discount (%)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={consultationDiscount}
+                      onChange={e => setConsultationDiscount(Math.min(100, Math.max(0, Number(e.target.value))))}
+                      className="w-24 border border-gray-300 rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <span className="text-sm font-semibold text-amber-800">
+                      Net: ₹{(consultationCharge * (1 - consultationDiscount / 100)).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col md:flex-row justify-center gap-4 mt-4">
               <button
                 type="submit"
                 className="px-8 py-3 bg-blue-600 text-white text-lg font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 focus:ring-offset-2 disabled:opacity-50 transition shadow-md"
@@ -2006,9 +2413,13 @@ const PrescriptionPage = () => {
                       <tr>
                         <td className="border border-gray-300 px-4 py-2 font-medium">Treatment Plan</td>
                         <td className="border border-gray-300 px-4 py-2">
-                          <ul className="list-disc list-inside">
-                            {formData.treatmentPlan.map((step, idx) => (
-                              <li key={idx}>{step}</li>
+                          <ul className="list-disc list-inside space-y-1">
+                            {formData.treatmentPlan.map((item, idx) => (
+                              <li key={idx}>
+                                {item.name}
+                                {item.cost ? <span className="text-gray-600"> — ₹{item.cost}</span> : null}
+                                {item.notes ? <span className="text-gray-500 text-xs"> ({item.notes})</span> : null}
+                              </li>
                             ))}
                           </ul>
                         </td>
@@ -2086,13 +2497,15 @@ const PrescriptionPage = () => {
               <div className="mt-12 text-right">
                 <div className="mb-4">
                   <img
-                    src="/sign.png"
+                    src={selectedDoctor === 'anjali' ? '/sign1.png' : '/sign.png'}
                     alt="Doctor's Signature"
                     className="inline-block"
                     style={{ height: '60px', width: 'auto' }}
                   />
                 </div>
-                <div className="font-semibold">Doctor&apos;s Signature</div>
+                <div className="font-semibold">
+                  {selectedDoctor === 'anjali' ? 'Dr. Anjali Swaroop' : 'Dr. Kautilya Swaroop'}
+                </div>
               </div>
             </div>
           </div>

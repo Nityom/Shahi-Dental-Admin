@@ -39,7 +39,7 @@ interface PrescriptionData {
   medical_history?: string;
   investigation?: string;
   diagnosis?: string;
-  treatment_plan?: string[];
+  treatment_plan?: any[]; // string[] (legacy) or TreatmentPlanItem objects
   oral_exam_notes?: string;
   selected_teeth?: ToothData[];
   medicines?: MedicineEntry[];
@@ -51,6 +51,8 @@ interface PrescriptionData {
 function PrintPrescriptionContent() {
   const searchParams = useSearchParams();
   const prescriptionId = searchParams.get('prescriptionId');
+  const signatureParam = searchParams.get('signature') || 'sign.png';
+  const doctorNameParam = searchParams.get('doctorName') || 'Dr. Kautilya Swaroop';
   const [prescriptionData, setPrescriptionData] = useState<PrescriptionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -278,7 +280,7 @@ function PrintPrescriptionContent() {
         <div className="patient-grid">
           <div className="row">
             <div className="col"><span className="lbl">Patient Name</span><span className="val">{prescriptionData.patient_name}</span></div>
-            <div className="col"><span className="lbl">Registration No.</span><span className="val">{prescriptionData.reference_number || '—'}</span></div>
+            <div className="col"><span className="lbl">Patient Number</span><span className="val">{prescriptionData.reference_number || '—'}</span></div>
           </div>
           <div className="row">
             <div className="col"><span className="lbl">Age</span><span className="val">{prescriptionData.age}</span></div>
@@ -352,9 +354,12 @@ function PrintPrescriptionContent() {
           <>
             <p className="sec-heading">TREATMENT PLAN</p>
             <div className="sec-body">
-              {prescriptionData.treatment_plan.map((step, index) => (
-                <div key={index}>{index + 1}. {step}</div>
-              ))}
+              {prescriptionData.treatment_plan.map((step: any, index: number) => {
+                const name = typeof step === 'string' ? step : step.name || String(step);
+                const cost = typeof step === 'object' && step.cost ? ` (₹${step.cost})` : '';
+                const notes = typeof step === 'object' && step.notes ? ` — ${step.notes}` : '';
+                return <div key={index}>{index + 1}. {name}{cost}{notes}</div>;
+              })}
             </div>
           </>
         )}
@@ -413,13 +418,13 @@ function PrintPrescriptionContent() {
           </div>
           <div className="sig-block" style={{ textAlign: 'center' }}>
             <Image
-              src="/sign.png"
+              src={`/${signatureParam}`}
               alt="Doctor's Signature"
               width={120}
               height={60}
               style={{ objectFit: 'contain', marginBottom: '4px' }}
             />
-            <div className="sig-label">Doctor&apos;s Signature</div>
+            <div className="sig-label">{doctorNameParam}</div>
             <div className="sig-title">Consultant</div>
           </div>
         </div>

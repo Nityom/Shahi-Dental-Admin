@@ -12,6 +12,12 @@ interface BillItem {
   itemType?: 'medicine' | 'procedure' | 'consultation' | 'other';
 }
 
+interface PaymentTransaction {
+  amount: number;
+  payment_date: string;
+  payment_method?: string;
+}
+
 interface PrintableBillProps {
   billNumber: string;
   billDate: string;
@@ -27,6 +33,9 @@ interface PrintableBillProps {
   balance?: number;
   termsAndConditions?: string;
   showPrintButton?: boolean;
+  signature?: string;
+  paymentTransactions?: PaymentTransaction[];
+  doctorName?: string;
 }
 
 const PrintableBill: React.FC<PrintableBillProps> = ({
@@ -44,6 +53,9 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
   balance = 0,
   termsAndConditions = 'All disputes are subject to Muzaffarpur jurisdiction only',
   showPrintButton = true,
+  signature = 'sign.png',
+  doctorName = 'Dr. Kautilya Swaroop',
+  paymentTransactions = [],
 }) => {
   const [mounted, setMounted] = useState(false);
 
@@ -192,7 +204,7 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
             <p className="text-xs text-gray-700">
              Kalambagh road, Lenin Chowk, Muzaffarpur, Bihar 842001, India 
             </p>
-            <p className="text-xs text-gray-700 mt-1">Mobile: 9525048993</p>
+            <p className="text-xs text-gray-700 mt-1">Mobile: 9525048993 &nbsp;|&nbsp; Reg. No. 7329/A</p>
           </div>
           <div className="mt-4 border-t border-gray-200 print-border"></div>
         </div>
@@ -279,10 +291,29 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
                 <span className="text-sm font-bold">{formatCurrency(total)}</span>
               </div>
 
-              <div className="flex justify-between mb-2">
-                <span className="text-sm">Received Amount</span>
-                <span className="text-sm">{formatCurrency(amountPaid)}</span>
-              </div>
+              {paymentTransactions.length > 0 ? (
+                paymentTransactions.map((txn, i) => (
+                  <div key={i} className="flex justify-between mb-1">
+                    <span className="text-sm text-gray-700">
+                      Received on {(() => {
+                        const d = new Date(txn.payment_date);
+                        if (isNaN(d.getTime())) return txn.payment_date;
+                        const dd = String(d.getDate()).padStart(2, '0');
+                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                        const yy = String(d.getFullYear()).slice(-2);
+                        return `${dd}-${mm}-${yy}`;
+                      })()}
+                      {txn.payment_method ? ` (${txn.payment_method})` : ''}
+                    </span>
+                    <span className="text-sm">{formatCurrency(txn.amount)}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm">Received Amount</span>
+                  <span className="text-sm">{formatCurrency(amountPaid)}</span>
+                </div>
+              )}
 
               <div className="flex justify-between border-t-2 border-gray-800 pt-2">
                 <span className="text-sm font-bold">Balance</span>
@@ -306,13 +337,13 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
             <div className="text-center">
               <div className="mb-4 h-20 flex items-center justify-center">
                 <img 
-                  src="/sign.png" 
+                  src={`/${signature}`} 
                   alt="Signature" 
                   className="max-h-16 w-auto object-contain"
                 />
               </div>
               <div className="border-t border-gray-800 pt-2 text-sm font-semibold">
-                <div>AUTHORISED SIGNATORY FOR</div>
+                <div>{doctorName}</div>
                 <div>KS Dental & Aesthetic Clinic</div>
               </div>
             </div>

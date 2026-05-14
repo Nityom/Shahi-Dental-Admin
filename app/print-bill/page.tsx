@@ -41,7 +41,10 @@ interface BillData {
 function PrintBillContent() {
   const searchParams = useSearchParams();
   const billId = searchParams.get('billId');
+  const signatureParam = searchParams.get('signature') || 'sign.png';
+  const doctorNameParam = searchParams.get('doctorName') || 'Dr. Kautilya Swaroop';
   const [billData, setBillData] = useState<BillData | null>(null);
+  const [paymentTransactions, setPaymentTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -97,6 +100,18 @@ function PrintBillContent() {
           amountPaid,
           balance,
         });
+
+        // Fetch payment transactions for this bill
+        try {
+          const txns = await convex.query(api.payment_transactions.listByBill, { bill_id: billId as string });
+          if (Array.isArray(txns)) {
+            setPaymentTransactions(txns.map((t: any) => ({
+              amount: t.amount,
+              payment_date: t.payment_date,
+              payment_method: t.payment_method,
+            })));
+          }
+        } catch {}
       } catch (err) {
         console.error('Error fetching bill:', err);
         setError(err instanceof Error ? err.message : 'Failed to load bill data');
@@ -130,7 +145,7 @@ function PrintBillContent() {
     );
   }
 
-  return <PrintableBill {...billData} />;
+  return <PrintableBill {...billData} signature={signatureParam} doctorName={doctorNameParam} paymentTransactions={paymentTransactions} />;
 }
 
 export default function PrintBillPage() {

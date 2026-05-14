@@ -556,6 +556,33 @@ const ViewPatients = () => {
                                   return total + billTotal;
                                 }, 0).toFixed(2)}</span>
                               </div>
+                              {/* Print All Bills button */}
+                              {(() => {
+                                const allIds = selectedPatient.prescriptions
+                                  .flatMap(p => (p.bills || []).map((b: any) => b.id || b._id))
+                                  .filter(Boolean) as string[];
+                                return allIds.length > 0 ? (
+                                  <div className="pt-2 border-t border-purple-100">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const params = new URLSearchParams({
+                                          billIds: allIds.join(','),
+                                          signature: 'sign.png',
+                                          doctorName: 'Dr. Kautilya Swaroop',
+                                        });
+                                        window.open(`/print-bill/statement?${params.toString()}`, '_blank');
+                                      }}
+                                      className="w-full inline-flex justify-center items-center gap-2 rounded-md px-4 py-2 bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                      </svg>
+                                      Print All Bills ({allIds.length})
+                                    </button>
+                                  </div>
+                                ) : null;
+                              })()}
                             </div>
                           </div>
                         </div>
@@ -597,7 +624,7 @@ const ViewPatients = () => {
                   />
 
                   {/* Modal Footer */}
-                  <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                  <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse flex-wrap gap-2">
                     <Link href={`/admin/prescription?patientName=${encodeURIComponent(selectedPatient.name)}&age=${selectedPatient.age}&sex=${selectedPatient.sex}&phone=${encodeURIComponent(selectedPatient.phone_number)}&medicalHistory=${encodeURIComponent(selectedPatient.prescriptions[0]?.medical_history || '')}`}>
                       <button
                         type="button"
@@ -606,6 +633,27 @@ const ViewPatients = () => {
                         Create New Prescription
                       </button>
                     </Link>
+                    {(() => {
+                      const allBillIds = selectedPatient.prescriptions
+                        .flatMap(p => (p.bills || []).map(b => b.id))
+                        .filter(Boolean) as string[];
+                      return allBillIds.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const params = new URLSearchParams({
+                              billIds: allBillIds.join(','),
+                              signature: 'sign.png',
+                              doctorName: 'Dr. Kautilya Swaroop',
+                            });
+                            window.open(`/print-bill/statement?${params.toString()}`, '_blank');
+                          }}
+                          className="mt-3 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                        >
+                          Print All Bills ({allBillIds.length})
+                        </button>
+                      ) : null;
+                    })()}
                     <button
                       type="button"
                       onClick={closeModal}
