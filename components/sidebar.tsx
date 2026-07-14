@@ -202,13 +202,13 @@ export function AppSidebar({ children }: { children?: React.ReactNode }): React.
           bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900
           border-r border-gray-800/50 text-white
           flex flex-col shrink-0
-          ${isExpanded ? 'w-64' : 'w-20'} 
           ${isMobile ? 'fixed z-30 h-full' : 'relative h-screen'}
+          ${isMobile ? (isExpanded ? 'translate-x-0 w-64' : '-translate-x-full w-64') : (isExpanded ? 'w-64 translate-x-0' : 'w-20 translate-x-0')}
           shadow-xl
         `}
       >
-        <div className={`p-4 flex items-center ${isExpanded ? 'justify-between' : 'justify-center'} mb-6`}>
-          {isExpanded ? (
+        <div className={`p-4 flex items-center ${isMobile || isExpanded ? 'justify-between' : 'justify-center'} mb-6`}>
+          {isMobile || isExpanded ? (
             <div className="flex items-center gap-3 fade-slide-in">
               <div className="w-14 h-14 rounded-lg flex items-center justify-center shadow-lg p-2">
                 <img src="/dental_logo.svg" alt="Logo" className="w-full h-full object-contain" />
@@ -236,7 +236,7 @@ export function AppSidebar({ children }: { children?: React.ReactNode }): React.
         </div>
 
         <div className="flex-1 px-2 py-4">
-          <MenuGroup label={isExpanded ? "MENU" : ""}>
+          <MenuGroup label={isMobile || isExpanded ? "MENU" : ""}>
             <ul>
               {items.map((item, index) => (
                 <div
@@ -246,7 +246,7 @@ export function AppSidebar({ children }: { children?: React.ReactNode }): React.
                 >
                   <MenuItem
                     icon={item.icon}
-                    title={isExpanded ? item.title : ""}
+                    title={isMobile || isExpanded ? item.title : ""}
                     url={item.url}
                     isActive={activeItem === item.id}
                     onClick={handleItemClick}
@@ -258,7 +258,7 @@ export function AppSidebar({ children }: { children?: React.ReactNode }): React.
           </MenuGroup>
         </div>
 
-        {isExpanded ? (
+        {isMobile || isExpanded ? (
           <div className="mt-auto p-4 border-t border-gray-700/50">
             <div className="flex flex-col space-y-4">
               <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-800/30">
@@ -299,7 +299,7 @@ export function AppSidebar({ children }: { children?: React.ReactNode }): React.
       {isMobile && !isExpanded && (
         <button
           onClick={toggleSidebar}
-          className="fixed bottom-4 left-4 z-20 bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 float-button"
+          className="fixed top-4 left-4 z-20 bg-white/90 backdrop-blur-sm text-gray-800 p-2.5 rounded-md shadow-md border border-gray-200 hover:bg-gray-100 transition-all duration-300"
         >
           <Menu size={24} />
         </button>

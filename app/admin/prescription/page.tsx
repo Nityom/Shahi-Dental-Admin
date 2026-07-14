@@ -1315,7 +1315,7 @@ const PrescriptionPage = () => {
   }, [loadPrescriptionData]); // Include loadPrescriptionData as a dependency
 
   return (
-    <div className="w-[80vw] mx-auto mt-8 p-4">
+    <div className="w-full xl:w-[90vw] max-w-[1400px] mx-auto mt-4 sm:mt-8 p-2 sm:p-4">
       {isStaffUser ? (
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center p-8 bg-red-50 rounded-lg border border-red-200 max-w-2xl">
