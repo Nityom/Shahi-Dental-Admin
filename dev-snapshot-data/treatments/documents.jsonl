@@ -1,0 +1,8 @@
+{"_creationTime":1778346464710.2566,"_id":"ks70rzfhxsyj79r0nw9ctyhh8586djsq","created_at":1778346464710.0,"default_cost":400.0,"is_frequent":false,"name":"Polishing"}
+{"_creationTime":1778346464710.2556,"_id":"ks72bnejyhqj0dkp6kyapewnax86d7yq","created_at":1778346464710.0,"default_cost":5000.0,"is_frequent":false,"name":"Crown"}
+{"_creationTime":1778346464710.256,"_id":"ks735aj0ks6pydrrbcq4b9m4r186c7wh","created_at":1778346464710.0,"default_cost":1000.0,"is_frequent":false,"name":"Extraction"}
+{"_creationTime":1778346464710.2554,"_id":"ks77c10fcx0y8w4g4qbp3tpcdx86cecz","created_at":1778346464710.0,"default_cost":800.0,"is_frequent":true,"name":"Filling"}
+{"_creationTime":1778346464710.2559,"_id":"ks77x9v1en8wh4rk2dw35zexen86ct6n","created_at":1778346464710.0,"default_cost":6000.0,"is_frequent":false,"name":"Bridge"}
+{"_creationTime":1778346464710.255,"_id":"ks79akke8y1n6jmsn7k84y8e7d86dhnf","created_at":1778346464710.0,"default_cost":3000.0,"is_frequent":true,"name":"Root Canal"}
+{"_creationTime":1778346464710.2551,"_id":"ks7anpfykfavvqjbf0j3f3wy2d86d32p","created_at":1778346464710.0,"default_cost":500.0,"is_frequent":true,"name":"Cleaning"}
+{"_creationTime":1778346464710.2563,"_id":"ks7e3xt3gdj1xw6jyww3gxecwd86c3wr","created_at":1778346464710.0,"default_cost":600.0,"is_frequent":true,"name":"Scaling"}

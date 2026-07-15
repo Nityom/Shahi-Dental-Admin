@@ -267,7 +267,7 @@ const ViewPatients = () => {
         </div>
       )}
 
-      <div className="w-full xl:w-[90vw] max-w-7xl mx-auto mt-4 sm:mt-8 p-4">
+      <div className="w-full max-w-7xl mx-auto mt-4 sm:mt-8 p-4">
         <h2 className="text-3xl font-bold mb-8 text-center text-blue-700 border-b pb-4">Patient Records</h2>
 
         {/* Search and Actions Bar */}

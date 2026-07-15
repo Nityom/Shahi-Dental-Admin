@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as appointments from "../appointments.js";
 import type * as auth from "../auth.js";
 import type * as bills from "../bills.js";
 import type * as consumables from "../consumables.js";
@@ -25,6 +26,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  appointments: typeof appointments;
   auth: typeof auth;
   bills: typeof bills;
   consumables: typeof consumables;

@@ -1,0 +1,15 @@
+{"name":"bills","id":10001}
+{"name":"inventory","id":10002}
+{"name":"inventory_sales","id":10003}
+{"name":"medicine_sales","id":10004}
+{"name":"medicines","id":10005}
+{"name":"patients","id":10006}
+{"name":"payment_transactions","id":10007}
+{"name":"prescriptions","id":10008}
+{"name":"reference_counter","id":10009}
+{"name":"users","id":10010}
+{"name":"auth_otp_sessions","id":10011}
+{"name":"auth_sessions","id":10012}
+{"name":"password_reset_tokens","id":10013}
+{"name":"treatments","id":10014}
+{"name":"appointments","id":10015}

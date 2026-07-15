@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useEffect } from 'react';
-import { Inbox, Menu, X, ChevronRight, Pill, FileText, LogOut, Wrench, TrendingUp, CreditCard, Package} from "lucide-react";
+import { Inbox, Menu, X, ChevronRight, Pill, FileText, LogOut, Wrench, TrendingUp, CreditCard, Package, Calendar } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { getCurrentUser, signOut } from "@/services/adminuser";
 
@@ -147,6 +147,7 @@ export function AppSidebar({ children }: { children?: React.ReactNode }): React.
 
   const items: MenuItem[] = [
     { id: "patient-management", title: "Patient Management", url: "/admin/patients", icon: Inbox },
+    { id: "appointments", title: "Appointments", url: "/admin/appointments", icon: Calendar },
     { id: "medicine-management", title: "Medicine Management", url: "/admin/medicines", icon: Pill },
     { id: "Inventory-management", title: "Inventory Management", url: "/admin/inventory", icon: Wrench },
     { id: "consumable-settings", title: "Consumable Settings", url: "/admin/consumable-settings", icon: Package },

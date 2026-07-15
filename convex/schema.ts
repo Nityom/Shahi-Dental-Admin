@@ -162,6 +162,26 @@ export default defineSchema({
     .index("by_patient", ["patient_id"])
     .index("by_date", ["payment_date"]),
 
+  appointments: defineTable({
+    full_name: v.string(),
+    phone: v.string(),
+    appointment_date: v.string(), // YYYY-MM-DD
+    appointment_time: v.string(), // HH:mm
+    doctor_name: v.optional(v.string()),
+    duration_minutes: v.optional(v.number()),
+    dental_problem: v.optional(v.string()),
+    status: v.optional(v.union(v.literal("PENDING"), v.literal("CONFIRMED"), v.literal("CANCELLED"), v.literal("COMPLETED"))),
+    notes: v.optional(v.string()),
+    reminder_note: v.optional(v.string()),
+    reminder_minutes_before: v.optional(v.number()),
+    is_offline: v.optional(v.boolean()),
+    created_at: v.optional(v.number()),
+    updated_at: v.optional(v.number()),
+  })
+    .index("by_date", ["appointment_date"])
+    .index("by_phone", ["phone"])
+    .index("by_doctor_date_time", ["doctor_name", "appointment_date", "appointment_time"]),
+
   reference_counter: defineTable({
     counter_id: v.number(), // Use 1 for the singleton
     current_number: v.number(),
