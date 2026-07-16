@@ -34,7 +34,7 @@ echo.
 REM Create database
 echo Creating database...
 set /p MYSQL_PASSWORD="Enter MySQL root password: "
-echo CREATE DATABASE IF NOT EXISTS titanium_db; | mysql -u root -p%MYSQL_PASSWORD%
+echo CREATE DATABASE IF NOT EXISTS shahidentalclinic_db; | mysql -u root -p%MYSQL_PASSWORD%
 
 if %ERRORLEVEL% NEQ 0 (
     echo ERROR: Failed to create database

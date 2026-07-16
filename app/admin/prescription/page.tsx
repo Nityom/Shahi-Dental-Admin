@@ -176,7 +176,7 @@ const PrescriptionPage = () => {
 
         if (user.email) {
           setUserEmail(user.email);
-          setIsStaffUser(user.email === 'staff@titanium.com');
+          setIsStaffUser(user.email === 'staff@shahi.com');
         }
       } catch (error) {
         console.error('Error checking auth:', error);

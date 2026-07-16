@@ -1,4 +1,4 @@
-# Titanium Dental Clinic - Patient Management System
+# Shahi Dental Clinic - Patient Management System
 
 A comprehensive dental clinic management system built with Next.js (Frontend) and PHP + MySQL (Backend).
 
@@ -76,7 +76,7 @@ A comprehensive dental clinic management system built with Next.js (Frontend) an
    
 5. **Default credentials** (after creating first user):
    - You'll need to sign up first
-   - Or use: staff@titanium.com / Staff@1234 (if migrated from Supabase)
+   - Or use: staff@shahi.com / Staff@1234 (if migrated from Supabase)
 
 ## Getting Started
 
@@ -137,7 +137,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000/api
 ### Backend (php-backend/.env)
 ```env
 DB_HOST=localhost
-DB_NAME=titanium_db
+DB_NAME=shahidentalclinic_dbhttps://meet.google.com/zhh-brxz-hpu
 DB_USER=root
 DB_PASSWORD=your_password
 ```

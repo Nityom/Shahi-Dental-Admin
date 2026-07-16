@@ -89,7 +89,7 @@ export default function ResetPassword() {
           >
             <Image 
             src="/dental_logo.svg" 
-              alt="Titanium Dental Clinic Logo" 
+              alt="Shahi Dental Clinic Logo" 
               width={190} 
               height={95}
               className="object-contain drop-shadow-lg"

@@ -120,7 +120,7 @@ const DantsriAdminLogin: React.FC = () => {
                   value={formData.email}
                   onChange={handleChange}
                   className="block w-full pl-10 py-3 border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-black focus:border-black transition-all duration-200"
-                  placeholder="admin@titanium.com"
+                  placeholder="admin@shahidentalclinic.com"
                 />
               </div>
             </div>
@@ -209,7 +209,7 @@ const DantsriAdminLogin: React.FC = () => {
               <span className="text-sm text-gray-500">
                 Contact system administrator at{' '}
                 <a href="mailto:support@titanium.com" className="font-medium text-gray-700 hover:text-black transition-colors duration-200 border-b border-transparent hover:border-black">
-                  support@titanium.com
+                  support@shahidentalclinic.com
                 </a>
               </span>
             </div>
