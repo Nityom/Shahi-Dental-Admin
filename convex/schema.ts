@@ -163,10 +163,14 @@ export default defineSchema({
     .index("by_date", ["payment_date"]),
 
   appointments: defineTable({
-    full_name: v.string(),
-    phone: v.string(),
-    appointment_date: v.string(), // YYYY-MM-DD
-    appointment_time: v.string(), // HH:mm
+    full_name: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    appointment_date: v.optional(v.string()), // YYYY-MM-DD
+    appointment_time: v.optional(v.string()), // HH:mm
+    name: v.optional(v.string()),
+    date: v.optional(v.string()),
+    time: v.optional(v.string()),
+    dentalProblem: v.optional(v.string()),
     doctor_name: v.optional(v.string()),
     duration_minutes: v.optional(v.number()),
     dental_problem: v.optional(v.string()),

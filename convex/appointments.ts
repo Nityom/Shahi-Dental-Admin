@@ -12,6 +12,7 @@ export const getBookedSlots = query({
     
     // Filter out CANCELLED appointments and match doctor if provided
     return appointments
+      .filter((a) => typeof a.appointment_time === "string")
       .filter(a => !args.doctor_name || a.doctor_name === args.doctor_name)
       .map(a => a.appointment_time);
   },
@@ -57,7 +58,13 @@ export const create = mutation({
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("appointments").order("desc").collect();
+    return (await ctx.db.query("appointments").order("desc").collect()).filter(
+      (appointment) =>
+        typeof appointment.full_name === "string" &&
+        typeof appointment.phone === "string" &&
+        typeof appointment.appointment_date === "string" &&
+        typeof appointment.appointment_time === "string",
+    );
   },
 });
 
@@ -101,6 +108,13 @@ export const update = mutation({
     if (updates.appointment_date || updates.appointment_time || updates.doctor_name || updates.status) {
       const current = await ctx.db.get(id);
       if (!current) throw new Error("Appointment not found");
+
+      if (
+        typeof current.appointment_date !== "string" ||
+        typeof current.appointment_time !== "string"
+      ) {
+        throw new Error("This legacy appointment must be opened and saved once before it can be rescheduled.");
+      }
       
       const newDate = updates.appointment_date ?? current.appointment_date;
       const newTime = updates.appointment_time ?? current.appointment_time;

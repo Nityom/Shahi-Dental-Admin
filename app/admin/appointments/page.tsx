@@ -21,6 +21,27 @@ const formatDateForDisplay = (dateStr: string) => {
   }).format(new Date(dateStr));
 };
 
+const normalizeAppointmentTime = (time: string) => {
+  const trimmedTime = time.trim();
+
+  if (!trimmedTime) return trimmedTime;
+
+  const timeMatch = trimmedTime.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!timeMatch) return trimmedTime;
+
+  let hours = Number(timeMatch[1]);
+  const minutes = timeMatch[2];
+  const meridiem = timeMatch[3].toUpperCase();
+
+  if (meridiem === 'AM') {
+    if (hours === 12) hours = 0;
+  } else if (hours !== 12) {
+    hours += 12;
+  }
+
+  return `${String(hours).padStart(2, '0')}:${minutes}`;
+};
+
 export default function AppointmentsPage() {
   const [selectedDate, setSelectedDate] = useState(getTodayString());
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -51,13 +72,20 @@ export default function AppointmentsPage() {
   const allAppointments = useQuery(api.appointments.list);
   const appointmentsForDate = useMemo(() => {
     if (!allAppointments) return undefined;
-    return allAppointments.filter(a => a.appointment_date === selectedDate).sort((a, b) => a.appointment_time.localeCompare(b.appointment_time));
+    return allAppointments
+      .filter(
+        (a): a is (typeof a & { appointment_date: string; appointment_time: string }) =>
+          typeof a.appointment_date === 'string' && typeof a.appointment_time === 'string',
+      )
+      .filter(a => a.appointment_date === selectedDate)
+      .sort((a, b) => a.appointment_time.localeCompare(b.appointment_time));
   }, [allAppointments, selectedDate]);
 
   const appointmentsByDate = useMemo(() => {
     if (!allAppointments) return {};
     const acc: Record<string, number> = {};
     for (const a of allAppointments) {
+      if (typeof a.appointment_date !== 'string') continue;
       acc[a.appointment_date] = (acc[a.appointment_date] || 0) + 1;
     }
     return acc;
@@ -97,10 +125,21 @@ export default function AppointmentsPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const appointmentPayload = {
+        full_name: formData.full_name,
+        phone: formData.phone,
+        appointment_date: selectedDate,
+        appointment_time: normalizeAppointmentTime(formData.appointment_time),
+        doctor_name: formData.doctor_name,
+        duration_minutes: formData.duration_minutes,
+        dental_problem: formData.dental_problem || undefined,
+        notes: formData.notes || undefined,
+      };
+
       if (editingId) {
-        await updateAppointment({ id: editingId, appointment_date: selectedDate, ...formData });
+        await updateAppointment({ id: editingId, ...appointmentPayload });
       } else {
-        await createAppointment({ appointment_date: selectedDate, ...formData });
+        await createAppointment(appointmentPayload);
       }
       setIsModalOpen(false);
     } catch (err: any) {
