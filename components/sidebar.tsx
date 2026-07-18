@@ -48,11 +48,11 @@ interface MenuItemProps {
 }
 
 const MenuItem: React.FC<MenuItemProps> = ({ icon: Icon, title, url, isActive, onClick, id, isExpanded }) => (
-  <li className="mb-1 px-2">
+  <li className="mb-2 px-2">
     <a
       href="#"
       title={!isExpanded ? title : undefined}
-      className={`flex items-center w-full py-2.5 px-3 rounded-lg transition-all duration-200 ${isActive
+      className={`flex items-center w-full py-3 px-3 rounded-lg transition-all duration-200 ${isActive
           ? 'bg-blue-600 text-white shadow-sm'
           : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
         } ${!isExpanded ? 'justify-center' : ''}`}
