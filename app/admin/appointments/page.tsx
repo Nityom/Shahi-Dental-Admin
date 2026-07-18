@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, User, Phone, Stethoscope } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, User, Phone, Stethoscope, Pencil, Trash2, Search, X } from 'lucide-react';
 
 // Helpers
 const getTodayString = () => {
@@ -46,6 +46,8 @@ export default function AppointmentsPage() {
   const [selectedDate, setSelectedDate] = useState(getTodayString());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<Id<"appointments"> | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   
   // Calendar State
   const [currentMonthDate, setCurrentMonthDate] = useState(() => {
@@ -90,6 +92,22 @@ export default function AppointmentsPage() {
     }
     return acc;
   }, [allAppointments]);
+
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim() || !allAppointments) return [];
+    const q = searchQuery.toLowerCase().trim();
+    return allAppointments
+      .filter(a =>
+        (typeof a.name === 'string' && a.name.toLowerCase().includes(q)) ||
+        (typeof a.phone === 'string' && a.phone.includes(q))
+      )
+      .sort((a, b) => {
+        const da = typeof a.date === 'string' ? a.date : '';
+        const db = typeof b.date === 'string' ? b.date : '';
+        return db.localeCompare(da); // newest first
+      })
+      .slice(0, 20);
+  }, [searchQuery, allAppointments]);
 
   const createAppointment = useMutation(api.appointments.create);
   const updateAppointment = useMutation(api.appointments.update);
@@ -165,12 +183,18 @@ export default function AppointmentsPage() {
     const days = [];
     const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     
+    const weekDaysMobile = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
     for (let i = 0; i < 7; i++) {
-      days.push(<div key={`header-${i}`} className="font-semibold text-center text-sm text-gray-500 py-2 uppercase tracking-wider">{weekDays[i]}</div>);
+      days.push(
+        <div key={`header-${i}`} className="font-semibold text-center text-gray-500 py-2 uppercase tracking-wider">
+          <span className="hidden sm:inline text-sm">{weekDays[i]}</span>
+          <span className="sm:hidden text-xs">{weekDaysMobile[i]}</span>
+        </div>
+      );
     }
 
     for (let i = 0; i < startDay; i++) {
-      days.push(<div key={`empty-${i}`} className="p-4 border border-gray-100 bg-gray-50/50 min-h-[100px]"></div>);
+      days.push(<div key={`empty-${i}`} className="border border-gray-100 bg-gray-50/50 min-h-[48px] sm:min-h-[100px]"></div>);
     }
 
     const todayStr = getTodayString();
@@ -188,18 +212,19 @@ export default function AppointmentsPage() {
         <div 
           key={dateString} 
           onClick={() => setSelectedDate(dateString)}
-          className={`relative p-2 border border-gray-100 min-h-[100px] cursor-pointer transition-colors group flex flex-col items-center pt-3 hover:bg-blue-50
+          className={`relative p-1 sm:p-2 border border-gray-100 min-h-[48px] sm:min-h-[100px] cursor-pointer transition-colors group flex flex-col items-center pt-2 sm:pt-3 hover:bg-blue-50
             ${isSelected ? 'bg-blue-50/80 border-blue-200' : 'bg-white'}`}
         >
-          <span className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-medium mb-1
+          <span className={`w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-full text-xs sm:text-sm font-medium mb-0.5 sm:mb-1
             ${isSelected ? 'bg-blue-600 text-white shadow-md' : isToday ? 'bg-blue-100 text-blue-800' : 'text-gray-700 group-hover:text-blue-600'}`}>
             {i}
           </span>
           {count > 0 && (
-            <div className="flex gap-1 mt-1 justify-center flex-wrap">
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+            <div className="flex gap-1 mt-0.5 justify-center flex-wrap">
+              <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
                 {count} {count === 1 ? 'Appt' : 'Appts'}
               </span>
+              <span className="sm:hidden w-1.5 h-1.5 rounded-full bg-green-500"></span>
             </div>
           )}
         </div>
@@ -209,7 +234,7 @@ export default function AppointmentsPage() {
     const totalSlots = startDay + daysInMonth;
     const paddingSlots = totalSlots % 7 === 0 ? 0 : 7 - (totalSlots % 7);
     for (let i = 0; i < paddingSlots; i++) {
-      days.push(<div key={`padding-${i}`} className="p-4 border border-gray-100 bg-gray-50/50 min-h-[100px]"></div>);
+      days.push(<div key={`padding-${i}`} className="border border-gray-100 bg-gray-50/50 min-h-[48px] sm:min-h-[100px]"></div>);
     }
 
     return (
@@ -257,13 +282,103 @@ export default function AppointmentsPage() {
         </div>
 
         {/* Selected Date Appointments list */}
-        <div className="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-gray-200 p-6 h-[800px] overflow-y-auto">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1 border-b pb-4 sticky top-0 bg-white z-10">
-            {formatDateForDisplay(selectedDate)}
-          </h3>
+        <div className="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-gray-200 flex flex-col max-h-[500px] lg:sticky lg:top-6 lg:max-h-[calc(100vh-8rem)] overflow-hidden">
+          {/* Panel header */}
+          <div className="px-5 pt-5 pb-4 border-b border-gray-100 shrink-0">
+            {isSearchOpen ? (
+              <div className="flex items-center gap-2">
+                <Search className="w-4 h-4 text-gray-400 shrink-0" />
+                <input
+                  autoFocus
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search by name or phone…"
+                  className="flex-1 text-sm outline-none text-gray-800 placeholder-gray-400 bg-transparent"
+                />
+                <button
+                  onClick={() => { setIsSearchOpen(false); setSearchQuery(''); }}
+                  className="p-1 rounded-full hover:bg-gray-100 text-gray-400 transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-0.5">Schedule</p>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-gray-900 leading-tight">{formatDateForDisplay(selectedDate)}</h3>
+                    {appointmentsForDate && appointmentsForDate.length > 0 && (
+                      <span className="text-xs font-bold bg-blue-600 text-white rounded-full px-2 py-0.5">{appointmentsForDate.length}</span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsSearchOpen(true)}
+                  className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition shrink-0 mt-1"
+                  title="Search appointments"
+                >
+                  <Search className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
 
-          <div className="mt-4 flex flex-col gap-3">
-            {appointmentsForDate === undefined ? (
+          <div className="p-4 flex flex-col gap-3 overflow-y-auto flex-1">
+            {/* Search results mode */}
+            {isSearchOpen && searchQuery.trim() ? (
+              searchResults.length === 0 ? (
+                <div className="py-10 text-center text-gray-400">
+                  <Search className="w-10 h-10 mx-auto mb-2 text-gray-200" />
+                  <p className="text-sm">No appointments found</p>
+                </div>
+              ) : (
+                searchResults.map((appt, index) => {
+                  const initials = (appt.name || '?').split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase();
+                  const avatarColors = ['bg-blue-100 text-blue-700','bg-violet-100 text-violet-700','bg-emerald-100 text-emerald-700','bg-amber-100 text-amber-700','bg-rose-100 text-rose-700','bg-cyan-100 text-cyan-700'];
+                  const color = avatarColors[index % avatarColors.length];
+                  return (
+                    <button
+                      key={appt._id}
+                      onClick={() => {
+                        if (typeof appt.date === 'string') {
+                          setSelectedDate(appt.date);
+                          const d = new Date(appt.date);
+                          setCurrentMonthDate(new Date(d.getFullYear(), d.getMonth(), 1));
+                        }
+                        setIsSearchOpen(false);
+                        setSearchQuery('');
+                      }}
+                      className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:border-blue-200 transition text-left w-full"
+                    >
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${color}`}>
+                        {initials}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-gray-900 text-sm truncate">{appt.name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-gray-500 flex items-center gap-1">
+                            <CalendarIcon className="w-3 h-3" />
+                            {typeof appt.date === 'string' ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(appt.date)) : '—'}
+                          </span>
+                          {typeof appt.time === 'string' && (
+                            <span className="text-xs text-blue-600 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />{appt.time}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
+              )
+            ) : isSearchOpen ? (
+              <div className="py-10 text-center text-gray-400">
+                <Search className="w-10 h-10 mx-auto mb-2 text-gray-200" />
+                <p className="text-sm">Start typing to search</p>
+              </div>
+            ) : appointmentsForDate === undefined ? (
               <div className="py-10 text-center">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
               </div>
@@ -274,37 +389,74 @@ export default function AppointmentsPage() {
                 <button onClick={() => handleOpenModal()} className="mt-4 text-blue-600 font-medium hover:underline text-sm">Create one now</button>
               </div>
             ) : (
-              appointmentsForDate.map((appt) => (
-                <div key={appt._id} className="p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-md hover:border-blue-100 transition-all group relative">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-1.5 text-blue-700 font-semibold">
-                      <Clock className="w-4 h-4" />
-                      {appt.time}
+              appointmentsForDate.map((appt, index) => {
+                const initials = (appt.name || '?').split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase();
+                const avatarColors = [
+                  'bg-blue-100 text-blue-700',
+                  'bg-violet-100 text-violet-700',
+                  'bg-emerald-100 text-emerald-700',
+                  'bg-amber-100 text-amber-700',
+                  'bg-rose-100 text-rose-700',
+                  'bg-cyan-100 text-cyan-700',
+                ];
+                const accentColors = ['border-blue-400', 'border-violet-400', 'border-emerald-400', 'border-amber-400', 'border-rose-400', 'border-cyan-400'];
+                const color = avatarColors[index % avatarColors.length];
+                const accent = accentColors[index % accentColors.length];
+
+                return (
+                  <div key={appt._id} className={`rounded-xl bg-white border border-gray-100 shadow-sm border-l-4 ${accent} hover:shadow-md transition-all group`}>
+                    {/* Top row: time + actions */}
+                    <div className="flex items-center justify-between px-4 pt-3 pb-2">
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-blue-500" />
+                        <span className="text-sm font-bold text-blue-600 tracking-tight">{appt.time}</span>
+                        {appt.duration_minutes && (
+                          <span className="text-xs text-gray-400 font-medium">· {appt.duration_minutes}min</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => handleOpenModal(appt)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition"
+                          title="Edit"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(appt._id)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleOpenModal(appt)} className="text-sm text-blue-600 hover:text-blue-800">Edit</button>
-                      <button onClick={() => handleDelete(appt._id)} className="text-sm text-red-600 hover:text-red-800">Delete</button>
+
+                    {/* Patient info */}
+                    <div className="flex items-center gap-3 px-4 pb-3">
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${color}`}>
+                        {initials}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-gray-900 text-sm leading-tight truncate">{appt.name}</p>
+                        <a href={`tel:${appt.phone}`} className="text-xs text-gray-500 hover:text-blue-600 transition flex items-center gap-1 mt-0.5">
+                          <Phone className="w-3 h-3" />{appt.phone}
+                        </a>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2 text-gray-800 font-medium">
-                      <User className="w-4 h-4 text-gray-400" />
-                      {appt.name}
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-600 text-sm">
-                      <Phone className="w-4 h-4 text-gray-400" />
-                      {appt.phone}
-                    </div>
+
+                    {/* Dental problem tag */}
                     {appt.dental_problem && (
-                      <div className="flex flex-start gap-2 text-gray-600 text-sm mt-2 pt-2 border-t border-gray-200/60">
-                        <Stethoscope className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
-                        <span className="line-clamp-2">{appt.dental_problem}</span>
+                      <div className="px-4 pb-3">
+                        <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-600 rounded-full px-2.5 py-1">
+                          <Stethoscope className="w-3 h-3 shrink-0" />
+                          <span className="truncate max-w-[180px]">{appt.dental_problem}</span>
+                        </span>
                       </div>
                     )}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
