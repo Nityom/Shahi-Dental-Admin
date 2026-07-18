@@ -25,12 +25,12 @@ const DantsriAdminLogin: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     // Simulate API call - replace with your actual auth logic
     try {
       // Mock login - replace with actual API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // Login success logic would go here
       console.log('Login successful', formData);
       // Redirect to dashboard or other authenticated page
@@ -55,9 +55,9 @@ const DantsriAdminLogin: React.FC = () => {
             <rect x="52" y="35" width="4" height="25" rx="2" fill="white" />
             <rect x="60" y="40" width="4" height="20" rx="2" fill="white" />
           </svg>
-          <h1 className="text-4xl font-bold text-white mb-6">KS Dental & Aesthetic Clinic</h1>
+          <h1 className="text-4xl font-bold text-white mb-6">Shahi Dental Clinic</h1>
           <p className="text-gray-300 text-lg leading-relaxed mb-8">
-            Welcome to the KS Dental & Aesthetic Clinic administration portal. Manage appointments, patient records, and clinic operations with ease.
+            Welcome to the Shahi Dental Clinic administration portal. Manage appointments, patient records, and clinic operations with ease.
           </p>
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-black p-4 rounded-lg border border-gray-800 shadow-lg transform transition-all duration-300 hover:scale-105 hover:border-white group">
@@ -78,7 +78,7 @@ const DantsriAdminLogin: React.FC = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Right side - login form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="w-full max-w-md">
@@ -89,7 +89,7 @@ const DantsriAdminLogin: React.FC = () => {
             </div>
             <p className="text-gray-600 mt-4">Enter your credentials to access the dashboard</p>
           </div>
-          
+
           {error && (
             <div className="mb-6 bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-r-md shadow-md flex items-center justify-between">
               <div className="flex items-center">
@@ -101,7 +101,7 @@ const DantsriAdminLogin: React.FC = () => {
               </button>
             </div>
           )}
-          
+
           <form onSubmit={handleSubmit} className="space-y-8 bg-white p-8 rounded-xl shadow-xl border border-gray-100">
             <div className="space-y-2">
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -124,7 +124,7 @@ const DantsriAdminLogin: React.FC = () => {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                 Password
@@ -165,7 +165,7 @@ const DantsriAdminLogin: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center">
               <div className="flex items-center">
                 <input
@@ -179,7 +179,7 @@ const DantsriAdminLogin: React.FC = () => {
                 </label>
               </div>
             </div>
-            
+
             <div>
               <button
                 type="submit"
@@ -194,7 +194,7 @@ const DantsriAdminLogin: React.FC = () => {
               </button>
             </div>
           </form>
-          
+
           <div className="mt-10">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -204,7 +204,7 @@ const DantsriAdminLogin: React.FC = () => {
                 <span className="px-4 bg-gray-50 text-gray-500 rounded-full">Need help?</span>
               </div>
             </div>
-            
+
             <div className="mt-6 text-center">
               <span className="text-sm text-gray-500">
                 Contact system administrator at{' '}

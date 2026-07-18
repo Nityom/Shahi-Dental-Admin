@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "KS Dental & Aesthetics",
+  title: "Shahi Dental Clinic",
   icons: {
-    icon: "/dental_logo.svg",
+    icon: "/dental_logo.webp",
   },
 };
 

@@ -52,7 +52,7 @@ export default function ResetPassword() {
     try {
       await updatePassword(password, token);
       setSuccess(true);
-      
+
       // Redirect to login after 3 seconds
       setTimeout(() => {
         router.push("/auth/login");
@@ -81,16 +81,16 @@ export default function ResetPassword() {
           transition={{ duration: 0.7 }}
           className="relative"
         >
-          <motion.div 
+          <motion.div
             initial={{ scale: 0.95 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 120, damping: 15 }}
             className="mb-8 flex justify-center"
           >
-            <Image 
-            src="/dental_logo.svg" 
-              alt="Shahi Dental Clinic Logo" 
-              width={190} 
+            <Image
+              src="/dental_logo.webp"
+              alt="Shahi Dental Clinic Logo"
+              width={190}
               height={95}
               className="object-contain drop-shadow-lg"
               onError={(e) => {
@@ -104,7 +104,7 @@ export default function ResetPassword() {
             <div className="relative z-10 bg-white/95 shadow-xl rounded-2xl border border-white/40">
               {/* Enhanced gradient top bar */}
               <div className="h-2 bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-600"></div>
-              
+
               <CardHeader className="pt-6 pb-4 px-8">
                 <motion.div
                   initial={{ opacity: 0 }}
@@ -113,7 +113,7 @@ export default function ResetPassword() {
                   className="text-center"
                 >
                   <div className="flex justify-center mb-3">
-                    <motion.div 
+                    <motion.div
                       whileHover={{ rotate: [0, -5, 5, -5, 5, 0], transition: { duration: 0.5 } }}
                       className="w-16 h-16 rounded-full bg-gradient-to-br from-teal-500 to-blue-600 flex items-center justify-center shadow-lg"
                     >
@@ -128,7 +128,7 @@ export default function ResetPassword() {
                   </CardDescription>
                 </motion.div>
               </CardHeader>
-              
+
               <CardContent className="px-8 py-4">
                 {success ? (
                   <motion.div
@@ -146,7 +146,7 @@ export default function ResetPassword() {
                         Your password has been updated successfully. You will be redirected to the login page shortly.
                       </p>
                       <div className="mt-4">
-                        <Button 
+                        <Button
                           onClick={() => router.push("/auth/login")}
                           className="bg-teal-500 hover:bg-teal-600 text-white font-medium rounded-xl px-4 py-2 text-sm transition-colors"
                         >
@@ -156,8 +156,8 @@ export default function ResetPassword() {
                     </div>
                   </motion.div>
                 ) : (
-                  <motion.form 
-                    onSubmit={handleSubmit} 
+                  <motion.form
+                    onSubmit={handleSubmit}
                     className="space-y-4"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -174,7 +174,7 @@ export default function ResetPassword() {
                         </Alert>
                       </motion.div>
                     )}
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="password" className="text-sm font-medium text-gray-700 flex items-center">
                         <Lock className="h-4 w-4 mr-2 text-teal-500" />
@@ -193,7 +193,7 @@ export default function ResetPassword() {
                       </div>
                       <p className="text-xs text-gray-500 mt-1">Must be at least 8 characters</p>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 flex items-center">
                         <Lock className="h-4 w-4 mr-2 text-teal-500" />
@@ -211,14 +211,14 @@ export default function ResetPassword() {
                         <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-teal-400/0 via-blue-400/0 to-indigo-400/0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 -z-10"></div>
                       </div>
                     </div>
-                    
+
                     <motion.div
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       className="mt-6"
                     >
-                      <Button 
-                        type="submit" 
+                      <Button
+                        type="submit"
                         className="w-full bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-600 hover:to-blue-700 text-white h-11 shadow-xl hover:shadow-2xl transition-all duration-300 rounded-xl font-medium overflow-hidden relative"
                         disabled={loading}
                       >
@@ -240,9 +240,9 @@ export default function ResetPassword() {
                   </motion.form>
                 )}
               </CardContent>
-              
+
               {!success && (
-                <motion.div 
+                <motion.div
                   className="px-8 py-4 flex justify-center"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -257,7 +257,7 @@ export default function ResetPassword() {
                   </div>
                 </motion.div>
               )}
-              
+
               <CardFooter className="py-3 flex justify-between bg-gradient-to-r from-gray-50 to-blue-50/30 px-8 text-xs text-gray-500">
                 <motion.p
                   initial={{ opacity: 0 }}
@@ -275,7 +275,7 @@ export default function ResetPassword() {
                   transition={{ delay: 0.7, duration: 0.5 }}
                   className="text-gray-400"
                 >
-                  © 2025 KS Dental & Aesthetics Dental
+                  © 2025 Shahi Dental Clinic Dental
                 </motion.p>
               </CardFooter>
             </div>

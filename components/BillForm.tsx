@@ -79,7 +79,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
   const [billSaved, setBillSaved] = useState(false);
   const [savedBillId, setSavedBillId] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
-  
+
   // Basic bill information
   const [billData, setBillData] = useState({
     patientId: '',
@@ -95,12 +95,12 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
 
   // Bill items including procedures, medicines, etc.
   const [billItems, setBillItems] = useState<BillItem[]>([]);
-  
+
   // State for PDF generation and stock updates
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [generatedPdf, setGeneratedPdf] = useState(false);
   const [stockUpdateResults] = useState<StockUpdateResult[]>([]);
-  
+
   // State for handling new procedure
   const [newProcedure, setNewProcedure] = useState({
     description: '',
@@ -157,7 +157,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
       setGeneratedPdf(false);
       const fullBillData = {
         clinic: {
-          name: "KS Dental & Aesthetics",
+          name: "Shahi Dental Clinic",
         },
         patient: {
           ...patientData,
@@ -231,9 +231,9 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
       setSaveError(null);
 
       const paidAmount = parseFloat(String(billData.amountPaid)) || 0;
-      
-      const paymentStatus = paidAmount >= totals.totalAmount ? 'PAID' : 
-                           paidAmount > 0 ? 'PARTIAL' : 'PENDING';
+
+      const paymentStatus = paidAmount >= totals.totalAmount ? 'PAID' :
+        paidAmount > 0 ? 'PARTIAL' : 'PENDING';
 
       const allBillItems = [
         ...billItems,
@@ -251,7 +251,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
       if (!patientData.reference_number) {
         throw new Error('Patient reference number is missing. Please save the prescription first before generating a bill.');
       }
-      
+
       try {
         const patient = await getPatientByReference(patientData.reference_number);
         if (patient && patient.id) {
@@ -263,7 +263,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
         console.error('Error getting patient by reference:', error);
         throw new Error('Cannot create bill: Failed to retrieve patient information. Please refresh the page and try again.');
       }
-      
+
       if (!effectivePatientId) {
         throw new Error('Cannot create bill: Patient ID could not be determined.');
       }
@@ -284,12 +284,12 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
         notes: notes || '',
         updated_at: new Date().toISOString()
       };
-      
+
       console.log('Creating bill with data:', billUpdateData);
 
       let savedBill;
       let existingBill = null;
-      
+
       try {
         existingBill = await getBillByPrescriptionId(prescriptionId);
       } catch (error) {
@@ -312,7 +312,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
       if (savedBill.bill_number) {
         setBillData(prev => ({ ...prev, billNumber: savedBill.bill_number! }));
       }
-      
+
       // Update form state with saved data
       if (savedBill && Array.isArray(savedBill.items)) {
         setBillItems(
@@ -326,10 +326,10 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
               total: parseFloat(String(item.total || (item.quantity * item.unit_price)))
             }))
         );
-        
+
         const consultFee = savedBill.items
           .find((item: BillItemFromDB) => item.itemType === 'consultation');
-          
+
         setBillData(prev => ({
           ...prev,
           consultationFee: parseFloat(String(consultFee?.unit_price || 500)),
@@ -352,7 +352,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
   // Handle input changes for form fields
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
+
     if (name === 'discount') {
       const discountValue = parseFloat(value) || 0;
       // Limit discount to 0-100%
@@ -377,15 +377,15 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
         ...prev,
         [name]: clampedAmount,
         paymentStatus: clampedAmount >= totalAmount ? 'Full Payment' :
-                      clampedAmount > 0 ? 'Partial Payment' : 'Payment Pending'
+          clampedAmount > 0 ? 'Partial Payment' : 'Payment Pending'
       }));
     } else if (name === 'paymentStatus') {
       const { totalAmount } = calculateTotals();
       setBillData(prev => ({
         ...prev,
         [name]: value,
-        amountPaid: value === 'Full Payment' ? totalAmount : 
-                    value === 'Payment Pending' ? 0 : prev.amountPaid
+        amountPaid: value === 'Full Payment' ? totalAmount :
+          value === 'Payment Pending' ? 0 : prev.amountPaid
       }));
     } else {
       setBillData(prev => ({
@@ -398,7 +398,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
   // Handle changes in new procedure form
   const handleNewProcedureChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
+
     if (name === 'description') {
       // If selecting from dropdown, update price too
       const selectedProcedure = defaultDentalProcedures.find(proc => proc.name === value);
@@ -523,13 +523,12 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
           <h4 className="font-medium text-blue-800 mb-2">Medicine Stock Update Status:</h4>
           <div className="space-y-2">
             {stockUpdateResults.map((result, index) => (
-              <div 
-                key={index} 
-                className={`p-2 rounded ${
-                  result.status === 'success' ? 'bg-green-100 text-green-700' :
-                  result.status === 'warning' ? 'bg-yellow-100 text-yellow-700' :
-                  'bg-red-100 text-red-700'
-                }`}
+              <div
+                key={index}
+                className={`p-2 rounded ${result.status === 'success' ? 'bg-green-100 text-green-700' :
+                    result.status === 'warning' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-red-100 text-red-700'
+                  }`}
               >
                 <p className="font-medium">{result.name}: {result.message}</p>
                 {result.medicine && (
@@ -544,9 +543,9 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
       <div className="grid grid-cols-1 gap-8">
         {/* Clinic Information */}
         <div className="bg-blue-50 p-6 rounded-lg border border-blue-100">
-          <div className="flex justify-between items-center">            <div>              <h3 className="text-2xl font-bold text-blue-800">KS Dental & Aesthetics</h3>
-              <p className="text-gray-600">Professional Dental Care Services</p>
-            </div>
+          <div className="flex justify-between items-center">            <div>              <h3 className="text-2xl font-bold text-blue-800">Shahi Dental Clinic</h3>
+            <p className="text-gray-600">Professional Dental Care Services</p>
+          </div>
             <div className="text-right">
               <p><strong>Bill No:</strong> {billData.billNumber}</p>
               <p><strong>Date:</strong> {new Date(billData.billDate).toLocaleDateString()}</p>
@@ -558,15 +557,15 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
         <div className="bg-green-50 p-6 rounded-lg border border-green-100">
           <h3 className="text-xl font-semibold mb-4 text-green-800">Patient Information</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">            <div>
-              <p><strong>Name:</strong> {patientData.name}</p>
-              <p><strong>Age/Sex:</strong> {patientData.age} / {patientData.sex}</p>
-              <p><strong>Visit Date:</strong> {new Date(patientData.date).toLocaleDateString()}</p>
-              {patientData.reference_number && (
-                <p className="mt-2 font-medium text-blue-700">
-                  <strong>Patient Reference:</strong> {patientData.reference_number}
-                </p>
-              )}
-            </div>
+            <p><strong>Name:</strong> {patientData.name}</p>
+            <p><strong>Age/Sex:</strong> {patientData.age} / {patientData.sex}</p>
+            <p><strong>Visit Date:</strong> {new Date(patientData.date).toLocaleDateString()}</p>
+            {patientData.reference_number && (
+              <p className="mt-2 font-medium text-blue-700">
+                <strong>Patient Reference:</strong> {patientData.reference_number}
+              </p>
+            )}
+          </div>
             <div>
 
               <label className="block text-sm font-medium text-gray-700 mt-4 mb-1">Contact Details</label>
@@ -609,7 +608,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
         {/* Bill Items Table */}
         <div className="bg-amber-50 p-6 rounded-lg border border-amber-100">
           <h3 className="text-xl font-semibold mb-4 text-amber-800">Bill Items</h3>
-          
+
           {/* Add New Procedure Section */}
           <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200">
             <h4 className="font-medium text-gray-700 mb-3">Add Dental Procedure</h4>
@@ -628,13 +627,13 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
                   ))}
                   <option value="Custom">Custom Procedure</option>
                 </select>
-                
+
                 {newProcedure.description === 'Custom' && (
                   <input
                     type="text"
                     placeholder="Enter custom procedure name"
                     className="mt-2 block w-full p-3 border border-gray-300 rounded-lg"
-                    onChange={(e) => setNewProcedure({...newProcedure, description: e.target.value})}
+                    onChange={(e) => setNewProcedure({ ...newProcedure, description: e.target.value })}
                   />
                 )}
               </div>
@@ -672,7 +671,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
               </div>
             </div>
           </div>
-          
+
           {/* Items Table */}
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 border">
@@ -691,26 +690,26 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
                   <tr key={item.id}>
                     <td className="px-4 py-3 whitespace-nowrap">{index + 1}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <input 
-                        type="text" 
-                        value={item.description} 
+                      <input
+                        type="text"
+                        value={item.description}
                         onChange={(e) => updateBillItem(item.id, 'description', e.target.value)}
                         className="w-full p-1 border border-gray-300 rounded"
                       />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <input 
-                        type="number" 
-                        value={item.quantity} 
+                      <input
+                        type="number"
+                        value={item.quantity}
                         onChange={(e) => updateBillItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
                         className="w-20 p-1 border border-gray-300 rounded"
                         min="1"
                       />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <input 
-                        type="number" 
-                        value={item.unitPrice} 
+                      <input
+                        type="number"
+                        value={item.unitPrice}
                         onChange={(e) => updateBillItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
                         className="w-24 p-1 border border-gray-300 rounded"
                         min="0"
@@ -720,7 +719,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
                       {item.total.toFixed(2)}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <button 
+                      <button
                         onClick={() => removeBillItem(item.id)}
                         className="text-red-600 hover:text-red-900 focus:outline-none"
                       >
@@ -729,7 +728,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
                     </td>
                   </tr>
                 ))}
-                
+
                 {/* Consultation Fee Row */}
                 <tr className="bg-blue-50">
                   <td className="px-4 py-3 whitespace-nowrap">{billItems.length + 1}</td>
@@ -748,10 +747,10 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
                 <tr>
                   <td colSpan={3} className="px-4 py-3 text-right font-medium">Discount:</td>
                   <td className="px-4 py-3">
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       name="discount"
-                      value={billData.discount} 
+                      value={billData.discount}
                       onChange={handleInputChange}
                       className="w-16 p-1 border border-gray-300 rounded text-right"
                       min="0"
@@ -772,9 +771,8 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
                   <td colSpan={4} className="px-4 py-3 text-right font-bold">
                     {billData.amountPaid >= (totals.subtotal - totals.discountAmount) ? "Balance:" : "Balance Due:"}
                   </td>
-                  <td colSpan={2} className={`px-4 py-3 font-bold text-lg ${
-                    billData.amountPaid >= (totals.subtotal - totals.discountAmount) ? "text-green-600" : "text-red-600"
-                  }`}>
+                  <td colSpan={2} className={`px-4 py-3 font-bold text-lg ${billData.amountPaid >= (totals.subtotal - totals.discountAmount) ? "text-green-600" : "text-red-600"
+                    }`}>
                     ₹ {Math.max((totals.subtotal - totals.discountAmount) - billData.amountPaid, 0).toFixed(2)}
                   </td>
                 </tr>
@@ -811,7 +809,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
                 className="mt-1 block w-full p-3 border border-gray-300 rounded-lg"
               />
             </div>
-            
+
             {/* Payment Status Dropdown */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Payment Status</label>
@@ -826,7 +824,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
                 <option value="Payment Pending">Payment Pending</option>
               </select>
             </div>
-            
+
             {/* Amount Paid - only visible if Partial Payment is selected */}
             {billData.paymentStatus === 'Partial Payment' && (
               <div>
@@ -938,24 +936,24 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
             <p className="mt-1 text-sm text-green-600">You can now print or download the bill.</p>
           </div>
         )}
-        
+
         {saveError && (
           <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
             {saveError}
           </div>
         )}
       </div>
-      
+
       {/* Hidden iframe for PDF preview/loading */}
       {pdfUrl && (
         <div className="hidden">
-          <iframe 
-            src={pdfUrl} 
+          <iframe
+            src={pdfUrl}
             title="Bill PDF"
           />
         </div>
       )}
-    </div>  );
+    </div>);
 };
 
 export default BillForm;

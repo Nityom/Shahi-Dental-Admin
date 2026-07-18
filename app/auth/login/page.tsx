@@ -120,7 +120,7 @@ export default function LoginForm() {
           <div className="absolute top-1/3 left-1/3 w-72 h-72 rounded-full bg-cyan-300/10 blur-2xl" />
         </div>
 
-       
+
         {/* Card */}
         <motion.div
           initial={{ opacity: 0, y: 28 }}
@@ -142,7 +142,7 @@ export default function LoginForm() {
               </div>
               <div>
                 <h1 className="font-playfair text-white text-2xl font-bold leading-snug mb-2">
-                  KS Dental & Aesthetic Clinic
+                  Shahi Dental Clinic
                 </h1>
                 <p className="text-white/55 text-sm font-light leading-relaxed">
                   Secure administrative portal for managing your clinic's daily operations.
@@ -173,8 +173,8 @@ export default function LoginForm() {
               {/* Logo */}
               <div className="flex justify-center mb-7">
                 <Image
-                  src="/dental_logo.svg"
-                  alt="KS Dental & Aesthetic Clinic"
+                  src="/dental_logo.webp"
+                  alt="Shahi Dental Clinic"
                   width={120}
                   height={72}
                   className="object-contain"
@@ -367,7 +367,7 @@ export default function LoginForm() {
             {/* Footer */}
             <div className="flex justify-between items-center px-10 py-3 bg-gradient-to-r from-gray-50 to-blue-50/30 border-t border-gray-100 text-[11px] text-[#afc5d9]">
               <span>Developed by Nityom Tikhe</span>
-              <span>© 2026 KS Dental & Aesthetic Clinic</span>
+              <span>© 2026 Shahi Dental Clinic</span>
             </div>
           </div>
 

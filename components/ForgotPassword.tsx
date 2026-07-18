@@ -52,16 +52,16 @@ export default function ForgotPassword() {
           transition={{ duration: 0.7 }}
           className="relative"
         >
-          <motion.div 
+          <motion.div
             initial={{ scale: 0.95 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 120, damping: 15 }}
             className="mb-8 flex justify-center"
           >
-            <Image 
-              src="/dental_logo.svg" 
-              alt="KS Dental & Aesthetics Logo" 
-              width={190} 
+            <Image
+              src="/dental_logo.webp"
+              alt="Shahi Dental Clinic Logo"
+              width={190}
               height={95}
               className="object-contain drop-shadow-lg"
               onError={(e) => {
@@ -75,7 +75,7 @@ export default function ForgotPassword() {
             <div className="relative z-10 bg-white/95 shadow-xl rounded-2xl border border-white/40">
               {/* Enhanced gradient top bar */}
               <div className="h-2 bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-600"></div>
-              
+
               <CardHeader className="pt-6 pb-4 px-8">
                 <motion.div
                   initial={{ opacity: 0 }}
@@ -84,7 +84,7 @@ export default function ForgotPassword() {
                   className="text-center"
                 >
                   <div className="flex justify-center mb-3">
-                    <motion.div 
+                    <motion.div
                       whileHover={{ rotate: [0, -5, 5, -5, 5, 0], transition: { duration: 0.5 } }}
                       className="w-16 h-16 rounded-full bg-gradient-to-br from-teal-500 to-blue-600 flex items-center justify-center shadow-lg"
                     >
@@ -99,10 +99,10 @@ export default function ForgotPassword() {
                   </CardDescription>
                 </motion.div>
               </CardHeader>
-              
+
               <CardContent className="px-8 py-4">
-                <motion.form 
-                  onSubmit={handleSubmit} 
+                <motion.form
+                  onSubmit={handleSubmit}
                   className="space-y-4"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -119,7 +119,7 @@ export default function ForgotPassword() {
                       </Alert>
                     </motion.div>
                   )}
-                  
+
                   {success && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
@@ -136,7 +136,7 @@ export default function ForgotPassword() {
                       </Alert>
                     </motion.div>
                   )}
-                  
+
                   {!success && (
                     <>
                       <div className="space-y-2">
@@ -157,14 +157,14 @@ export default function ForgotPassword() {
                           <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-teal-400/0 via-blue-400/0 to-indigo-400/0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 -z-10"></div>
                         </div>
                       </div>
-                      
+
                       <motion.div
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         className="mt-6"
                       >
-                        <Button 
-                          type="submit" 
+                        <Button
+                          type="submit"
                           className="w-full bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-600 hover:to-blue-700 text-white h-11 shadow-xl hover:shadow-2xl transition-all duration-300 rounded-xl font-medium overflow-hidden relative"
                           disabled={loading}
                         >
@@ -187,8 +187,8 @@ export default function ForgotPassword() {
                   )}
                 </motion.form>
               </CardContent>
-              
-              <motion.div 
+
+              <motion.div
                 className="px-8 py-4 flex justify-center"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -201,7 +201,7 @@ export default function ForgotPassword() {
                   </Link>
                 </div>
               </motion.div>
-              
+
               <CardFooter className="py-3 flex justify-between bg-gradient-to-r from-gray-50 to-blue-50/30 px-8 text-xs text-gray-500">
                 <motion.p
                   initial={{ opacity: 0 }}
@@ -219,7 +219,7 @@ export default function ForgotPassword() {
                   transition={{ delay: 0.7, duration: 0.5 }}
                   className="text-gray-400"
                 >
-                  © 2025 KS Dental & Aesthetics 
+                  © 2025 Shahi Dental Clinic
                 </motion.p>
               </CardFooter>
             </div>

@@ -186,23 +186,23 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
                 ORIGINAL FOR RECIPIENT
               </div>
             </div>
-            
+
           </div>
 
           <div className="mt-6 text-center">
             <div className="flex items-center justify-center mb-3">
-              <img 
-                src="/dental_logo.svg" 
-                alt="KS Dental Logo" 
+              <img
+                src="/dental_logo.webp"
+                alt="KS Dental Logo"
                 className="h-16 w-16 mr-3 logo-print"
               />
               <h1 className="text-4xl font-bold">
-                <span className="ks-grey" style={{color: '#6B7280'}}>KS</span>
-                <span className="clinic-blue" style={{color: '#1E63D5'}}> Dental & Aesthetic Clinic</span>
+                <span className="ks-grey" style={{ color: '#6B7280' }}>KS</span>
+                <span className="clinic-blue" style={{ color: '#1E63D5' }}> Dental & Aesthetic Clinic</span>
               </h1>
             </div>
             <p className="text-xs text-gray-700">
-             Kalambagh road, Lenin Chowk, Muzaffarpur, Bihar 842001, India 
+              Kalambagh road, Lenin Chowk, Muzaffarpur, Bihar 842001, India
             </p>
             <p className="text-xs text-gray-700 mt-1">Mobile: 9525048993 &nbsp;|&nbsp; Reg. No. 7329/A</p>
           </div>
@@ -336,15 +336,15 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
           <div className="flex justify-end">
             <div className="text-center">
               <div className="mb-4 h-20 flex items-center justify-center">
-                <img 
-                  src={`/${signature}`} 
-                  alt="Signature" 
+                <img
+                  src={`/${signature}`}
+                  alt="Signature"
                   className="max-h-16 w-auto object-contain"
                 />
               </div>
               <div className="border-t border-gray-800 pt-2 text-sm font-semibold">
                 <div>{doctorName}</div>
-                <div>KS Dental & Aesthetic Clinic</div>
+                <div>Shahi Dental Clinic</div>
               </div>
             </div>
           </div>
