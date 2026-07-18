@@ -167,6 +167,11 @@ export default defineSchema({
     phone: v.optional(v.string()),
     date: v.optional(v.string()), // YYYY-MM-DD
     time: v.optional(v.string()), // HH:mm
+    // legacy field – kept temporarily for migration
+    dentalProblem: v.optional(v.string()),
+    full_name: v.optional(v.string()),
+    appointment_date: v.optional(v.string()),
+    appointment_time: v.optional(v.string()),
     doctor_name: v.optional(v.string()),
     duration_minutes: v.optional(v.number()),
     dental_problem: v.optional(v.string()),

@@ -1,6 +1,42 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
+/** One-time migration – run via: npx convex run appointments:migrateFields */
+export const migrateFields = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("appointments").collect();
+    let migrated = 0;
+    for (const doc of all) {
+      const raw = doc as Record<string, unknown>;
+      const hasLegacy =
+        "appointment_date" in raw ||
+        "appointment_time" in raw ||
+        "full_name" in raw ||
+        "dentalProblem" in raw;
+      if (!hasLegacy) continue;
+      await ctx.db.replace(doc._id, {
+        name: (raw.name ?? raw.full_name ?? undefined) as string | undefined,
+        phone: (raw.phone ?? undefined) as string | undefined,
+        date: (raw.date ?? raw.appointment_date ?? undefined) as string | undefined,
+        time: (raw.time ?? raw.appointment_time ?? undefined) as string | undefined,
+        doctor_name: (raw.doctor_name ?? undefined) as string | undefined,
+        duration_minutes: (raw.duration_minutes ?? undefined) as number | undefined,
+        dental_problem: (raw.dental_problem ?? raw.dentalProblem ?? undefined) as string | undefined,
+        status: (raw.status ?? undefined) as "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | undefined,
+        notes: (raw.notes ?? undefined) as string | undefined,
+        reminder_note: (raw.reminder_note ?? undefined) as string | undefined,
+        reminder_minutes_before: (raw.reminder_minutes_before ?? undefined) as number | undefined,
+        is_offline: (raw.is_offline ?? undefined) as boolean | undefined,
+        created_at: (raw.created_at ?? undefined) as number | undefined,
+        updated_at: (raw.updated_at ?? Date.now()) as number | undefined,
+      });
+      migrated++;
+    }
+    return { migrated };
+  },
+});
+
 export const getBookedSlots = query({
   args: {
     date: v.string(),
