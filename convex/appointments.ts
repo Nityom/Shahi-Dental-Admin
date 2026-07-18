@@ -3,27 +3,27 @@ import { mutation, query } from "./_generated/server";
 
 export const getBookedSlots = query({
   args: {
-    appointment_date: v.string(),
+    date: v.string(),
     doctor_name: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    let q = ctx.db.query("appointments").withIndex("by_date", (q) => q.eq("appointment_date", args.appointment_date));
+    let q = ctx.db.query("appointments").withIndex("by_date", (q) => q.eq("date", args.date));
     const appointments = await q.collect();
     
     // Filter out CANCELLED appointments and match doctor if provided
     return appointments
-      .filter((a) => typeof a.appointment_time === "string")
+      .filter((a) => typeof a.time === "string")
       .filter(a => !args.doctor_name || a.doctor_name === args.doctor_name)
-      .map(a => a.appointment_time);
+      .map(a => a.time);
   },
 });
 
 export const create = mutation({
   args: {
-    full_name: v.string(),
+    name: v.string(),
     phone: v.string(),
-    appointment_date: v.string(),
-    appointment_time: v.string(),
+    date: v.string(),
+    time: v.string(),
     doctor_name: v.optional(v.string()),
     duration_minutes: v.optional(v.number()),
     dental_problem: v.optional(v.string()),
@@ -36,8 +36,8 @@ export const create = mutation({
       .query("appointments")
       .withIndex("by_doctor_date_time", (q) => 
         q.eq("doctor_name", args.doctor_name)
-         .eq("appointment_date", args.appointment_date)
-         .eq("appointment_time", args.appointment_time)
+         .eq("date", args.date)
+         .eq("time", args.time)
       )
       .collect();
     
@@ -60,20 +60,20 @@ export const list = query({
   handler: async (ctx) => {
     return (await ctx.db.query("appointments").order("desc").collect()).filter(
       (appointment) =>
-        typeof appointment.full_name === "string" &&
+        typeof appointment.name === "string" &&
         typeof appointment.phone === "string" &&
-        typeof appointment.appointment_date === "string" &&
-        typeof appointment.appointment_time === "string",
+        typeof appointment.date === "string" &&
+        typeof appointment.time === "string",
     );
   },
 });
 
 export const getByDate = query({
-  args: { appointment_date: v.string() },
+  args: { date: v.string() },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("appointments")
-      .withIndex("by_date", (q) => q.eq("appointment_date", args.appointment_date))
+      .withIndex("by_date", (q) => q.eq("date", args.date))
       .collect();
   },
 });
@@ -88,10 +88,10 @@ export const getById = query({
 export const update = mutation({
   args: {
     id: v.id("appointments"),
-    full_name: v.optional(v.string()),
+    name: v.optional(v.string()),
     phone: v.optional(v.string()),
-    appointment_date: v.optional(v.string()),
-    appointment_time: v.optional(v.string()),
+    date: v.optional(v.string()),
+    time: v.optional(v.string()),
     doctor_name: v.optional(v.string()),
     duration_minutes: v.optional(v.number()),
     dental_problem: v.optional(v.string()),
@@ -105,19 +105,19 @@ export const update = mutation({
     const { id, ...updates } = args;
     
     // If we are changing date/time/doctor/status, we should check for double booking again
-    if (updates.appointment_date || updates.appointment_time || updates.doctor_name || updates.status) {
+    if (updates.date || updates.time || updates.doctor_name || updates.status) {
       const current = await ctx.db.get(id);
       if (!current) throw new Error("Appointment not found");
 
       if (
-        typeof current.appointment_date !== "string" ||
-        typeof current.appointment_time !== "string"
+        typeof current.date !== "string" ||
+        typeof current.time !== "string"
       ) {
         throw new Error("This legacy appointment must be opened and saved once before it can be rescheduled.");
       }
       
-      const newDate = updates.appointment_date ?? current.appointment_date;
-      const newTime = updates.appointment_time ?? current.appointment_time;
+      const newDate = updates.date ?? current.date;
+      const newTime = updates.time ?? current.time;
       const newDoctor = updates.doctor_name ?? current.doctor_name;
       const newStatus = updates.status ?? current.status;
       
@@ -125,8 +125,8 @@ export const update = mutation({
         .query("appointments")
         .withIndex("by_doctor_date_time", (q) => 
           q.eq("doctor_name", newDoctor)
-           .eq("appointment_date", newDate)
-           .eq("appointment_time", newTime)
+           .eq("date", newDate)
+           .eq("time", newTime)
         )
         .collect();
         

@@ -163,14 +163,10 @@ export default defineSchema({
     .index("by_date", ["payment_date"]),
 
   appointments: defineTable({
-    full_name: v.optional(v.string()),
-    phone: v.optional(v.string()),
-    appointment_date: v.optional(v.string()), // YYYY-MM-DD
-    appointment_time: v.optional(v.string()), // HH:mm
     name: v.optional(v.string()),
-    date: v.optional(v.string()),
-    time: v.optional(v.string()),
-    dentalProblem: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    date: v.optional(v.string()), // YYYY-MM-DD
+    time: v.optional(v.string()), // HH:mm
     doctor_name: v.optional(v.string()),
     duration_minutes: v.optional(v.number()),
     dental_problem: v.optional(v.string()),
@@ -182,9 +178,9 @@ export default defineSchema({
     created_at: v.optional(v.number()),
     updated_at: v.optional(v.number()),
   })
-    .index("by_date", ["appointment_date"])
+    .index("by_date", ["date"])
     .index("by_phone", ["phone"])
-    .index("by_doctor_date_time", ["doctor_name", "appointment_date", "appointment_time"]),
+    .index("by_doctor_date_time", ["doctor_name", "date", "time"]),
 
   reference_counter: defineTable({
     counter_id: v.number(), // Use 1 for the singleton

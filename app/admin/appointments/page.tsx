@@ -55,9 +55,9 @@ export default function AppointmentsPage() {
 
   // Form State
   const [formData, setFormData] = useState({
-    full_name: '',
+    name: '',
     phone: '',
-    appointment_time: '11:00',
+    time: '11:00',
     doctor_name: 'Dr. Kautilya Swaroop',
     duration_minutes: 30,
     dental_problem: '',
@@ -74,19 +74,19 @@ export default function AppointmentsPage() {
     if (!allAppointments) return undefined;
     return allAppointments
       .filter(
-        (a): a is (typeof a & { appointment_date: string; appointment_time: string }) =>
-          typeof a.appointment_date === 'string' && typeof a.appointment_time === 'string',
+        (a): a is (typeof a & { date: string; time: string }) =>
+          typeof a.date === 'string' && typeof a.time === 'string',
       )
-      .filter(a => a.appointment_date === selectedDate)
-      .sort((a, b) => a.appointment_time.localeCompare(b.appointment_time));
+      .filter(a => a.date === selectedDate)
+      .sort((a, b) => a.time.localeCompare(b.time));
   }, [allAppointments, selectedDate]);
 
   const appointmentsByDate = useMemo(() => {
     if (!allAppointments) return {};
     const acc: Record<string, number> = {};
     for (const a of allAppointments) {
-      if (typeof a.appointment_date !== 'string') continue;
-      acc[a.appointment_date] = (acc[a.appointment_date] || 0) + 1;
+      if (typeof a.date !== 'string') continue;
+      acc[a.date] = (acc[a.date] || 0) + 1;
     }
     return acc;
   }, [allAppointments]);
@@ -99,9 +99,9 @@ export default function AppointmentsPage() {
     if (appt) {
       setEditingId(appt._id);
       setFormData({
-        full_name: appt.full_name,
+        name: appt.name,
         phone: appt.phone,
-        appointment_time: appt.appointment_time,
+        time: appt.time,
         doctor_name: appt.doctor_name || 'Dr. Kautilya Swaroop',
         duration_minutes: appt.duration_minutes || 30,
         dental_problem: appt.dental_problem || '',
@@ -110,9 +110,9 @@ export default function AppointmentsPage() {
     } else {
       setEditingId(null);
       setFormData({
-        full_name: '',
+        name: '',
         phone: '',
-        appointment_time: '11:00',
+        time: '11:00',
         doctor_name: 'Dr. Kautilya Swaroop',
         duration_minutes: 30,
         dental_problem: '',
@@ -126,10 +126,10 @@ export default function AppointmentsPage() {
     e.preventDefault();
     try {
       const appointmentPayload = {
-        full_name: formData.full_name,
+        name: formData.name,
         phone: formData.phone,
-        appointment_date: selectedDate,
-        appointment_time: normalizeAppointmentTime(formData.appointment_time),
+        date: selectedDate,
+        time: normalizeAppointmentTime(formData.time),
         doctor_name: formData.doctor_name,
         duration_minutes: formData.duration_minutes,
         dental_problem: formData.dental_problem || undefined,
@@ -279,7 +279,7 @@ export default function AppointmentsPage() {
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-1.5 text-blue-700 font-semibold">
                       <Clock className="w-4 h-4" />
-                      {appt.appointment_time}
+                      {appt.time}
                     </div>
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => handleOpenModal(appt)} className="text-sm text-blue-600 hover:text-blue-800">Edit</button>
@@ -290,7 +290,7 @@ export default function AppointmentsPage() {
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2 text-gray-800 font-medium">
                       <User className="w-4 h-4 text-gray-400" />
-                      {appt.full_name}
+                      {appt.name}
                     </div>
                     <div className="flex items-center gap-2 text-gray-600 text-sm">
                       <Phone className="w-4 h-4 text-gray-400" />
@@ -324,7 +324,7 @@ export default function AppointmentsPage() {
               <div className="grid grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Name</label>
-                  <input required type="text" value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
+                  <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Phone</label>
@@ -334,7 +334,7 @@ export default function AppointmentsPage() {
               <div className="grid grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Time</label>
-                  <input required type="time" value={formData.appointment_time} onChange={e => setFormData({...formData, appointment_time: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
+                  <input required type="time" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Doctor</label>
