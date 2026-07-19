@@ -33,7 +33,7 @@ export const create = mutation({
         } else {
             await ctx.db.insert("reference_counter", { counter_id: 1, current_number: 1 });
         }
-        const reference_number = `KS${String(currentNumber + 1).padStart(4, "0")}`;
+        const reference_number = `SDC${String(currentNumber + 1).padStart(4, "0")}`;  
 
         const newPatientId = await ctx.db.insert("patients", {
             reference_number,
