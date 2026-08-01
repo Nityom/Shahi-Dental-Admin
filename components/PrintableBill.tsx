@@ -10,6 +10,7 @@ interface BillItem {
   unit?: string;
   total: number;
   itemType?: 'medicine' | 'procedure' | 'consultation' | 'other';
+  date?: string;
 }
 
 interface PaymentTransaction {
@@ -194,15 +195,15 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
               <img
                 src="/dental_logo.webp"
                 alt="KS Dental Logo"
-                className="h-16 w-16 mr-3 logo-print"
+                className="h-16  mr-3 logo-print"
               />
-              <h1 className="text-4xl font-bold">
+              {/* <h1 className="text-4xl font-bold">
                 <span className="ks-grey" style={{ color: '#6B7280' }}>KS</span>
                 <span className="clinic-blue" style={{ color: '#1E63D5' }}> Dental & Aesthetic Clinic</span>
-              </h1>
+              </h1> */}
             </div>
             <p className="text-xs text-gray-700">
-              Kalambagh road, Lenin Chowk, Muzaffarpur, Bihar 842001, India
+              Juran Chhapra Main Rd, in front of Road Number 2, Juran Chapra, Brahmapura, Muzaffarpur, Bihar 842001
             </p>
             <p className="text-xs text-gray-700 mt-1">Mobile: 9525048993 &nbsp;|&nbsp; Reg. No. 7329/A</p>
           </div>
@@ -245,6 +246,7 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
             <thead>
               <tr className="border-t-2 border-b-2 border-gray-800">
                 <th className="text-left py-2 px-2 text-sm font-semibold">ITEMS/SERVICES</th>
+                <th className="text-center py-2 px-2 text-sm font-semibold w-24">DATE</th>
                 <th className="text-center py-2 px-2 text-sm font-semibold w-24">QTY</th>
                 <th className="text-right py-2 px-2 text-sm font-semibold w-28">RATE</th>
                 <th className="text-right py-2 px-2 text-sm font-semibold w-32">AMOUNT</th>
@@ -254,6 +256,9 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
               {items.map((item, index) => (
                 <tr key={item.id || index} className="border-b border-gray-300">
                   <td className="py-2 px-2 text-sm">{item.description}</td>
+                  <td className="py-2 px-2 text-sm text-center">
+                    {item.date ? new Date(item.date).toLocaleDateString('en-GB') : '-'}
+                  </td>
                   <td className="py-2 px-2 text-sm text-center">
                     {item.quantity} {item.unit || (item.itemType === 'medicine' ? 'PCS' : 'EACH')}
                   </td>

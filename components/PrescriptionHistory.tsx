@@ -94,8 +94,10 @@ const PrescriptionHistory: React.FC<PrescriptionHistoryProps> = ({ prescriptions
                       <div className="mt-2">
                         <p className="text-sm font-medium text-indigo-700">Selected Teeth:</p>
                         <p className="text-gray-700">
-                          {prescription.selected_teeth.map((tooth: { id: number; type: string; disease?: string; }) => 
-                            `#${tooth.id} (${tooth.type})${tooth.disease ? ` - ${tooth.disease}` : ''}`
+                          {prescription.selected_teeth.map((tooth: { id: number; type: string; category?: string; disease?: string; }) => 
+                            tooth.category === 'General'
+                              ? (tooth.disease || '')
+                              : `#${tooth.id} (${tooth.type})${tooth.disease ? ` - ${tooth.disease}` : ''}`
                           ).join(', ')}
                         </p>
                       </div>

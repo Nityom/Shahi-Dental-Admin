@@ -156,14 +156,14 @@ export function BillSummary({ bill }: BillSummaryProps) {
           <Download className="h-4 w-4" />
           Download
         </Button>
-        <Button 
+        {/* <Button 
           onClick={handleGeneratePDF} 
           variant="outline" 
           className="flex items-center gap-2 text-gray-600"
         >
           <FileText className="h-4 w-4" />
           View PDF
-        </Button>
+        </Button> */}
       </div>
     </Card>
   );

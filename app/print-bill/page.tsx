@@ -21,6 +21,7 @@ interface BillItem {
   unit?: string;
   total: number;
   itemType?: 'medicine' | 'procedure' | 'consultation' | 'other';
+  date?: string;
 }
 
 interface BillData {
@@ -73,6 +74,7 @@ function PrintBillContent() {
               unit: item.unit || (item.item_type === 'medicine' || item.itemType === 'medicine' ? 'PCS' : 'EACH'),
               total: parseFloat(item.total) || (parseFloat(item.quantity) * parseFloat(item.unit_price ?? item.unitPrice)),
               itemType: item.itemType || item.item_type || 'other',
+              date: item.date,
             }))
           : [];
 

@@ -22,7 +22,7 @@ export type AuthUser = {
 };
 
 function buildOtpEmailHtml(otpCode: string, deliveryEmail: string, validityLabel: string): string {
-  const logoSrc = "https://www.ksdentalclinics.com/dental_logo.webp";
+  const logoSrc = "https://portal.shahidentalclinic.com/dental_logo_email.png";
   const digitBoxStyle =
     "display:inline-block;width:52px;height:62px;line-height:62px;" +
     "background:#ffffff;border:1.5px solid rgba(0,119,182,0.18);border-radius:12px;" +
@@ -48,13 +48,15 @@ function buildOtpEmailHtml(otpCode: string, deliveryEmail: string, validityLabel
     <div style="height:5px;background:linear-gradient(90deg,#00C9A7,#00B4D8,#0077B6);"></div>
 
     <div style="background:linear-gradient(150deg,#023E8A 0%,#0077B6 60%,#0096C7 100%);padding:36px 48px;text-align:center;">
-      <img
-        src="${logoSrc}"
-        alt="Shahi Dental Clinic"
-        width="130"
-        height="auto"
-        style="display:block;margin:0 auto 16px;max-width:130px;height:auto;"
-      />
+      <div style="display:inline-block;background:#ffffff;border-radius:14px;padding:12px 20px;margin:0 0 16px;">
+        <img
+          src="${logoSrc}"
+          alt="Shahi Dental Clinic"
+          width="130"
+          height="auto"
+          style="display:block;max-width:130px;height:auto;"
+        />
+      </div>
       <p style="margin:0 0 10px;font-size:11px;color:rgba(255,255,255,0.88);letter-spacing:0.18em;text-transform:uppercase;font-weight:700;">
         Secure Access
       </p>
@@ -217,7 +219,7 @@ export async function issueLoginOtp(user: AuthUser) {
 
 export async function createAndStoreSession(userId: string) {
   const rawSessionToken = createRandomToken();
-  const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+  const expiresAt = Date.now() + 10 * 60 * 60 * 1000;
 
   await convex.mutation(convexAuthFns.createAuthSession, {
     userId: userId as any,

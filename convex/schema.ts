@@ -111,6 +111,7 @@ export default defineSchema({
     cost_price: v.optional(v.number()),
     selling_price: v.optional(v.number()),
     company: v.optional(v.string()),
+    low_stock_threshold: v.optional(v.number()),
   }).index("by_name", ["name"]),
 
   inventory: defineTable({

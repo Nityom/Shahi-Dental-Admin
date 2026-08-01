@@ -7,7 +7,7 @@ import path from 'path';
 interface ToothData {
   id: number;
   type: string;
-  category: 'Permanent' | 'Deciduous';
+  category: string;
   disease?: string;
 }
 
@@ -25,15 +25,17 @@ interface PrescriptionData {
   date: string;
   cc: string;
   mh: string;
-  de: string;
+  oralExamination: string;
   advice: string;
   followupDate: string;
   medicines?: MedicineEntry[];
   dentalNotation: string;
-  clinicalNotes: string;
+  diagnosisNotes: string;
   selectedTeeth: ToothData[];
   investigation?: string;
   treatmentPlan?: string[];
+  treatmentPlanTotal?: number;
+  treatmentDone?: { description: string; date?: string }[];
   referenceNumber?: string;
 }
 
@@ -111,6 +113,7 @@ export async function POST(req: NextRequest) {
     // Build teeth string
     if (data.selectedTeeth && data.selectedTeeth.length > 0) {
       const teethInfo = data.selectedTeeth.map(tooth => {
+        if (tooth.category === 'General') return tooth.disease || '';
         const id = tooth.id.toString();
         const q = id[0];
         const n = parseInt(id.slice(1));
@@ -205,19 +208,28 @@ export async function POST(req: NextRequest) {
       y -= 6;
     }
 
-    if (data.de) drawSection('DIAGNOSIS', data.de);
+    if (data.oralExamination) drawSection('ORAL EXAMINATION', data.oralExamination);
     if (data.cc) drawSection('CHIEF COMPLAINT', data.cc);
     if (data.mh) drawSection('MEDICAL HISTORY', data.mh);
 
-    const oralParts: string[] = [];
-    if (data.dentalNotation) oralParts.push(`Teeth involved: ${data.dentalNotation}`);
-    if (data.clinicalNotes) oralParts.push(data.clinicalNotes);
-    if (oralParts.length > 0) drawSection('ORAL EXAMINATION', oralParts.join('; '));
+    const diagParts: string[] = [];
+    if (data.dentalNotation) diagParts.push(`Teeth involved: ${data.dentalNotation}`);
+    if (data.diagnosisNotes) diagParts.push(data.diagnosisNotes);
+    if (diagParts.length > 0) drawSection('DIAGNOSIS', diagParts.join('; '));
 
     if (data.investigation) drawSection('INVESTIGATION', data.investigation);
 
     if (data.treatmentPlan && data.treatmentPlan.length > 0) {
-      drawSection('TREATMENT PLAN', data.treatmentPlan.map((s, i) => `${i + 1}. ${s}`).join('\n'));
+      let planText = data.treatmentPlan.map((s, i) => `${i + 1}. ${s}`).join('\n');
+      if (data.treatmentPlanTotal) planText += `\nEstimated Cost: Rs.${data.treatmentPlanTotal}`;
+      drawSection('TREATMENT PLAN (ESTIMATE)', planText);
+    }
+
+    if (data.treatmentDone && data.treatmentDone.length > 0) {
+      const doneText = data.treatmentDone
+        .map((t, i) => `${i + 1}. ${t.description}${t.date ? ` (${formatDate(t.date)})` : ''}`)
+        .join('\n');
+      drawSection('TREATMENT DONE', doneText);
     }
 
     // Medications table

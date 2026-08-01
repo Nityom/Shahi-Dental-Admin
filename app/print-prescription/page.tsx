@@ -25,6 +25,7 @@ interface TreatmentItem {
   quantity: number;
   unit_price: number;
   total: number;
+  date?: string;
 }
 
 interface PrescriptionData {
@@ -322,15 +323,23 @@ function PrintPrescriptionContent() {
           </>
         )}
 
-        {/* ── ORAL EXAMINATION ── */}
-        {(prescriptionData.oral_exam_notes || (prescriptionData.selected_teeth && prescriptionData.selected_teeth.length > 0)) && (
+        {/* ── ORAL EXAMINATION (was Diagnosis D/E) ── */}
+        {prescriptionData.diagnosis && (
           <>
             <p className="sec-heading">ORAL EXAMINATION</p>
+            <p className="sec-body">{prescriptionData.diagnosis}</p>
+          </>
+        )}
+
+        {/* ── DIAGNOSIS (was Oral Examination: tooth chart + notes) ── */}
+        {(prescriptionData.oral_exam_notes || (prescriptionData.selected_teeth && prescriptionData.selected_teeth.length > 0)) && (
+          <>
+            <p className="sec-heading">DIAGNOSIS</p>
             {prescriptionData.selected_teeth && prescriptionData.selected_teeth.length > 0 && (
               <div className="sec-body">
                 {prescriptionData.selected_teeth.map((tooth, index) => (
                   <div key={index}>
-                    Tooth #{tooth.id} ({tooth.type}) – {tooth.disease}
+                    {tooth.category === 'General' ? tooth.disease : `Tooth #${tooth.id} (${tooth.type}) – ${tooth.disease}`}
                   </div>
                 ))}
               </div>
@@ -341,18 +350,10 @@ function PrintPrescriptionContent() {
           </>
         )}
 
-        {/* ── DIAGNOSIS ── */}
-        {prescriptionData.diagnosis && (
-          <>
-            <p className="sec-heading">DIAGNOSIS</p>
-            <p className="sec-body">{prescriptionData.diagnosis}</p>
-          </>
-        )}
-
-        {/* ── TREATMENT PLAN ── */}
+        {/* ── TREATMENT PLAN (Estimate) ── */}
         {prescriptionData.treatment_plan && prescriptionData.treatment_plan.length > 0 && (
           <>
-            <p className="sec-heading">TREATMENT PLAN</p>
+            <p className="sec-heading">TREATMENT PLAN (ESTIMATE)</p>
             <div className="sec-body">
               {prescriptionData.treatment_plan.map((step: any, index: number) => {
                 const name = typeof step === 'string' ? step : step.name || String(step);
@@ -360,6 +361,10 @@ function PrintPrescriptionContent() {
                 const notes = typeof step === 'object' && step.notes ? ` — ${step.notes}` : '';
                 return <div key={index}>{index + 1}. {name}{cost}{notes}</div>;
               })}
+              {(() => {
+                const total = prescriptionData.treatment_plan.reduce((sum: number, step: any) => sum + (typeof step === 'object' && step.cost ? Number(step.cost) : 0), 0);
+                return total > 0 ? <div style={{ fontWeight: 'bold', marginTop: 4 }}>Estimated Cost: ₹{total}</div> : null;
+              })()}
             </div>
           </>
         )}
@@ -370,7 +375,7 @@ function PrintPrescriptionContent() {
             <p className="sec-heading">TREATMENT DONE</p>
             <div className="sec-body">
               {prescriptionData.treatment_done.map((item, index) => (
-                <div key={index}>{index + 1}. {item.description}</div>
+                <div key={index}>{index + 1}. {item.description}{item.date ? ` (${formatDate(item.date)})` : ''}</div>
               ))}
             </div>
           </>

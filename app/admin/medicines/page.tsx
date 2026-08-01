@@ -11,7 +11,8 @@ export default function AddMedicinePage() {
     rate: 0,
     cost_price: 0,
     selling_price: 0,
-    company: ''
+    company: '',
+    low_stock_threshold: 10
   });
 
   const [medicines, setMedicines] = useState<Medicine[]>([]);
@@ -45,7 +46,7 @@ export default function AddMedicinePage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
 
-    if (name === 'quantity' || name === 'rate' || name === 'cost_price' || name === 'selling_price') {
+    if (name === 'quantity' || name === 'rate' || name === 'cost_price' || name === 'selling_price' || name === 'low_stock_threshold') {
       setFormData({
         ...formData,
         [name]: value === '' ? 0 : Number(value)
@@ -81,7 +82,8 @@ export default function AddMedicinePage() {
           rate: 0,
           cost_price: 0,
           selling_price: 0,
-          company: ''
+          company: '',
+          low_stock_threshold: 10
         });
         setEditMode(false);
         setEditingMedicine(null);
@@ -96,7 +98,8 @@ export default function AddMedicinePage() {
           rate: 0,
           cost_price: 0,
           selling_price: 0,
-          company: ''
+          company: '',
+          low_stock_threshold: 10
         });
       }
 
@@ -138,7 +141,8 @@ export default function AddMedicinePage() {
       rate: medicine.rate || 0,
       cost_price: medicine.cost_price || 0,
       selling_price: medicine.selling_price || 0,
-      company: medicine.company || ''
+      company: medicine.company || '',
+      low_stock_threshold: medicine.low_stock_threshold ?? 10
     });
     setEditMode(true);
     setEditingMedicine(medicine);
@@ -155,7 +159,8 @@ export default function AddMedicinePage() {
       rate: 0,
       cost_price: 0,
       selling_price: 0,
-      company: ''
+      company: '',
+      low_stock_threshold: 10
     });
     setError('');
     setEditMode(false);
@@ -200,6 +205,8 @@ export default function AddMedicinePage() {
       ? numA - numB
       : numB - numA;
   });
+
+  const lowStockItems = sortedMedicines.filter(med => med.quantity < (med.low_stock_threshold ?? 10));
 
   const renderSortIcon = (field: keyof Medicine) => {
     if (sortField !== field) return null;
@@ -301,6 +308,22 @@ export default function AddMedicinePage() {
                 </div>
 
                 <div>
+                  <label htmlFor="low_stock_threshold" className="block text-sm font-medium text-gray-700 mb-1">
+                    Low Stock Alert Below
+                  </label>
+                  <input
+                    type="number"
+                    id="low_stock_threshold"
+                    name="low_stock_threshold"
+                    value={formData.low_stock_threshold ?? 10}
+                    onChange={handleChange}
+                    min="0"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g. 10"
+                  />
+                </div>
+
+                <div>
                   <label htmlFor="cost_price" className="block text-sm font-medium text-gray-700 mb-1">
                     Cost Price (₹)
                   </label>
@@ -394,7 +417,7 @@ export default function AddMedicinePage() {
                 <div className="bg-yellow-50 p-4 rounded-lg">
                   <p className="text-sm text-yellow-700">Low Stock</p>
                   <p className="text-2xl font-bold text-yellow-800">
-                    {sortedMedicines.filter(med => med.quantity < 10).length}
+                    {lowStockItems.length}
                   </p>
                 </div>
                 <div className="bg-purple-50 p-4 rounded-lg">
@@ -405,6 +428,23 @@ export default function AddMedicinePage() {
                 </div>
               </div>
             </div>
+
+            {/* Low Stock Items List */}
+            {lowStockItems.length > 0 && (
+              <div className="bg-white rounded-lg shadow-md p-6 mt-6 border border-yellow-200">
+                <h2 className="text-lg font-bold text-yellow-800 mb-3">Low Stock Items</h2>
+                <ul className="space-y-2">
+                  {lowStockItems.map(med => (
+                    <li key={med.id} className="flex justify-between items-center text-sm">
+                      <span className="text-gray-800">{med.name}{med.company ? ` (${med.company})` : ''}</span>
+                      <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-800 font-semibold">
+                        {med.quantity} left
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           {/* Medicines List */}
@@ -504,9 +544,9 @@ export default function AddMedicinePage() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                Number(medicine.quantity) < 10
+                                Number(medicine.quantity) < (medicine.low_stock_threshold ?? 10)
                                   ? 'bg-red-100 text-red-800'
-                                  : Number(medicine.quantity) <= 20
+                                  : Number(medicine.quantity) <= (medicine.low_stock_threshold ?? 10) * 2
                                     ? 'bg-yellow-100 text-yellow-800'
                                     : 'bg-green-100 text-green-800'
                                 }`}>

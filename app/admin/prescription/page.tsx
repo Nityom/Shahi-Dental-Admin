@@ -136,6 +136,7 @@ interface TreatmentItem {
   quantity: number;
   unitPrice: number;
   total: number;
+  date?: string;
 }
 
 const PrescriptionPage = () => {
@@ -160,6 +161,8 @@ const PrescriptionPage = () => {
 
   const [treatmentItems, setTreatmentItems] = useState<TreatmentItem[]>([]);
   const [newTreatmentStep, setNewTreatmentStep] = useState('');
+  const [xrayCount, setXrayCount] = useState<number>(0);
+  const XRAY_PRICE = 200;
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isStaffUser, setIsStaffUser] = useState(false);
@@ -223,7 +226,7 @@ const PrescriptionPage = () => {
 
   // Consultation charge
   const [applyConsultationCharge, setApplyConsultationCharge] = useState<boolean>(true);
-  const [consultationCharge, setConsultationCharge] = useState<number>(300);
+  const [consultationCharge, setConsultationCharge] = useState<number>(250);
   const [consultationDiscount, setConsultationDiscount] = useState<number>(0);
 
   // Treatment plan catalog search
@@ -362,6 +365,7 @@ const PrescriptionPage = () => {
                   quantity: item.quantity || 1,
                   unitPrice: item.unit_price || item.unitPrice || 0,
                   total: item.total || 0,
+                  date: item.date,
                 })));
               }
             }
@@ -478,9 +482,11 @@ const PrescriptionPage = () => {
     setMedicines(updatedMedicines);
   };
 
-  // Handler for adding a tooth to the selected teeth list
+  // Handler for adding a tooth (or a general, non-tooth-specific diagnosis) to the selected list
   const handleAddTeeth = () => {
-    if (selectedTeethNumbers?.length && selectedDisease) {
+    if (!selectedDisease) return;
+
+    if (selectedTeethNumbers?.length) {
       const newTeeth = selectedTeethNumbers.map(toothId => {
         const quadrant = parseInt(toothId[0]);
         const number = parseInt(toothId.slice(1));
@@ -496,8 +502,17 @@ const PrescriptionPage = () => {
 
       setSelectedTeeth([...selectedTeeth, ...newTeeth]);
       setSelectedTeethNumbers([]);
-      setSelectedDisease('');
+    } else {
+      // Not tied to a specific tooth (e.g. Braces treatment, general diagnosis)
+      setSelectedTeeth([...selectedTeeth, {
+        id: -Date.now(),
+        type: 'N/A',
+        category: 'General',
+        disease: selectedDisease
+      }]);
     }
+
+    setSelectedDisease('');
   };
 
   // Handler for removing a tooth from selection
@@ -590,7 +605,8 @@ const PrescriptionPage = () => {
               description: item.description || '',
               quantity: item.quantity || 1,
               unitPrice: item.unit_price || item.unitPrice || 0,
-              total: item.total || 0
+              total: item.total || 0,
+              date: item.date
             }));
             setTreatmentItems(mappedItems);
           }
@@ -706,7 +722,8 @@ const PrescriptionPage = () => {
           description: item.description,
           quantity: item.quantity,
           unit_price: item.unitPrice,
-          total: item.total
+          total: item.total,
+          date: item.date
         })),
         advice: formData.advice,
         followup_date: formData.followupDate || undefined,
@@ -885,7 +902,8 @@ const PrescriptionPage = () => {
             quantity: item.quantity,
             unit_price: item.unitPrice,
             total: item.unitPrice * item.quantity,
-            item_type: 'procedure' as const
+            item_type: 'procedure' as const,
+            date: item.date
           }));
 
           // Treatment Plan items (with cost) — included only if not already covered by Treatment Done
@@ -1002,7 +1020,8 @@ const PrescriptionPage = () => {
       // Format teeth information for prescription in a more technical, concise way
       const teethInfo = selectedTeeth.length > 0
         ? selectedTeeth.reduce((acc, tooth) => {
-          return `${acc}${acc ? ', ' : ''}#${tooth.id} (${tooth.disease})`;
+          const label = tooth.category === 'General' ? tooth.disease : `#${tooth.id} (${tooth.disease})`;
+          return `${acc}${acc ? ', ' : ''}${label}`;
         }, '')
         : '';
 
@@ -1012,14 +1031,18 @@ const PrescriptionPage = () => {
         referenceNumber: formData.reference_number || patientReferenceNumber || '',
         medicines: medicines.length > 0 ? medicines : undefined,
         dentalNotation: teethInfo,
-        clinicalNotes: oralExamNotes
-          ? `${formData.de}${formData.de ? '; ' : ''}${oralExamNotes}`
-          : formData.de,
+        oralExamination: formData.de,
+        diagnosisNotes: oralExamNotes,
         investigation: formData.investigation,
         // Convert TreatmentPlanItem[] → string[] for the PDF generator
         treatmentPlan: formData.treatmentPlan.map(item =>
           `${item.name}${item.cost ? ` (Rs.${item.cost})` : ''}${item.notes ? ' - ' + item.notes : ''}`
         ),
+        treatmentPlanTotal: formData.treatmentPlan.reduce((sum, item) => sum + (Number(item.cost) || 0), 0),
+        treatmentDone: treatmentItems.map(item => ({
+          description: item.description,
+          date: item.date,
+        })),
       };
 
       console.log('Sending prescription data to API:', prescriptionData);
@@ -1143,6 +1166,7 @@ const PrescriptionPage = () => {
             unit_price: item.unitPrice,
             total: item.total,
             item_type: 'procedure' as const,
+            date: item.date,
           }));
           const allItems = [...planItems, ...doneItems];
           if (allItems.length === 0) {
@@ -1302,6 +1326,7 @@ const PrescriptionPage = () => {
                     quantity: item.quantity || 1,
                     unitPrice: item.unit_price || item.unitPrice || 0,
                     total: item.total || 0,
+                    date: item.date,
                   })));
                 }
               }
@@ -1464,19 +1489,276 @@ const PrescriptionPage = () => {
                     rows={2}
                     placeholder="Any investigations or tests recommended (e.g., X-ray, CBCT, Blood tests)"
                   />
+
+                  <div className="flex items-end gap-3 mt-3">
+                    <div className="w-40">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">No. of X-rays</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={xrayCount || ''}
+                        onChange={(e) => setXrayCount(parseInt(e.target.value) || 0)}
+                        className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                        placeholder="0"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (xrayCount <= 0) return;
+                        const existingIndex = treatmentItems.findIndex(i => i.description === 'X-ray');
+                        if (existingIndex >= 0) {
+                          const newItems = [...treatmentItems];
+                          newItems[existingIndex] = {
+                            ...newItems[existingIndex],
+                            quantity: xrayCount,
+                            total: xrayCount * XRAY_PRICE,
+                          };
+                          setTreatmentItems(newItems);
+                        } else {
+                          setTreatmentItems([...treatmentItems, {
+                            id: treatmentItems.length + 1,
+                            description: 'X-ray',
+                            quantity: xrayCount,
+                            unitPrice: XRAY_PRICE,
+                            total: xrayCount * XRAY_PRICE,
+                            date: new Date().toISOString().slice(0, 10)
+                          }]);
+                        }
+                      }}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm whitespace-nowrap"
+                    >
+                      Add X-ray to Bill (₹{XRAY_PRICE} each)
+                    </button>
+                  </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Diagnosis (D/E)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Oral Examination (D/E)</label>
                   <textarea
                     name="de"
                     value={formData.de}
                     onChange={handleChange}
                     className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
                     rows={3}
-                    placeholder="Clinical diagnosis"
+                    placeholder="Oral examination findings"
                   />
                 </div>
+
+            {/* Diagnosis Section with Dropdown Selection */}
+            <div className="bg-indigo-50 p-6 rounded-lg border border-indigo-100">
+              <div className="flex items-center justify-between mb-4 gap-3">
+                <h3 className="text-xl font-semibold text-indigo-800">Diagnosis</h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddDiseaseForm(prev => !prev);
+                    if (showAddDiseaseForm) {
+                      setNewDiseaseName('');
+                    }
+                  }}
+                  className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition border border-indigo-300 font-medium whitespace-nowrap"
+                >
+                  {showAddDiseaseForm ? 'Close' : '+ Add New Disease'}
+                </button>
+              </div>
+
+              {/* Dropdown Selection for Teeth */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Select Multiple Teeth</label>
+                  <select
+                    multiple
+                    value={selectedTeethNumbers}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions).map(option => option.value);
+                      setSelectedTeethNumbers(selected);
+                    }}
+                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                    size={8}
+                  >
+                    {[1, 2, 3, 4].map(quadrant => (
+                      <optgroup key={quadrant} label={DENTAL_QUADRANTS.find(q => q.id === quadrant)?.name || `Quadrant ${quadrant}`}>
+                        {TEETH_BY_QUADRANT[quadrant as 1 | 2 | 3 | 4].map((tooth) => (
+                          <option key={`${quadrant}${tooth.number}`} value={`${quadrant}${tooth.number}`}>
+                            {`${quadrant}${tooth.number} - ${tooth.name}`}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-sm text-gray-500">Hold Ctrl/Cmd key to select multiple teeth</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Dental Disease</label>
+                  <select
+                    value={selectedDisease}
+                    onChange={(e) => setSelectedDisease(e.target.value)}
+                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  >
+                    <option value="">Select Disease</option>
+                    {dentalDiseases.map((disease) => (
+                      <option key={disease} value={disease}>
+                        {disease}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Leave teeth unselected for treatments not specific to a tooth (e.g. Braces).
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={handleAddTeeth}
+                    disabled={!selectedDisease}
+                    className="mt-4 w-full p-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {selectedTeethNumbers?.length ? 'Add Selected Teeth' : 'Add Diagnosis (No Specific Tooth)'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Oral Examination Notes */}
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Examination Notes</label>
+                <textarea
+                  value={oralExamNotes}
+                  onChange={(e) => setOralExamNotes(e.target.value)}
+                  className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  rows={4}
+                  placeholder="Additional notes about the diagnosis..."
+                />
+              </div>
+
+              {/* Selected Teeth Summary */}
+              {selectedTeeth.length > 0 && (
+                <div className="mt-4 p-3 bg-white rounded-lg border border-indigo-200">
+                  <h4 className="font-medium text-indigo-800 mb-2">Selected Teeth Summary:</h4>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead>
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tooth Number</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quadrant</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Disease</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {selectedTeeth.map((tooth) => {
+                          // Convert numeric ID back to quadrant+letter format for display
+                          const isGeneral = tooth.category === 'General';
+                          const toothId = tooth.id.toString();
+                          const quadrant = toothId[0];
+                          const number = parseInt(toothId.slice(1));
+                          const displayId = isGeneral
+                            ? 'General'
+                            : (number >= 9
+                              ? `${quadrant}${String.fromCharCode(65 + (number - 9))}` // Convert 9->A, 10->B, etc.
+                              : tooth.id);
+
+                          return (
+                            <tr key={tooth.id}>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{displayId}</td>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{tooth.category}</td>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{tooth.disease}</td>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveTooth(tooth.id)}
+                                  className="text-red-600 hover:text-red-800 transition"
+                                >
+                                  Remove
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Preview of dental notation that will appear on prescription */}
+                  <div className="mt-3 p-2 bg-gray-50 rounded border border-gray-200">
+                    <p className="text-sm text-gray-700">
+                      <span className="font-medium">Dental Notation for Prescription:</span> {
+                        selectedTeeth.map((tooth, index) => {
+                          if (tooth.category === 'General') {
+                            return `${index > 0 ? ', ' : ''}${tooth.disease}`;
+                          }
+                          const toothId = tooth.id.toString();
+                          const quadrant = toothId[0];
+                          const number = parseInt(toothId.slice(1));
+                          const displayId = number >= 9
+                            ? `${quadrant}${String.fromCharCode(65 + (number - 9))}` // Convert 9->A, 10->B, etc.
+                            : tooth.id;
+
+                          return `${index > 0 ? ', ' : ''}#${displayId} (${tooth.disease})`;
+                        }).join('')
+                      }
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Add New Dental Disease Form */}
+              {showAddDiseaseForm && (
+                <div className="mt-6 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+                  <h4 className="font-medium text-indigo-800 mb-3">Add New Disease to List:</h4>
+                  <div className="flex gap-2 mb-3">
+                    <input
+                      type="text"
+                      value={newDiseaseName}
+                      onChange={(e) => setNewDiseaseName(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          handleAddNewDisease();
+                        }
+                      }}
+                      placeholder="Enter disease name"
+                      className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddNewDisease}
+                      disabled={!newDiseaseName.trim()}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddDiseaseForm(false);
+                        setNewDiseaseName('');
+                      }}
+                      className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+
+                  {dentalDiseases.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {dentalDiseases.map((disease) => (
+                        <div key={disease} className="bg-white px-3 py-1 rounded-full border border-indigo-300 flex items-center gap-2 text-sm">
+                          <span>{disease}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDisease(disease)}
+                            className="text-red-600 hover:text-red-800 font-bold"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
                 {/* Treatment Plan Section — catalog-based with cost + notes */}
                 <div>
@@ -1642,215 +1924,16 @@ const PrescriptionPage = () => {
                       </button>
                     ))}
                   </div>
-                </div>
-              </div>
-            </div>
 
-            {/* Oral Examination Section with Dropdown Selection */}
-            <div className="bg-indigo-50 p-6 rounded-lg border border-indigo-100">
-              <div className="flex items-center justify-between mb-4 gap-3">
-                <h3 className="text-xl font-semibold text-indigo-800">Oral Examination</h3>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddDiseaseForm(prev => !prev);
-                    if (showAddDiseaseForm) {
-                      setNewDiseaseName('');
-                    }
-                  }}
-                  className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition border border-indigo-300 font-medium whitespace-nowrap"
-                >
-                  {showAddDiseaseForm ? 'Close' : '+ Add New Disease'}
-                </button>
-              </div>
-
-              {/* Dropdown Selection for Teeth */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Select Multiple Teeth</label>
-                  <select
-                    multiple
-                    value={selectedTeethNumbers}
-                    onChange={(e) => {
-                      const selected = Array.from(e.target.selectedOptions).map(option => option.value);
-                      setSelectedTeethNumbers(selected);
-                    }}
-                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-                    size={8}
-                  >
-                    {[1, 2, 3, 4].map(quadrant => (
-                      <optgroup key={quadrant} label={DENTAL_QUADRANTS.find(q => q.id === quadrant)?.name || `Quadrant ${quadrant}`}>
-                        {TEETH_BY_QUADRANT[quadrant as 1 | 2 | 3 | 4].map((tooth) => (
-                          <option key={`${quadrant}${tooth.number}`} value={`${quadrant}${tooth.number}`}>
-                            {`${quadrant}${tooth.number} - ${tooth.name}`}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-sm text-gray-500">Hold Ctrl/Cmd key to select multiple teeth</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Dental Disease</label>
-                  <select
-                    value={selectedDisease}
-                    onChange={(e) => setSelectedDisease(e.target.value)}
-                    disabled={!selectedTeethNumbers?.length}
-                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-                  >
-                    <option value="">Select Disease</option>
-                    {dentalDiseases.map((disease) => (
-                      <option key={disease} value={disease}>
-                        {disease}
-                      </option>
-                    ))}
-                  </select>
-
-                  <button
-                    type="button"
-                    onClick={handleAddTeeth}
-                    disabled={!selectedTeethNumbers?.length || !selectedDisease}
-                    className="mt-4 w-full p-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Add Selected Teeth
-                  </button>
-                </div>
-              </div>
-
-              {/* Oral Examination Notes */}
-              <div className="mt-6">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Examination Notes</label>
-                <textarea
-                  value={oralExamNotes}
-                  onChange={(e) => setOralExamNotes(e.target.value)}
-                  className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-                  rows={4}
-                  placeholder="Additional notes about the oral examination..."
-                />
-              </div>
-
-              {/* Selected Teeth Summary */}
-              {selectedTeeth.length > 0 && (
-                <div className="mt-4 p-3 bg-white rounded-lg border border-indigo-200">
-                  <h4 className="font-medium text-indigo-800 mb-2">Selected Teeth Summary:</h4>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead>
-                        <tr>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tooth Number</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quadrant</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Disease</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {selectedTeeth.map((tooth) => {
-                          // Convert numeric ID back to quadrant+letter format for display
-                          const toothId = tooth.id.toString();
-                          const quadrant = toothId[0];
-                          const number = parseInt(toothId.slice(1));
-                          const displayId = number >= 9
-                            ? `${quadrant}${String.fromCharCode(65 + (number - 9))}` // Convert 9->A, 10->B, etc.
-                            : tooth.id;
-
-                          return (
-                            <tr key={tooth.id}>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{displayId}</td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{tooth.category}</td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{tooth.disease}</td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveTooth(tooth.id)}
-                                  className="text-red-600 hover:text-red-800 transition"
-                                >
-                                  Remove
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Preview of dental notation that will appear on prescription */}
-                  <div className="mt-3 p-2 bg-gray-50 rounded border border-gray-200">
-                    <p className="text-sm text-gray-700">
-                      <span className="font-medium">Dental Notation for Prescription:</span> {
-                        selectedTeeth.map((tooth, index) => {
-                          const toothId = tooth.id.toString();
-                          const quadrant = toothId[0];
-                          const number = parseInt(toothId.slice(1));
-                          const displayId = number >= 9
-                            ? `${quadrant}${String.fromCharCode(65 + (number - 9))}` // Convert 9->A, 10->B, etc.
-                            : tooth.id;
-
-                          return `${index > 0 ? ', ' : ''}#${displayId} (${tooth.disease})`;
-                        }).join('')
-                      }
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Add New Dental Disease Form */}
-              {showAddDiseaseForm && (
-                <div className="mt-6 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-                  <h4 className="font-medium text-indigo-800 mb-3">Add New Disease to List:</h4>
-                  <div className="flex gap-2 mb-3">
-                    <input
-                      type="text"
-                      value={newDiseaseName}
-                      onChange={(e) => setNewDiseaseName(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          handleAddNewDisease();
-                        }
-                      }}
-                      placeholder="Enter disease name"
-                      className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      autoFocus
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddNewDisease}
-                      disabled={!newDiseaseName.trim()}
-                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                    >
-                      Add
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowAddDiseaseForm(false);
-                        setNewDiseaseName('');
-                      }}
-                      className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-
-                  {dentalDiseases.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {dentalDiseases.map((disease) => (
-                        <div key={disease} className="bg-white px-3 py-1 rounded-full border border-indigo-300 flex items-center gap-2 text-sm">
-                          <span>{disease}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveDisease(disease)}
-                            className="text-red-600 hover:text-red-800 font-bold"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
+                  {formData.treatmentPlan.length > 0 && (
+                    <div className="mt-3 flex justify-end">
+                      <div className="px-4 py-2 bg-green-100 border border-green-300 rounded-lg text-sm font-semibold text-green-800">
+                        Estimated Cost: ₹{formData.treatmentPlan.reduce((sum, item) => sum + (Number(item.cost) || 0), 0).toLocaleString('en-IN')}
+                      </div>
                     </div>
                   )}
                 </div>
-              )}
+              </div>
             </div>
 
 
@@ -1890,7 +1973,8 @@ const PrescriptionPage = () => {
                             description: selected.name,
                             quantity: 1,
                             unitPrice: selected.price,
-                            total: selected.price
+                            total: selected.price,
+                            date: new Date().toISOString().slice(0, 10)
                           };
                           setTreatmentItems([...treatmentItems, newItem]);
                         }
@@ -1914,6 +1998,7 @@ const PrescriptionPage = () => {
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price (₹)</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total (₹)</th>
@@ -1934,6 +2019,18 @@ const PrescriptionPage = () => {
                                 setTreatmentItems(newItems);
                               }}
                               className="w-full p-1 border border-gray-300 rounded"
+                            />
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <input
+                              type="date"
+                              value={item.date || ''}
+                              onChange={(e) => {
+                                const newItems = [...treatmentItems];
+                                newItems[index].date = e.target.value;
+                                setTreatmentItems(newItems);
+                              }}
+                              className="p-1 border border-gray-300 rounded text-sm"
                             />
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
@@ -1983,7 +2080,7 @@ const PrescriptionPage = () => {
                     </tbody>
                     <tfoot className="bg-gray-50">
                       <tr>
-                        <td colSpan={4} className="px-4 py-3 text-right font-bold">Total Amount:</td>
+                        <td colSpan={5} className="px-4 py-3 text-right font-bold">Total Amount:</td>
                         <td colSpan={2} className="px-4 py-3 font-bold text-lg text-teal-700">
                           ₹{treatmentItems.reduce((sum, item) => sum + item.total, 0).toFixed(2)}
                         </td>
@@ -2391,27 +2488,24 @@ const PrescriptionPage = () => {
                     )}
                     {formData.de && (
                       <tr>
-                        <td className="border border-gray-300 px-4 py-2 font-medium">Diagnosis</td>
+                        <td className="border border-gray-300 px-4 py-2 font-medium">Oral Examination</td>
                         <td className="border border-gray-300 px-4 py-2 whitespace-pre-wrap">{formData.de}</td>
                       </tr>
                     )}
-                    {selectedTeeth.length > 0 && (
+                    {(selectedTeeth.length > 0 || oralExamNotes) && (
                       <tr>
-                        <td className="border border-gray-300 px-4 py-2 font-medium">Dental Notation</td>
-                        <td className="border border-gray-300 px-4 py-2">
-                          {selectedTeeth.map(tooth => `#${tooth.id} (${tooth.disease})`).join(', ')}
+                        <td className="border border-gray-300 px-4 py-2 font-medium">Diagnosis</td>
+                        <td className="border border-gray-300 px-4 py-2 whitespace-pre-wrap">
+                          {selectedTeeth.length > 0 && (
+                            <div>{selectedTeeth.map(tooth => tooth.category === 'General' ? tooth.disease : `#${tooth.id} (${tooth.disease})`).join(', ')}</div>
+                          )}
+                          {oralExamNotes && <div>{oralExamNotes}</div>}
                         </td>
-                      </tr>
-                    )}
-                    {oralExamNotes && (
-                      <tr>
-                        <td className="border border-gray-300 px-4 py-2 font-medium">Oral Examination</td>
-                        <td className="border border-gray-300 px-4 py-2 whitespace-pre-wrap">{oralExamNotes}</td>
                       </tr>
                     )}
                     {formData.treatmentPlan && formData.treatmentPlan.length > 0 && (
                       <tr>
-                        <td className="border border-gray-300 px-4 py-2 font-medium">Treatment Plan</td>
+                        <td className="border border-gray-300 px-4 py-2 font-medium">Treatment Plan (Estimate)</td>
                         <td className="border border-gray-300 px-4 py-2">
                           <ul className="list-disc list-inside space-y-1">
                             {formData.treatmentPlan.map((item, idx) => (
@@ -2422,6 +2516,9 @@ const PrescriptionPage = () => {
                               </li>
                             ))}
                           </ul>
+                          <div className="font-semibold mt-1">
+                            Estimated Cost: ₹{formData.treatmentPlan.reduce((sum, item) => sum + (Number(item.cost) || 0), 0).toLocaleString('en-IN')}
+                          </div>
                         </td>
                       </tr>
                     )}
@@ -2480,12 +2577,14 @@ const PrescriptionPage = () => {
                     <thead>
                       <tr className="bg-gray-100">
                         <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Description</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Date</th>
                       </tr>
                     </thead>
                     <tbody>
                       {treatmentItems.map((item, idx) => (
                         <tr key={idx}>
                           <td className="border border-gray-300 px-4 py-2">{item.description}</td>
+                          <td className="border border-gray-300 px-4 py-2">{item.date ? new Date(item.date).toLocaleDateString('en-GB') : ''}</td>
                         </tr>
                       ))}
                     </tbody>
