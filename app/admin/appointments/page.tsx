@@ -5,6 +5,7 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, User, Phone, Stethoscope, Pencil, Trash2, Search, X } from 'lucide-react';
+import { useIsAdmin } from '@/hooks/use-is-admin';
 
 // Helpers
 const getTodayString = () => {
@@ -46,6 +47,7 @@ export default function AppointmentsPage() {
   const [selectedDate, setSelectedDate] = useState(getTodayString());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<Id<"appointments"> | null>(null);
+  const { isAdmin } = useIsAdmin();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   
@@ -422,13 +424,15 @@ export default function AppointmentsPage() {
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
-                        <button
-                          onClick={() => handleDelete(appt._id)}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleDelete(appt._id)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
 

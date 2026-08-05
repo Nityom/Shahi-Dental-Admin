@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { addMedicine, getAllMedicines, deleteMedicine, updateMedicine, Medicine } from '@/services/medicine';
 import { PlusCircle, X, Trash2, Search, ArrowUp, ArrowDown, Package, Pill, RefreshCw, Edit } from 'lucide-react';
+import { useIsAdmin } from '@/hooks/use-is-admin';
 
 export default function AddMedicinePage() {
   const [formData, setFormData] = useState<Medicine>({
@@ -17,6 +18,7 @@ export default function AddMedicinePage() {
 
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const { isAdmin } = useIsAdmin();
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<boolean>(false);
@@ -579,14 +581,16 @@ export default function AddMedicinePage() {
                                 >
                                   <Edit size={18} />
                                 </button>
-                                <button
-                                  onClick={() => medicine.id && handleDelete(medicine.id)}
-                                  disabled={isDeleting}
-                                  className="text-red-600 hover:text-red-900"
-                                  title="Delete Medicine"
-                                >
-                                  <Trash2 size={18} />
-                                </button>
+                                {isAdmin && (
+                                  <button
+                                    onClick={() => medicine.id && handleDelete(medicine.id)}
+                                    disabled={isDeleting}
+                                    className="text-red-600 hover:text-red-900"
+                                    title="Delete Medicine"
+                                  >
+                                    <Trash2 size={18} />
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>

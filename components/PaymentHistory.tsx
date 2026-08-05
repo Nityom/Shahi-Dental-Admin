@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { paymentTransactionService, PaymentTransaction } from "@/services/payment-transactions";
 import { Plus, Trash2 } from "lucide-react";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +39,7 @@ export default function PaymentHistory({
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
+  const { isAdmin } = useIsAdmin();
 
   const fetchPayments = async () => {
     try {
@@ -155,14 +157,16 @@ export default function PaymentHistory({
                         {payment.notes && ` • ${payment.notes}`}
                       </p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => confirmDelete(payment.id)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => confirmDelete(payment.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>

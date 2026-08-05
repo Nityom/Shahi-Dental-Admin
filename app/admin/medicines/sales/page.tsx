@@ -1,9 +1,11 @@
 "use client";
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { TrendingUp, Calendar, Package, IndianRupee, Percent, RefreshCw, PieChart, Users, Pill } from 'lucide-react';
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
+import { useIsAdmin } from '@/hooks/use-is-admin';
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
@@ -82,6 +84,8 @@ interface ConsumableUsageResponse {
 }
 
 export default function SalesReportPage() {
+  const router = useRouter();
+  const { isAdmin, loading: isAdminLoading } = useIsAdmin();
   const [activeTab, setActiveTab] = useState<'medicine' | 'patient' | 'inventory'>('medicine');
   // Medicine Sales States
   const [reportType, setReportType] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
@@ -116,6 +120,12 @@ export default function SalesReportPage() {
   const [consumableError, setConsumableError] = useState('');
   const [consumableStartDate, setConsumableStartDate] = useState('');
   const [consumableEndDate, setConsumableEndDate] = useState('');
+
+  useEffect(() => {
+    if (!isAdminLoading && !isAdmin) {
+      router.replace('/admin/patients');
+    }
+  }, [isAdminLoading, isAdmin, router]);
 
   useEffect(() => {
     // Set default dates (last 30 days)
@@ -452,6 +462,14 @@ export default function SalesReportPage() {
     }),
     { totalPatients: 0, totalBills: 0, totalAmount: 0, paidAmount: 0, balanceAmount: 0 }
   );
+
+  if (isAdminLoading || !isAdmin) {
+    return (
+      <div className="w-full min-h-screen flex items-center justify-center">
+        <p className="text-gray-600">{isAdminLoading ? 'Loading...' : 'Redirecting...'}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full min-h-screen px-6 pt-6 pb-6 overflow-x-hidden">

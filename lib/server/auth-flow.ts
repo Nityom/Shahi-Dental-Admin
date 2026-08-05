@@ -21,7 +21,7 @@ export type AuthUser = {
   is_active?: boolean;
 };
 
-function buildOtpEmailHtml(otpCode: string, deliveryEmail: string, validityLabel: string): string {
+function buildOtpEmailHtml(otpCode: string, deliveryEmail: string, validityLabel: string, portalLabel: string): string {
   const logoSrc = "https://portal.shahidentalclinic.com/dental_logo_email.png";
   const digitBoxStyle =
     "display:inline-block;width:52px;height:62px;line-height:62px;" +
@@ -64,7 +64,7 @@ function buildOtpEmailHtml(otpCode: string, deliveryEmail: string, validityLabel
         Shahi Dental Clinic
       </p>
       <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.6);letter-spacing:0.1em;text-transform:uppercase;font-weight:500;">
-        Admin Portal - Secure Login
+        ${portalLabel} Portal - Secure Login
       </p>
     </div>
 
@@ -77,7 +77,7 @@ function buildOtpEmailHtml(otpCode: string, deliveryEmail: string, validityLabel
       </h2>
 
       <p style="margin:0 0 28px;font-size:14.5px;color:#4a6070;line-height:1.7;">
-        Someone (hopefully you) requested access to the Shahi Dental Clinic admin dashboard.
+        Someone (hopefully you) requested access to the Shahi Dental Clinic ${portalLabel.toLowerCase()} dashboard.
         Use the code below to complete your sign-in.
         <strong>Do not share this code with anyone.</strong>
       </p>
@@ -121,24 +121,46 @@ function buildOtpEmailHtml(otpCode: string, deliveryEmail: string, validityLabel
 </html>`;
 }
 
-function getBootstrapAdmin() {
-  const email = process.env.AUTH_LOGIN_EMAIL;
-  const password = process.env.AUTH_LOGIN_PASSWORD;
+type BootstrapAccount = { email: string; password: string; role: string; name: string };
 
-  if (!email || !password) {
-    return null;
+function getBootstrapAccounts(): BootstrapAccount[] {
+  const accounts: BootstrapAccount[] = [];
+
+  const adminEmail = process.env.AUTH_LOGIN_EMAIL;
+  const adminPassword = process.env.AUTH_LOGIN_PASSWORD;
+  if (adminEmail && adminPassword) {
+    accounts.push({
+      email: normalizeEmail(adminEmail),
+      password: adminPassword,
+      role: "admin",
+      name: process.env.AUTH_BOOTSTRAP_NAME || "Administrator",
+    });
   }
 
-  return {
-    email: normalizeEmail(email),
-    password,
-    name: process.env.AUTH_BOOTSTRAP_NAME || "Administrator",
-  };
+  // Staff account: fixed credentials, no delete/sales access (enforced by role).
+  const staffEmail = process.env.AUTH_STAFF_LOGIN_EMAIL || "staff@shahidentalclinic.com";
+  const staffPassword = process.env.AUTH_STAFF_LOGIN_PASSWORD || "Staff@1234";
+  accounts.push({
+    email: normalizeEmail(staffEmail),
+    password: staffPassword,
+    role: "staff",
+    name: process.env.AUTH_STAFF_NAME || "Staff",
+  });
+
+  return accounts;
 }
 
-function getAuthDeliveryEmail(defaultEmail: string): string {
-  const overrideEmail = process.env.AUTH_OTP_TO_EMAIL;
-  return normalizeEmail(overrideEmail || defaultEmail);
+function getAuthDeliveryEmail(user: AuthUser): string {
+  // Per-role override inboxes; falls back to the user's own email if unset.
+  const overrideEmail =
+    user.role === "staff"
+      ? process.env.AUTH_STAFF_OTP_EMAIL
+      : process.env.AUTH_OTP_TO_EMAIL;
+
+  if (overrideEmail) {
+    return normalizeEmail(overrideEmail);
+  }
+  return normalizeEmail(user.email);
 }
 
 export async function findUserByEmail(email: string): Promise<AuthUser | null> {
@@ -147,10 +169,10 @@ export async function findUserByEmail(email: string): Promise<AuthUser | null> {
 
 export async function getUserForLogin(email: string, password: string): Promise<AuthUser | null> {
   const normalizedEmail = normalizeEmail(email);
-  const bootstrap = getBootstrapAdmin();
+  const bootstrap = getBootstrapAccounts().find((account) => account.email === normalizedEmail);
 
-  // Restrict authentication to configured admin email only.
-  if (!bootstrap || normalizedEmail !== bootstrap.email) {
+  // Restrict authentication to configured accounts only.
+  if (!bootstrap) {
     return null;
   }
 
@@ -163,7 +185,7 @@ export async function getUserForLogin(email: string, password: string): Promise<
         email: normalizedEmail,
         password_hash: passwordHash,
         name: bootstrap.name,
-        role: "admin",
+        role: bootstrap.role,
       });
       user = await findUserByEmail(normalizedEmail);
     }
@@ -193,7 +215,8 @@ export async function issueLoginOtp(user: AuthUser) {
   const otp = generateOtpCode(4);
   const otpValidityMinutes = 5;
   const expiresAt = Date.now() + otpValidityMinutes * 60 * 1000;
-  const deliveryEmail = getAuthDeliveryEmail(user.email);
+  const deliveryEmail = getAuthDeliveryEmail(user);
+  const portalLabel = user.role === "staff" ? "Staff" : "Admin";
 
   const otpSessionId = await convex.mutation(convexAuthFns.createOtpSession, {
     userId: user._id as any,
@@ -204,9 +227,9 @@ export async function issueLoginOtp(user: AuthUser) {
 
   await sendAuthEmail({
     to: deliveryEmail,
-    subject: "Shahi Dental Clinic Admin Login OTP",
+    subject: `Shahi Dental Clinic ${portalLabel} Login OTP`,
     text: `Your 4-digit OTP is ${otp}. It is valid for ${otpValidityMinutes} minutes.`,
-    html: buildOtpEmailHtml(otp, deliveryEmail, `${otpValidityMinutes} minutes`),
+    html: buildOtpEmailHtml(otp, deliveryEmail, `${otpValidityMinutes} minutes`, portalLabel),
   });
 
   return {
@@ -235,7 +258,7 @@ export async function issuePasswordReset(email: string) {
   if (!user || user.is_active === false) {
     return;
   }
-  const deliveryEmail = getAuthDeliveryEmail(user.email);
+  const deliveryEmail = getAuthDeliveryEmail(user);
 
   const rawResetToken = createRandomToken();
   const resetTokenHash = hashValue(rawResetToken);

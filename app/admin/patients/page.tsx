@@ -8,6 +8,7 @@ import { Patient } from '@/types/patient';
 import Link from 'next/link';
 import { Alert } from "@/components/ui/alert";
 import PrescriptionHistory from "@/components/PrescriptionHistory";
+import { useIsAdmin } from '@/hooks/use-is-admin';
 
 // Group prescriptions by patient name to create a patient list
 interface Bill {
@@ -40,6 +41,7 @@ const ViewPatients = () => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [alertMessage, setAlertMessage] = useState<{ type: 'error' | 'success', message: string } | null>(null);
+  const { isAdmin } = useIsAdmin();
   const patientsPerPage = 10;
 
   const fetchPatients = useCallback(async () => {
@@ -395,12 +397,14 @@ const ViewPatients = () => {
                           >
                             View Details
                           </button>
-                          <button
-                            onClick={() => handleDelete(patient)}
-                            className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition"
-                          >
-                            Delete
-                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleDelete(patient)}
+                              className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition"
+                            >
+                              Delete
+                            </button>
+                          )}
                           <Link href={`/admin/prescription?patientName=${encodeURIComponent(patient.name)}&phone=${encodeURIComponent(patient.phone_number)}&age=${patient.age}&sex=${patient.sex}&medicalHistory=${encodeURIComponent(patient.prescriptions[0]?.medical_history || '')}`}>
                             <button className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition">
                               New Prescription
@@ -593,6 +597,7 @@ const ViewPatients = () => {
                   {/* Prescription History */}
                   <PrescriptionHistory
                     prescriptions={selectedPatient.prescriptions}
+                    isAdmin={isAdmin}
                     onDelete={async (prescriptionId) => {
                       try {
                         // Skip database deletion for temporary IDs (only existing in UI)

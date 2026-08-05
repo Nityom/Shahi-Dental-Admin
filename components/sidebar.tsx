@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Inbox, Menu, ChevronRight, Pill, FileText, LogOut, Wrench, TrendingUp, CreditCard, Package, Calendar } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { getCurrentUser, signOut } from "@/services/adminuser";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 
 interface CustomSidebarProps {
   children: React.ReactNode;
@@ -97,6 +98,7 @@ export function AppSidebar({ children }: { children?: React.ReactNode }): React.
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [animateItems, setAnimateItems] = useState<boolean>(false);
   const [userEmail, setUserEmail] = useState<string>("");
+  const { isAdmin } = useIsAdmin();
 
   useEffect(() => {
     const checkViewport = (): void => {
@@ -135,7 +137,7 @@ export function AppSidebar({ children }: { children?: React.ReactNode }): React.
     { id: "medicine-management", title: "Medicine Management", url: "/admin/medicines", icon: Pill },
     { id: "Inventory-management", title: "Inventory Management", url: "/admin/inventory", icon: Wrench },
     { id: "consumable-settings", title: "Consumable Settings", url: "/admin/consumable-settings", icon: Package },
-    { id: "sales-report", title: "Sales Report", url: "/admin/medicines/sales", icon: TrendingUp },
+    ...(isAdmin ? [{ id: "sales-report", title: "Sales Report", url: "/admin/medicines/sales", icon: TrendingUp }] : []),
     { id: "installments", title: "Payment Installments", url: "/admin/installments", icon: CreditCard },
     { id: "generate-prescription", title: "Generate Prescription", url: "/admin/prescription", icon: FileText },
   ];

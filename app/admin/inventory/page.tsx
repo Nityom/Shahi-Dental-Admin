@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { addInventory, getAllInventory, deleteInventory, updateInventory, Inventory } from '@/services/inventory';
 import { PlusCircle, X, Trash2, Search, ArrowUp, ArrowDown, Package, Pill, RefreshCw, Edit } from 'lucide-react';
+import { useIsAdmin } from '@/hooks/use-is-admin';
 import { ConvexHttpClient } from "convex/browser";
 // @ts-ignore
 import { api } from "@/convex/_generated/api";
@@ -33,6 +34,7 @@ export default function AddInventoryPage() {
 
   const [Inventorys, setInventorys] = useState<Inventory[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const { isAdmin } = useIsAdmin();
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<boolean>(false);
@@ -816,14 +818,16 @@ export default function AddInventoryPage() {
                               >
                                 <Edit size={18} />
                               </button>
-                              <button
-                                onClick={() => Inventory.id && handleDelete(Inventory.id)}
-                                disabled={isDeleting}
-                                className="text-red-600 hover:text-red-900 ml-3"
-                                title="Delete inventory item"
-                              >
-                                <Trash2 size={18} />
-                              </button>
+                              {isAdmin && (
+                                <button
+                                  onClick={() => Inventory.id && handleDelete(Inventory.id)}
+                                  disabled={isDeleting}
+                                  className="text-red-600 hover:text-red-900 ml-3"
+                                  title="Delete inventory item"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              )}
                             </td>
                           </tr>
                         ))}

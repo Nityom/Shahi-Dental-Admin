@@ -13,6 +13,7 @@ import {
 } from '@/services/consumables';
 import { getAllInventory, Inventory } from '@/services/inventory';
 import { Trash2, Edit, Plus, Save, X, Search, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react';
+import { useIsAdmin } from '@/hooks/use-is-admin';
 
 /**
  * Consumable Items Settings Page
@@ -23,6 +24,7 @@ import { Trash2, Edit, Plus, Save, X, Search, AlertTriangle, CheckCircle, AlertC
 const ConsumableSettingsPage = () => {
   const [items, setItems] = useState<Consumable[]>([]);
   const [inventory, setInventory] = useState<Inventory[]>([]);
+  const { isAdmin } = useIsAdmin();
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
@@ -489,15 +491,17 @@ const ConsumableSettingsPage = () => {
                                     <Edit className="w-4 h-4" />
                                     Edit
                                   </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => handleDelete(item.id!, item.name)}
-                                    className="flex items-center gap-1"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                    Delete
-                                  </Button>
+                                  {isAdmin && (
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => handleDelete(item.id!, item.name)}
+                                      className="flex items-center gap-1"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                      Delete
+                                    </Button>
+                                  )}
                                 </div>
                               )}
                             </td>
