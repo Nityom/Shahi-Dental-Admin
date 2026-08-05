@@ -71,6 +71,12 @@ export const getCurrentUser = async (): Promise<AuthUser | null> => {
   return data.user;
 };
 
+export const getSession = async (): Promise<{ user: AuthUser | null; expiresAt?: number }> => {
+  return await requestAuth<{ user: AuthUser | null; expiresAt?: number }>("/api/auth/session", {
+    method: "GET",
+  });
+};
+
 export const resetPassword = async (email: string) => {
   return await requestAuth<{ success: boolean; message: string }>("/api/auth/password/forgot", {
     method: "POST",

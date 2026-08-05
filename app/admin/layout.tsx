@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { getCurrentUser } from "@/services/adminuser";
+import { getSession, signOut } from "@/services/adminuser";
 import { useRouter } from "next/navigation";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -14,14 +14,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     useEffect(() => {
         const checkAuth = async () => {
             try {
-                const user = await getCurrentUser();
-                
+                const { user, expiresAt } = await getSession();
+
                 if (!user) {
                     router.push('/auth/login');
                     return;
                 }
-                
+
                 setIsAuthenticated(true);
+
+                // Force logout the moment the session expires, even if the tab stays open.
+                if (expiresAt) {
+                    const msUntilExpiry = expiresAt - Date.now();
+                    if (msUntilExpiry <= 0) {
+                        signOut();
+                        return;
+                    }
+                    const timer = setTimeout(() => signOut(), msUntilExpiry);
+                    return () => clearTimeout(timer);
+                }
             } catch (error) {
                 console.error('Auth error:', error);
                 router.push('/auth/login');

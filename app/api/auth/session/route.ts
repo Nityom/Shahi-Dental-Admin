@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
           name: payload.user.name || "Administrator",
           role: payload.user.role || "admin",
         },
+        expiresAt: payload.session.expires_at,
       },
       { status: 200 }
     );
