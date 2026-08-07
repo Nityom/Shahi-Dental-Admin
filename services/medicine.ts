@@ -23,6 +23,8 @@ export type Medicine = {
   updated_at?: string;
   price?: number;
   low_stock_threshold?: number;
+  strips?: number;
+  quantity_per_strip?: number;
 };
 
 export const addMedicine = async (medicine: Medicine) => {
@@ -35,6 +37,8 @@ export const addMedicine = async (medicine: Medicine) => {
     selling_price: medicine.selling_price ? Number(medicine.selling_price) : undefined,
     company: medicine.company,
     low_stock_threshold: medicine.low_stock_threshold ? Number(medicine.low_stock_threshold) : undefined,
+    strips: medicine.strips ? Number(medicine.strips) : undefined,
+    quantity_per_strip: medicine.quantity_per_strip ? Number(medicine.quantity_per_strip) : undefined,
   });
   return data;
 };
@@ -58,6 +62,8 @@ export const getAllMedicines = async () => {
       profit_margin: profitMargin,
       price: sellingPrice ? sellingPrice : Number(item.rate),
       low_stock_threshold: item.low_stock_threshold !== undefined ? Number(item.low_stock_threshold) : 10,
+      strips: item.strips !== undefined ? Number(item.strips) : undefined,
+      quantity_per_strip: item.quantity_per_strip !== undefined ? Number(item.quantity_per_strip) : undefined,
     };
   }) as Medicine[];
 };
@@ -73,6 +79,8 @@ export const updateMedicine = async (id: string, updates: Partial<Medicine>) => 
   if (updates.selling_price !== undefined) validUpdate.selling_price = Number(updates.selling_price);
   if (updates.company !== undefined) validUpdate.company = updates.company;
   if (updates.low_stock_threshold !== undefined) validUpdate.low_stock_threshold = Number(updates.low_stock_threshold);
+  if (updates.strips !== undefined) validUpdate.strips = Number(updates.strips);
+  if (updates.quantity_per_strip !== undefined) validUpdate.quantity_per_strip = Number(updates.quantity_per_strip);
 
   const data = await convex.mutation(api.medicines.update, validUpdate as any);
   return data;

@@ -13,7 +13,9 @@ export default function AddMedicinePage() {
     cost_price: 0,
     selling_price: 0,
     company: '',
-    low_stock_threshold: 10
+    low_stock_threshold: 10,
+    strips: 0,
+    quantity_per_strip: 0
   });
 
   const [medicines, setMedicines] = useState<Medicine[]>([]);
@@ -48,7 +50,18 @@ export default function AddMedicinePage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
 
-    if (name === 'quantity' || name === 'rate' || name === 'cost_price' || name === 'selling_price' || name === 'low_stock_threshold') {
+    if (name === 'strips' || name === 'quantity_per_strip') {
+      const numericValue = value === '' ? 0 : Number(value);
+      setFormData(prev => {
+        const strips = name === 'strips' ? numericValue : (prev.strips || 0);
+        const quantityPerStrip = name === 'quantity_per_strip' ? numericValue : (prev.quantity_per_strip || 0);
+        return {
+          ...prev,
+          [name]: numericValue,
+          quantity: strips * quantityPerStrip
+        };
+      });
+    } else if (name === 'quantity' || name === 'rate' || name === 'cost_price' || name === 'selling_price' || name === 'low_stock_threshold') {
       setFormData({
         ...formData,
         [name]: value === '' ? 0 : Number(value)
@@ -85,7 +98,9 @@ export default function AddMedicinePage() {
           cost_price: 0,
           selling_price: 0,
           company: '',
-          low_stock_threshold: 10
+          low_stock_threshold: 10,
+          strips: 0,
+          quantity_per_strip: 0
         });
         setEditMode(false);
         setEditingMedicine(null);
@@ -101,7 +116,9 @@ export default function AddMedicinePage() {
           cost_price: 0,
           selling_price: 0,
           company: '',
-          low_stock_threshold: 10
+          low_stock_threshold: 10,
+          strips: 0,
+          quantity_per_strip: 0
         });
       }
 
@@ -136,6 +153,9 @@ export default function AddMedicinePage() {
   };
 
   const handleEdit = (medicine: Medicine) => {
+    // Older medicines may not have strips recorded; default to 1 strip so the total quantity stays accurate
+    const strips = medicine.strips ?? 1;
+    const quantityPerStrip = medicine.quantity_per_strip ?? medicine.quantity;
     setFormData({
       name: medicine.name,
       description: medicine.description || '',
@@ -144,7 +164,9 @@ export default function AddMedicinePage() {
       cost_price: medicine.cost_price || 0,
       selling_price: medicine.selling_price || 0,
       company: medicine.company || '',
-      low_stock_threshold: medicine.low_stock_threshold ?? 10
+      low_stock_threshold: medicine.low_stock_threshold ?? 10,
+      strips,
+      quantity_per_strip: quantityPerStrip
     });
     setEditMode(true);
     setEditingMedicine(medicine);
@@ -162,7 +184,9 @@ export default function AddMedicinePage() {
       cost_price: 0,
       selling_price: 0,
       company: '',
-      low_stock_threshold: 10
+      low_stock_threshold: 10,
+      strips: 0,
+      quantity_per_strip: 0
     });
     setError('');
     setEditMode(false);
@@ -293,19 +317,52 @@ export default function AddMedicinePage() {
                   />
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="strips" className="block text-sm font-medium text-gray-700 mb-1">
+                      Strips*
+                    </label>
+                    <input
+                      type="number"
+                      id="strips"
+                      name="strips"
+                      value={formData.strips ?? 0}
+                      onChange={handleChange}
+                      required
+                      min="0"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="e.g. 10"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="quantity_per_strip" className="block text-sm font-medium text-gray-700 mb-1">
+                      Qty per Strip*
+                    </label>
+                    <input
+                      type="number"
+                      id="quantity_per_strip"
+                      name="quantity_per_strip"
+                      value={formData.quantity_per_strip ?? 0}
+                      onChange={handleChange}
+                      required
+                      min="0"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="e.g. 10"
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-1">
-                    Quantity*
+                    Total Quantity (Strips × Qty per Strip)
                   </label>
                   <input
                     type="number"
                     id="quantity"
                     name="quantity"
                     value={formData.quantity}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter quantity"
+                    readOnly
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700"
                   />
                 </div>
 

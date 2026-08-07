@@ -474,7 +474,7 @@ const PrescriptionPage = () => {
   };
 
   const addMedicine = () => {
-    setMedicines([...medicines, { name: '', dosage: '', duration: '', quantity: 1 }]);
+    setMedicines([...medicines, { name: '', dosage: '1-0-1', duration: '5 days', quantity: calculateQuantity('1-0-1', '5 days') || 10 }]);
   };
   const removeMedicine = (index: number) => {
     const updatedMedicines = [...medicines];
@@ -2162,7 +2162,7 @@ const PrescriptionPage = () => {
                 {medicines.length === 0 ? (
                   <button
                     type="button"
-                    onClick={() => setMedicines([{ name: '', dosage: '', duration: '', quantity: 1 }])}
+                    onClick={() => setMedicines([{ name: '', dosage: '1-0-1', duration: '5 days', quantity: calculateQuantity('1-0-1', '5 days') || 10 }])}
                     className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition shadow-sm"
                   >
                     Add Medicine

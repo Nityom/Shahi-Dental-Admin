@@ -11,6 +11,8 @@ export const create = mutation({
         selling_price: v.optional(v.number()),
         company: v.optional(v.string()),
         low_stock_threshold: v.optional(v.number()),
+        strips: v.optional(v.number()),
+        quantity_per_strip: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
         return await ctx.db.insert("medicines", args);
@@ -42,6 +44,8 @@ export const update = mutation({
         selling_price: v.optional(v.number()),
         company: v.optional(v.string()),
         low_stock_threshold: v.optional(v.number()),
+        strips: v.optional(v.number()),
+        quantity_per_strip: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
         const { id, ...updates } = args;
