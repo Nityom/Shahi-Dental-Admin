@@ -2208,8 +2208,23 @@ const PrescriptionPage = () => {
                           </label>
                           <input
                             type="number"
-                            value={medicine.quantity || 1}
-                            onChange={(e) => handleMedicineChange(index, 'quantity', parseInt(e.target.value) || 1)}
+                            value={medicine.quantity === 0 ? '' : (medicine.quantity ?? '')}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              if (raw === '') {
+                                handleMedicineChange(index, 'quantity', 0);
+                                return;
+                              }
+                              const num = parseInt(raw, 10);
+                              if (!isNaN(num)) {
+                                handleMedicineChange(index, 'quantity', num);
+                              }
+                            }}
+                            onBlur={() => {
+                              if (!medicine.quantity || medicine.quantity < 1) {
+                                handleMedicineChange(index, 'quantity', 1);
+                              }
+                            }}
                             min="1"
                             placeholder="Auto-calculated"
                             className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition bg-blue-50"
