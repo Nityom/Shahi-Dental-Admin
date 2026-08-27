@@ -906,19 +906,6 @@ const PrescriptionPage = () => {
             date: item.date
           }));
 
-          // Treatment Plan items (with cost) — included only if not already covered by Treatment Done
-          const treatmentDoneNames = new Set(treatmentItems.map(i => i.description.toLowerCase()));
-          const treatmentPlanBillItems = formData.treatmentPlan
-            .filter(tp => tp.cost > 0 && !treatmentDoneNames.has(tp.name.toLowerCase()))
-            .map((tp, index) => ({
-              id: treatmentItems.length + index + 2,
-              description: tp.name + (tp.notes ? ` (${tp.notes})` : ''),
-              quantity: 1,
-              unit_price: tp.cost,
-              total: tp.cost,
-              item_type: 'procedure' as const
-            }));
-
           // Medicine items
           const medicineItems = medicines
             .filter(med => med.name && med.quantity && med.quantity > 0)
@@ -927,7 +914,7 @@ const PrescriptionPage = () => {
               const unitPrice = medicineDetail?.price || 0;
               const quantity = med.quantity || 1;
               return {
-                id: treatmentItems.length + treatmentPlanBillItems.length + index + 2,
+                id: treatmentItems.length + index + 2,
                 description: `${med.name} (${med.dosage})`,
                 quantity: quantity,
                 unit_price: unitPrice,
@@ -937,9 +924,8 @@ const PrescriptionPage = () => {
             });
 
           const treatmentTotal = treatmentDoneItems.reduce((s, i) => s + i.total, 0);
-          const planTotal = treatmentPlanBillItems.reduce((s, i) => s + i.total, 0);
           const medicineTotal = medicineItems.reduce((s, i) => s + i.total, 0);
-          const totalAmount = consultationFee + treatmentTotal + planTotal + medicineTotal;
+          const totalAmount = consultationFee + treatmentTotal + medicineTotal;
 
           const billItems = [
             ...(consultationFee > 0 ? [{
@@ -953,7 +939,6 @@ const PrescriptionPage = () => {
               item_type: 'consultation' as const
             }] : []),
             ...treatmentDoneItems,
-            ...treatmentPlanBillItems,
             ...medicineItems
           ];
 
