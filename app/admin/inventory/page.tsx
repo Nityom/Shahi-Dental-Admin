@@ -1,17 +1,24 @@
 "use client";
-import { useState, useEffect, useCallback } from 'react';
-import { addInventory, getAllInventory, deleteInventory, updateInventory, Inventory } from '@/services/inventory';
-import { PlusCircle, X, Trash2, Search, ArrowUp, ArrowDown, Package, Pill, RefreshCw, Edit } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { addInventory, getAllInventory, deleteInventory, updateInventory, Inventory, InventorySubdivision } from '@/services/inventory';
+import { materialTransactionService } from '@/services/registers';
+import { MaterialTransaction } from '@/types/registers';
+import { PlusCircle, X, Trash2, Search, ArrowUp, ArrowDown, Package, Pill, RefreshCw, Edit, ArrowDownLeft, ArrowUpRight, History, Layers, ExternalLink } from 'lucide-react';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 import { ConvexHttpClient } from "convex/browser";
 // @ts-ignore
 import { api } from "@/convex/_generated/api";
 
-const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-if (!convexUrl) {
-  throw new Error("NEXT_PUBLIC_CONVEX_URL is not configured.");
-}
-const convex = new ConvexHttpClient(convexUrl);
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL || "");
+
+const SUBDIVISIONS: InventorySubdivision[] = [
+  'One-Time Material',
+  'Consumable',
+  'Non-Dental / Cleaning Consumable',
+  'Record Maintenance Material',
+];
 
 interface DailySale {
   inventory_id: string;
@@ -29,7 +36,10 @@ export default function AddInventoryPage() {
     quantity: 0,
     rate: 0,
     company: '',
-    is_consumable: false
+    is_consumable: true,
+    subdivision: 'Consumable',
+    unit: 'pcs',
+    min_stock_level: 5,
   });
 
   const [Inventorys, setInventorys] = useState<Inventory[]>([]);
@@ -39,6 +49,7 @@ export default function AddInventoryPage() {
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedSubdivision, setSelectedSubdivision] = useState<string>('ALL');
   const [sortField, setSortField] = useState<keyof Inventory>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [isLoadingInventorys, setIsLoadingInventorys] = useState<boolean>(true);
@@ -46,6 +57,21 @@ export default function AddInventoryPage() {
   // Edit Mode States
   const [isEditMode, setIsEditMode] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Material Register Logs Modal States
+  const [showLogsModal, setShowLogsModal] = useState<boolean>(false);
+  const [materialLogs, setMaterialLogs] = useState<MaterialTransaction[]>([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState<boolean>(false);
+
+  // Inward / Outward Modal States
+  const [stockModalType, setStockModalType] = useState<'INWARD' | 'OUTWARD' | null>(null);
+  const [selectedStockItem, setSelectedStockItem] = useState<Inventory | null>(null);
+  const [stockQty, setStockQty] = useState<number>(1);
+  const [stockRate, setStockRate] = useState<number>(0);
+  const [stockVendor, setStockVendor] = useState<string>('');
+  const [stockInvoice, setStockInvoice] = useState<string>('');
+  const [stockNotes, setStockNotes] = useState<string>('');
+  const [isStockSubmitting, setIsStockSubmitting] = useState<boolean>(false);
 
   // Daily Sales Form States
   const [showSalesForm, setShowSalesForm] = useState<boolean>(false);
@@ -96,15 +122,21 @@ export default function AddInventoryPage() {
   useEffect(() => {
     fetchInventorys();
     fetchTodaySales();
-  }, [fetchInventorys, fetchTodaySales, sortField, sortDirection]);
+  }, [fetchInventorys, fetchTodaySales]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
-    if (name === 'quantity' || name === 'rate') {
+    if (name === 'quantity' || name === 'rate' || name === 'min_stock_level') {
       setFormData({
         ...formData,
         [name]: value === '' ? 0 : Number(value)
+      });
+    } else if (name === 'subdivision') {
+      setFormData({
+        ...formData,
+        subdivision: value as InventorySubdivision,
+        is_consumable: value === 'Consumable' || value === 'Non-Dental / Cleaning Consumable',
       });
     } else {
       setFormData({
@@ -122,12 +154,28 @@ export default function AddInventoryPage() {
 
     try {
       if (isEditMode && editingId) {
-        // Update existing inventory
         await updateInventory(editingId, formData);
         setSuccess(true);
       } else {
-        // Add new inventory
         await addInventory(formData);
+        // Log initial stock in material transactions
+        if (formData.quantity > 0) {
+          try {
+            await materialTransactionService.record({
+              material_name: formData.name,
+              subdivision: formData.subdivision || 'Consumable',
+              transaction_type: 'INITIAL_STOCK',
+              quantity: Number(formData.quantity),
+              unit: formData.unit || 'pcs',
+              rate: Number(formData.rate) || 0,
+              vendor_name: formData.company,
+              transaction_date: new Date().toISOString().split('T')[0],
+              notes: 'Initial stock recorded on item creation',
+            });
+          } catch (mErr) {
+            console.warn('Initial stock log skipped:', mErr);
+          }
+        }
         setSuccess(true);
       }
       resetForm();
@@ -136,12 +184,8 @@ export default function AddInventoryPage() {
       setTimeout(() => {
         setSuccess(false);
       }, 3000);
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message || `Failed to ${isEditMode ? 'update' : 'add'} inventory`);
-      } else {
-        setError(`Failed to ${isEditMode ? 'update' : 'add'} inventory`);
-      }
+    } catch (err: any) {
+      setError(err.message || `Failed to ${isEditMode ? 'update' : 'add'} inventory`);
     } finally {
       setIsLoading(false);
     }
@@ -154,21 +198,23 @@ export default function AddInventoryPage() {
       quantity: inventory.quantity,
       rate: inventory.rate,
       company: inventory.company || '',
-      is_consumable: inventory.is_consumable || false
+      is_consumable: inventory.is_consumable || false,
+      subdivision: inventory.subdivision || (inventory.is_consumable ? 'Consumable' : 'One-Time Material'),
+      unit: inventory.unit || 'pcs',
+      min_stock_level: inventory.min_stock_level ?? 5,
     });
     setIsEditMode(true);
     setEditingId(inventory.id || null);
     setError('');
-    // Scroll to form
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this Inventory?")) {
+    if (window.confirm("Are you sure you want to delete this material item?")) {
       setIsDeleting(true);
       try {
         await deleteInventory(id);
-        setInventorys(Inventorys.filter(Inventory => Inventory.id !== id));
+        setInventorys(Inventorys.filter(item => item.id !== id));
       } catch (err) {
         console.error("Failed to delete Inventory:", err);
       } finally {
@@ -184,11 +230,70 @@ export default function AddInventoryPage() {
       quantity: 0,
       rate: 0,
       company: '',
-      is_consumable: false
+      is_consumable: true,
+      subdivision: 'Consumable',
+      unit: 'pcs',
+      min_stock_level: 5,
     });
     setError('');
     setIsEditMode(false);
     setEditingId(null);
+  };
+
+  const openStockModal = (item: Inventory, type: 'INWARD' | 'OUTWARD') => {
+    setSelectedStockItem(item);
+    setStockModalType(type);
+    setStockQty(1);
+    setStockRate(item.rate || 0);
+    setStockVendor(item.company || '');
+    setStockInvoice('');
+    setStockNotes('');
+  };
+
+  const handleStockSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedStockItem || !selectedStockItem.id) return;
+    setIsStockSubmitting(true);
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const subdivision = selectedStockItem.subdivision || (selectedStockItem.is_consumable ? 'Consumable' : 'One-Time Material');
+      
+      await materialTransactionService.record({
+        material_id: selectedStockItem.id,
+        material_name: selectedStockItem.name,
+        subdivision,
+        transaction_type: stockModalType === 'INWARD' ? 'PURCHASE' : 'USAGE',
+        quantity: Number(stockQty),
+        unit: selectedStockItem.unit || 'pcs',
+        rate: Number(stockRate),
+        vendor_name: stockVendor || undefined,
+        invoice_no: stockInvoice || undefined,
+        transaction_date: today,
+        notes: stockNotes || undefined,
+      });
+
+      setStockModalType(null);
+      setSelectedStockItem(null);
+      fetchInventorys();
+    } catch (err: any) {
+      alert(`Error updating stock: ${err.message || 'Failed'}`);
+    } finally {
+      setIsStockSubmitting(false);
+    }
+  };
+
+  const openLogsModal = async () => {
+    setShowLogsModal(true);
+    setIsLoadingLogs(true);
+    try {
+      const logs = await materialTransactionService.list({});
+      setMaterialLogs(logs);
+    } catch (err) {
+      console.error('Failed to load material logs:', err);
+    } finally {
+      setIsLoadingLogs(false);
+    }
   };
 
   const handleInventorySelect = (inventory: Inventory) => {
@@ -251,20 +356,14 @@ export default function AddInventoryPage() {
         notes: ''
       });
       setSelectedInventory(null);
-
-      // Refresh inventory and today's sales to show updated data
-      fetchInventorys();
       fetchTodaySales();
+      fetchInventorys();
 
       setTimeout(() => {
         setSalesSuccess(false);
       }, 3000);
-
-      alert(`Sale recorded successfully! Total: ₹${totalAmount.toFixed(2)}`);
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to record sale';
-      setSalesError(errorMsg);
-      alert(errorMsg);
+    } catch (err: any) {
+      setSalesError(err.message || 'Failed to record sale');
     } finally {
       setSalesLoading(false);
     }
@@ -291,35 +390,44 @@ export default function AddInventoryPage() {
     }
   };
 
-  const filteredInventorys = Inventorys.filter(Inventory =>
-    Inventory.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (Inventory.company && Inventory.company.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Filtered by Search & Subdivision
+  const filteredInventorys = useMemo(() => {
+    return Inventorys.filter(item => {
+      const matchesSearch = 
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.company && item.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()));
 
-  const sortedInventorys = [...filteredInventorys].sort((a: Inventory, b: Inventory) => {
-    if (sortField === 'created_at') {
-      const dateA = a.created_at ? new Date(a.created_at) : new Date(0);
-      const dateB = b.created_at ? new Date(b.created_at) : new Date(0);
-      return sortDirection === 'asc'
-        ? dateA.getTime() - dateB.getTime()
-        : dateB.getTime() - dateA.getTime();
+      const itemSub = item.subdivision || (item.is_consumable ? 'Consumable' : 'One-Time Material');
+      const matchesSubdivision = selectedSubdivision === 'ALL' || itemSub === selectedSubdivision;
+
+      return matchesSearch && matchesSubdivision;
+    });
+  }, [Inventorys, searchTerm, selectedSubdivision]);
+
+  const sortedInventorys = useMemo(() => {
+    return [...filteredInventorys].sort((a, b) => {
+      if (sortField === 'name' || sortField === 'company') {
+        const valueA = (a[sortField] || '').toLowerCase();
+        const valueB = (b[sortField] || '').toLowerCase();
+        return sortDirection === 'asc' ? valueA.localeCompare(valueB) : valueB.localeCompare(valueA);
+      }
+
+      const numA = typeof a[sortField] === 'number' ? (a[sortField] as number) : 0;
+      const numB = typeof b[sortField] === 'number' ? (b[sortField] as number) : 0;
+
+      return sortDirection === 'asc' ? numA - numB : numB - numA;
+    });
+  }, [filteredInventorys, sortField, sortDirection]);
+
+  // Subdivision statistics
+  const subdivisionCounts = useMemo(() => {
+    const counts: Record<string, number> = { ALL: Inventorys.length };
+    for (const sub of SUBDIVISIONS) {
+      counts[sub] = Inventorys.filter(i => (i.subdivision || (i.is_consumable ? 'Consumable' : 'One-Time Material')) === sub).length;
     }
-
-    if (sortField === 'name' || sortField === 'company') {
-      const valueA = (a[sortField] || '').toLowerCase();
-      const valueB = (b[sortField] || '').toLowerCase();
-      return sortDirection === 'asc'
-        ? valueA.localeCompare(valueB)
-        : valueB.localeCompare(valueA);
-    }
-
-    const numA = typeof a[sortField] === 'number' ? a[sortField] as number : 0;
-    const numB = typeof b[sortField] === 'number' ? b[sortField] as number : 0;
-
-    return sortDirection === 'asc'
-      ? numA - numB
-      : numB - numA;
-  });
+    return counts;
+  }, [Inventorys]);
 
   const renderSortIcon = (field: keyof Inventory) => {
     if (sortField !== field) return null;
@@ -327,610 +435,783 @@ export default function AddInventoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white w-full overflow-auto scrollbar-none">
-      <div className="w-full">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Inventory Management</h1>
-          <p className="text-gray-600 mt-1">Add and manage inventory for your dental clinic</p>
+    <div className="min-h-screen bg-gray-50/50 w-full overflow-auto">
+      <div className="w-full max-w-7xl mx-auto space-y-6">
+        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+              <Layers className="text-blue-600 h-8 w-8" />
+              Material & Inventory Management
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Organize clinic inventory across 4 subdivisions with complete stock & inward/outward tracking
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={openLogsModal}
+              className="px-4 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-medium flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+            >
+              <History className="w-4 h-4 text-blue-600" />
+              Material Register Logs
+            </button>
+            <Link
+              href="/admin/registers?tab=MATERIAL"
+              className="px-3.5 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-medium flex items-center gap-1 transition"
+              title="Open in Registers & Records hub"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Full Register Hub
+            </Link>
+          </div>
         </header>
 
+        {/* Subdivision Filter Tabs */}
+        <div className="flex flex-wrap gap-2 bg-white p-2 rounded-xl border border-gray-200 shadow-sm">
+          <button
+            onClick={() => setSelectedSubdivision('ALL')}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
+              selectedSubdivision === 'ALL'
+                ? 'bg-blue-600 text-white shadow'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            All Materials ({subdivisionCounts['ALL'] || 0})
+          </button>
+          {SUBDIVISIONS.map((sub) => (
+            <button
+              key={sub}
+              onClick={() => setSelectedSubdivision(sub)}
+              className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
+                selectedSubdivision === sub
+                  ? 'bg-blue-600 text-white shadow'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {sub} ({subdivisionCounts[sub] || 0})
+            </button>
+          ))}
+        </div>
+
+        {/* Subdivision Summary KPI Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {SUBDIVISIONS.map((sub) => {
+            const items = Inventorys.filter(i => (i.subdivision || (i.is_consumable ? 'Consumable' : 'One-Time Material')) === sub);
+            const totalStock = items.reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
+            const totalValue = items.reduce((sum, i) => sum + (Number(i.quantity) || 0) * (Number(i.rate) || 0), 0);
+            const isSelected = selectedSubdivision === sub;
+
+            return (
+              <div
+                key={sub}
+                onClick={() => setSelectedSubdivision(sub)}
+                className={`p-4 rounded-xl border transition cursor-pointer ${
+                  isSelected
+                    ? 'bg-blue-50/70 border-blue-300 ring-2 ring-blue-500/20'
+                    : 'bg-white border-gray-200 hover:border-gray-300 shadow-sm'
+                }`}
+              >
+                <div className="text-xs font-bold text-gray-500 uppercase tracking-wider truncate mb-1">
+                  {sub}
+                </div>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-2xl font-bold text-gray-900">{items.length}</span>
+                  <span className="text-xs text-gray-500">{totalStock} units</span>
+                </div>
+                <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-600 flex justify-between">
+                  <span>Stock Value:</span>
+                  <strong className="text-gray-900">₹{totalValue.toLocaleString('en-IN')}</strong>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Add Inventory Form */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-gray-800 flex items-center">
-                  <Pill className="mr-2 text-blue-500" size={20} />
-                  {isEditMode ? 'Edit Inventory' : 'Add New Inventory'}
+          {/* Add / Edit Form Column */}
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex justify-between items-center mb-5">
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <Pill className="text-blue-600" size={20} />
+                  {isEditMode ? 'Edit Material Item' : 'Add New Material Item'}
                 </h2>
                 {isEditMode && (
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="text-sm text-gray-600 hover:text-gray-800 flex items-center"
+                    className="text-xs text-gray-500 hover:text-gray-800 flex items-center"
                   >
-                    <X size={16} className="mr-1" />
-                    Cancel Edit
+                    <X size={14} className="mr-1" />
+                    Cancel
                   </button>
                 )}
               </div>
 
               {error && (
-                <div className="bg-red-100 text-red-800 p-4 rounded-md mb-6 flex justify-between items-center">
+                <div className="bg-red-50 text-red-700 text-xs p-3 rounded-lg mb-4 flex justify-between items-center border border-red-200">
                   <span>{error}</span>
-                  <button onClick={() => setError('')}>
-                    <X size={18} />
-                  </button>
+                  <button onClick={() => setError('')}><X size={14} /></button>
                 </div>
               )}
 
               {success && (
-                <div className="bg-green-100 text-green-800 px-4 py-3 rounded-md mb-6 flex items-center justify-between">
-                  <span>Inventory {isEditMode ? 'updated' : 'added'} successfully!</span>
-                  <button onClick={() => setSuccess(false)}>
-                    <X size={18} />
-                  </button>
+                <div className="bg-green-50 text-green-700 text-xs p-3 rounded-lg mb-4 flex items-center justify-between border border-green-200">
+                  <span>Material {isEditMode ? 'updated' : 'saved'} successfully!</span>
+                  <button onClick={() => setSuccess(false)}><X size={14} /></button>
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-4 text-sm">
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                    Inventory Name*
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Material / Item Name *
                   </label>
                   <input
                     type="text"
-                    id="name"
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter Inventory name"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g. Composite Shade A2, Extraction Forceps"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-1">
-                    Company
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Material Category / Subdivision *
                   </label>
-                  <input
-                    type="text"
-                    id="company"
-                    name="company"
-                    value={formData.company}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter company name"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-1">
-                    Quantity*
-                  </label>
-                  <input
-                    type="number"
-                    id="quantity"
-                    name="quantity"
-                    value={formData.quantity}
+                  <select
+                    name="subdivision"
+                    value={formData.subdivision || 'Consumable'}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter quantity"
-                  />
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white"
+                  >
+                    {SUBDIVISIONS.map(sub => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                  </select>
                 </div>
 
-                <div>
-                  <label htmlFor="rate" className="block text-sm font-medium text-gray-700 mb-1">
-                    Rate (₹)
-                  </label>
-                  <div className="relative">
-
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Current Quantity *
+                    </label>
                     <input
                       type="number"
-                      id="rate"
+                      name="quantity"
+                      value={formData.quantity}
+                      onChange={handleChange}
+                      required
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Unit (e.g. pcs, box)
+                    </label>
+                    <input
+                      type="text"
+                      name="unit"
+                      value={formData.unit || 'pcs'}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      placeholder="pcs, box, ml, pkts"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Unit Rate / Price (₹) *
+                    </label>
+                    <input
+                      type="number"
                       name="rate"
                       value={formData.rate}
                       onChange={handleChange}
                       required
-                      className="w-full pl-3 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
-             [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                      placeholder="Enter rate"
+                      min="0"
+                      step="0.01"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     />
-
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Min Alert Stock
+                    </label>
+                    <input
+                      type="number"
+                      name="min_stock_level"
+                      value={formData.min_stock_level || 5}
+                      onChange={handleChange}
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Company / Supplier
+                  </label>
+                  <input
+                    type="text"
+                    name="company"
+                    value={formData.company}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    placeholder="Manufacturer / Vendor name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Notes / Description
                   </label>
                   <textarea
-                    id="description"
                     name="description"
                     value={formData.description}
                     onChange={handleChange}
-                    rows={4}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter Inventory description"
-                  ></textarea>
-                </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="is_consumable"
-                    name="is_consumable"
-                    checked={!!formData.is_consumable}
-                    onChange={(e) => setFormData({ ...formData, is_consumable: e.target.checked })}
-                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    placeholder="Specification or storage notes"
                   />
-                  <label htmlFor="is_consumable" className="ml-2 block text-sm text-gray-700">
-                    Mark as consumable item
-                  </label>
                 </div>
 
-                <div className="flex justify-between">
+                <div className="flex gap-2 pt-2">
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 flex items-center"
+                    className="w-1/3 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium"
                   >
-                    <X size={16} className="mr-1" />
                     Clear
                   </button>
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center"
+                    className="w-2/3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow transition flex items-center justify-center gap-1"
                   >
                     {isLoading ? (
-                      <>
-                        <RefreshCw size={16} className="mr-2 animate-spin" />
-                        <span>{isEditMode ? 'Updating...' : 'Adding...'}</span>
-                      </>
+                      <RefreshCw size={14} className="animate-spin" />
+                    ) : isEditMode ? (
+                      <Edit size={14} />
                     ) : (
-                      <>
-                        {isEditMode ? (
-                          <Edit size={16} className="mr-2" />
-                        ) : (
-                          <PlusCircle size={16} className="mr-2" />
-                        )}
-                        <span>{isEditMode ? 'Update Inventory' : 'Add Inventory'}</span>
-                      </>
+                      <PlusCircle size={14} />
                     )}
+                    {isEditMode ? 'Update Item' : 'Add Material'}
                   </button>
                 </div>
               </form>
             </div>
 
             {/* Daily Sales Form */}
-            <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-800 flex items-center">
-                  <Package className="mr-2 text-green-500" size={20} />
-                  Record Daily Sales
-                </h2>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <Package className="text-green-600" size={18} />
+                  Record Daily Direct Sale
+                </h3>
                 <button
                   onClick={() => setShowSalesForm(!showSalesForm)}
-                  className="text-sm px-3 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200"
+                  className="text-xs px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-md font-medium"
                 >
-                  {showSalesForm ? 'Hide' : 'Show'} Form
+                  {showSalesForm ? 'Hide' : 'Open'}
                 </button>
               </div>
 
               {showSalesForm && (
-                <>
-                  {salesError && (
-                    <div className="bg-red-100 text-red-800 p-4 rounded-md mb-4 flex justify-between items-center">
-                      <span>{salesError}</span>
-                      <button onClick={() => setSalesError('')}>
-                        <X size={18} />
-                      </button>
-                    </div>
-                  )}
+                <form onSubmit={handleSalesSubmit} className="space-y-3 mt-3 text-sm">
+                  {salesError && <div className="text-xs text-red-600 bg-red-50 p-2 rounded">{salesError}</div>}
+                  {salesSuccess && <div className="text-xs text-green-600 bg-green-50 p-2 rounded">Sale recorded!</div>}
 
-                  {salesSuccess && (
-                    <div className="bg-green-100 text-green-800 px-4 py-3 rounded-md mb-4 flex items-center justify-between">
-                      <span>Sale recorded successfully!</span>
-                      <button onClick={() => setSalesSuccess(false)}>
-                        <X size={18} />
-                      </button>
-                    </div>
-                  )}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Select Item</label>
+                    <select
+                      name="inventory_select"
+                      value={salesFormData.inventory_id}
+                      onChange={handleSalesFormChange}
+                      required
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs"
+                    >
+                      <option value="">-- Choose Material --</option>
+                      {Inventorys.filter(i => i.quantity > 0).map(i => (
+                        <option key={i.id} value={i.id}>{i.name} (Stock: {i.quantity})</option>
+                      ))}
+                    </select>
+                  </div>
 
-                  <form onSubmit={handleSalesSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label htmlFor="inventory_select" className="block text-sm font-medium text-gray-700 mb-1">
-                        Select Inventory Item*
-                      </label>
-                      <select
-                        id="inventory_select"
-                        name="inventory_select"
-                        value={salesFormData.inventory_id}
-                        onChange={handleSalesFormChange}
-                        required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      >
-                        <option value="">-- Select Item --</option>
-                        {Inventorys
-                          .filter(inv => inv.quantity > 0)
-                          .map(inv => (
-                            <option key={inv.id} value={inv.id}>
-                              {inv.name} (Stock: {inv.quantity}, Rate: ₹{inv.rate})
-                            </option>
-                          ))}
-                      </select>
-                    </div>
-
-                    {selectedInventory && (
-                      <div className="bg-blue-50 p-3 rounded-md">
-                        <p className="text-sm text-blue-700">
-                          <strong>{selectedInventory.name}</strong>
-                        </p>
-                        <p className="text-xs text-blue-600 mt-1">
-                          Available: {selectedInventory.quantity} units | Rate: ₹{selectedInventory.rate}
-                        </p>
-                      </div>
-                    )}
-
-                    <div>
-                      <label htmlFor="sales_quantity" className="block text-sm font-medium text-gray-700 mb-1">
-                        Quantity Sold*
-                      </label>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Qty</label>
                       <input
                         type="number"
-                        id="sales_quantity"
                         name="quantity"
                         value={salesFormData.quantity}
                         onChange={handleSalesFormChange}
                         min="1"
-                        max={selectedInventory?.quantity || 999}
                         required
-                        disabled={!selectedInventory}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100"
-                        placeholder="Enter quantity sold"
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs"
                       />
                     </div>
-
                     <div>
-                      <label htmlFor="sales_rate" className="block text-sm font-medium text-gray-700 mb-1">
-                        Selling Rate (₹)*
-                      </label>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Rate (₹)</label>
                       <input
                         type="number"
-                        id="sales_rate"
                         name="rate"
                         value={salesFormData.rate}
                         onChange={handleSalesFormChange}
-                        min="0"
-                        step="0.01"
                         required
-                        disabled={!selectedInventory}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100"
-                        placeholder="Enter selling rate"
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs"
                       />
                     </div>
+                  </div>
 
-                    {selectedInventory && salesFormData.quantity > 0 && salesFormData.rate > 0 && (
-                      <div className="bg-green-50 p-3 rounded-md border border-green-200">
-                        <p className="text-sm font-semibold text-green-800">
-                          Total Amount: ₹{(salesFormData.quantity * salesFormData.rate).toFixed(2)}
-                        </p>
-                      </div>
-                    )}
-
-                    <div>
-                      <label htmlFor="sales_notes" className="block text-sm font-medium text-gray-700 mb-1">
-                        Notes (Optional)
-                      </label>
-                      <textarea
-                        id="sales_notes"
-                        name="notes"
-                        value={salesFormData.notes}
-                        onChange={handleSalesFormChange}
-                        rows={2}
-                        disabled={!selectedInventory}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100"
-                        placeholder="Add any notes about this sale"
-                      ></textarea>
-                    </div>
-
-                    <div className="flex justify-between pt-2">
-                      <button
-                        type="button"
-                        onClick={resetSalesForm}
-                        disabled={salesLoading}
-                        className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 flex items-center disabled:opacity-50"
-                      >
-                        <X size={16} className="mr-1" />
-                        Clear
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={salesLoading || !selectedInventory}
-                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {salesLoading ? (
-                          <>
-                            <RefreshCw size={16} className="mr-2 animate-spin" />
-                            <span>Recording...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Package size={16} className="mr-2" />
-                            <span>Record Sale</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </form>
-                </>
-              )}
-
-              {!showSalesForm && (
-                <p className="text-sm text-gray-600">
-                  Click "Show Form" to record direct sales from inventory at the end of the day.
-                </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={resetSalesForm}
+                      className="w-1/3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={salesLoading || !salesFormData.inventory_id}
+                      className="w-2/3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold shadow disabled:opacity-50"
+                    >
+                      {salesLoading ? 'Recording...' : 'Save Direct Sale'}
+                    </button>
+                  </div>
+                </form>
               )}
             </div>
 
-            {/* Quick Stats Card */}
-            <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Inventory Stats</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <p className="text-sm text-blue-700">Total Inventorys</p>
-                  <p className="text-2xl font-bold text-blue-800">{sortedInventorys.length}</p>
-                </div>
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <p className="text-sm text-green-700">Total Value</p>
-                  <p className="text-2xl font-bold text-green-800">
-                    ₹{sortedInventorys.reduce((total, med) => total + (med.quantity * med.rate), 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div className="bg-yellow-50 p-4 rounded-lg">
-                  <p className="text-sm text-yellow-700">Low Stock</p>
-                  <p className="text-2xl font-bold text-yellow-800">
-                    {sortedInventorys.filter(med => med.quantity < 10).length}
-                  </p>
-                </div>
-                <div className="bg-purple-50 p-4 rounded-lg">
-                  <p className="text-sm text-purple-700">Companies</p>
-                  <p className="text-2xl font-bold text-purple-800">
-                    {new Set(sortedInventorys.map(med => med.company).filter(Boolean)).size}
-                  </p>
-                </div>
+            {/* Today's Sales Summary */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+              <div className="flex justify-between items-center mb-3">
+                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Today's Direct Sales</h4>
+                <button
+                  onClick={fetchTodaySales}
+                  className="text-[11px] text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                >
+                  <RefreshCw size={12} className={isLoadingSales ? 'animate-spin' : ''} />
+                  Refresh
+                </button>
               </div>
+
+              {isLoadingSales ? (
+                <div className="py-4 text-center text-xs text-gray-400">Loading sales...</div>
+              ) : todaySales.length === 0 ? (
+                <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg text-center">
+                  No direct inventory sales recorded today.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="bg-green-50 border border-green-200 p-2.5 rounded-lg flex justify-between items-center text-xs">
+                    <span className="font-medium text-green-800">Total Today ({todaySales.length} items):</span>
+                    <strong className="text-sm font-bold text-green-900">₹{todayTotal.toFixed(2)}</strong>
+                  </div>
+                  <div className="max-h-36 overflow-y-auto space-y-1 text-xs">
+                    {todaySales.map((s, idx) => (
+                      <div key={idx} className="flex justify-between items-center p-1.5 bg-gray-50 rounded text-[11px]">
+                        <span className="font-medium text-gray-800 truncate max-w-[140px]">{s.inventory_name}</span>
+                        <span className="text-gray-600 font-semibold">₹{Number(s.total_amount).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Inventorys List */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-gray-800 flex items-center">
-                  <Package className="mr-2 text-blue-500" size={20} />
-                  Inventory 
-                </h2>
-                <div className="relative w-64">
+          {/* Material Table Column */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">
+                    {selectedSubdivision === 'ALL' ? 'All Material Inventory' : selectedSubdivision}
+                  </h2>
+                  <p className="text-xs text-gray-500">
+                    Showing {sortedInventorys.length} items in current category
+                  </p>
+                </div>
+                <div className="relative w-full sm:w-64">
                   <input
                     type="text"
-                    placeholder="Search Inventorys..."
+                    placeholder="Search materials, vendor..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full pl-9 pr-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <Search size={16} className="text-gray-400" />
-                  </div>
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 </div>
               </div>
 
               {isLoadingInventorys ? (
-                <div className="flex justify-center items-center h-64">
-                  <RefreshCw size={32} className="animate-spin text-blue-500" />
+                <div className="flex justify-center items-center py-20">
+                  <RefreshCw size={28} className="animate-spin text-blue-600" />
                 </div>
               ) : sortedInventorys.length === 0 ? (
-                <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
-                  <Package size={48} className="mx-auto text-gray-400 mb-3" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-1">No Inventorys found</h3>
-                  <p className="text-gray-500">
-                    {searchTerm ? "Try a different search term" : "Add your first Inventory using the form"}
+                <div className="text-center py-16 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                  <Package size={40} className="mx-auto text-gray-400 mb-2" />
+                  <h3 className="text-sm font-semibold text-gray-900">No materials found</h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {searchTerm ? "Try adjusting your search filter" : "Add your first item using the form on the left"}
                   </p>
                 </div>
               ) : (
-                <>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('name')}>
-                            <div className="flex items-center space-x-1">
-                              <span>Name</span>
-                              {renderSortIcon('name')}
-                            </div>
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('company')}>
-                            <div className="flex items-center space-x-1">
-                              <span>Company</span>
-                              {renderSortIcon('company')}
-                            </div>
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('quantity')}>
-                            <div className="flex items-center space-x-1">
-                              <span>Quantity</span>
-                              {renderSortIcon('quantity')}
-                            </div>
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('rate')}>
-                            <div className="flex items-center space-x-1">
-                              <span>Rate</span>
-                              {renderSortIcon('rate')}
-                            </div>
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Actions
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {sortedInventorys.map((Inventory) => (
-                          <tr key={Inventory.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center gap-2">
-                                <div className="font-medium text-gray-900">{Inventory.name}</div>
-                                {Inventory.is_consumable && (
-                                  <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
-                                    Consumable
-                                  </span>
-                                )}
-                              </div>
-                              {Inventory.description && (
-                                <div className="text-xs text-gray-500 truncate max-w-xs" title={Inventory.description}>
-                                  {Inventory.description}
-                                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-gray-50 border-y border-gray-200 text-gray-600 uppercase font-semibold">
+                      <tr>
+                        <th className="py-2.5 px-3 text-left cursor-pointer" onClick={() => handleSort('name')}>
+                          <div className="flex items-center gap-1">Name {renderSortIcon('name')}</div>
+                        </th>
+                        <th className="py-2.5 px-3 text-left">Subdivision</th>
+                        <th className="py-2.5 px-3 text-left cursor-pointer" onClick={() => handleSort('company')}>
+                          <div className="flex items-center gap-1">Company {renderSortIcon('company')}</div>
+                        </th>
+                        <th className="py-2.5 px-3 text-center cursor-pointer" onClick={() => handleSort('quantity')}>
+                          <div className="flex items-center justify-center gap-1">Stock {renderSortIcon('quantity')}</div>
+                        </th>
+                        <th className="py-2.5 px-3 text-right cursor-pointer" onClick={() => handleSort('rate')}>
+                          <div className="flex items-center justify-end gap-1">Rate {renderSortIcon('rate')}</div>
+                        </th>
+                        <th className="py-2.5 px-3 text-center">Quick Stock</th>
+                        <th className="py-2.5 px-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {sortedInventorys.map((item) => {
+                        const sub = item.subdivision || (item.is_consumable ? 'Consumable' : 'One-Time Material');
+                        const isLow = Number(item.quantity) <= (item.min_stock_level ?? 5);
+
+                        return (
+                          <tr key={item.id} className="hover:bg-gray-50/80 transition">
+                            <td className="py-3 px-3">
+                              <div className="font-semibold text-gray-900">{item.name}</div>
+                              {item.description && (
+                                <div className="text-[11px] text-gray-500 truncate max-w-xs">{item.description}</div>
                               )}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {Inventory.company || "-"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                Number(Inventory.quantity) < 10
-                                  ? 'bg-red-100 text-red-800'
-                                  : Number(Inventory.quantity) <= 20
-                                    ? 'bg-yellow-100 text-yellow-800'
-                                    : 'bg-green-100 text-green-800'
-                                }`}>
-                                {Inventory.quantity}
+                            <td className="py-3 px-3">
+                              <span className={`inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full ${
+                                sub === 'Consumable'
+                                  ? 'bg-purple-100 text-purple-700'
+                                  : sub === 'One-Time Material'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : sub === 'Non-Dental / Cleaning Consumable'
+                                  ? 'bg-teal-100 text-teal-700'
+                                  : 'bg-amber-100 text-amber-800'
+                              }`}>
+                                {sub}
                               </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              ₹{Number(Inventory.rate).toFixed(2)}
+                            <td className="py-3 px-3 text-gray-600">{item.company || '-'}</td>
+                            <td className="py-3 px-3 text-center">
+                              <span className={`inline-flex px-2 py-0.5 text-xs font-bold rounded-full ${
+                                isLow ? 'bg-red-100 text-red-700 animate-pulse' : 'bg-green-100 text-green-700'
+                              }`}>
+                                {item.quantity} {item.unit || 'pcs'}
+                              </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <button
-                                onClick={() => handleEdit(Inventory)}
-                                className="text-blue-600 hover:text-blue-900"
-                                title="Edit inventory item"
-                              >
-                                <Edit size={18} />
-                              </button>
-                              {isAdmin && (
+                            <td className="py-3 px-3 text-right font-medium text-gray-900">
+                              ₹{Number(item.rate).toFixed(2)}
+                            </td>
+                            <td className="py-3 px-3 text-center">
+                              <div className="inline-flex items-center gap-1">
                                 <button
-                                  onClick={() => Inventory.id && handleDelete(Inventory.id)}
-                                  disabled={isDeleting}
-                                  className="text-red-600 hover:text-red-900 ml-3"
-                                  title="Delete inventory item"
+                                  onClick={() => openStockModal(item, 'INWARD')}
+                                  className="p-1 text-emerald-700 hover:bg-emerald-50 rounded border border-emerald-200 text-[11px] font-medium flex items-center gap-0.5"
+                                  title="Record Inward / Purchase"
                                 >
-                                  <Trash2 size={18} />
+                                  <ArrowDownLeft className="w-3.5 h-3.5" />
+                                  + In
                                 </button>
-                              )}
+                                <button
+                                  onClick={() => openStockModal(item, 'OUTWARD')}
+                                  className="p-1 text-orange-700 hover:bg-orange-50 rounded border border-orange-200 text-[11px] font-medium flex items-center gap-0.5"
+                                  title="Record Outward / Usage"
+                                >
+                                  <ArrowUpRight className="w-3.5 h-3.5" />
+                                  - Use
+                                </button>
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => handleEdit(item)}
+                                  className="text-blue-600 hover:text-blue-800 p-1"
+                                  title="Edit Material"
+                                >
+                                  <Edit size={16} />
+                                </button>
+                                {isAdmin && (
+                                  <button
+                                    onClick={() => item.id && handleDelete(item.id)}
+                                    disabled={isDeleting}
+                                    className="text-red-600 hover:text-red-800 p-1"
+                                    title="Delete Material"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="mt-4 text-right text-sm text-gray-500">
-                    Showing {sortedInventorys.length} of {Inventorys.length} Inventorys
-                  </div>
-                </>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               )}
-            </div>
-
-            {/* Today's Sales Report */}
-            <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-gray-800">Today's Sales</h3>
-                <button 
-                  onClick={fetchTodaySales}
-                  className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-1"
-                >
-                  <RefreshCw size={14} />
-                  Refresh
-                </button>
-              </div>
-              
-              {isLoadingSales ? (
-                <div className="flex justify-center items-center py-8">
-                  <RefreshCw size={24} className="animate-spin text-blue-500" />
-                </div>
-              ) : todaySales.length === 0 ? (
-                <div className="bg-gray-50 p-4 rounded-lg text-center">
-                  <p className="text-sm text-gray-600">No sales recorded today yet.</p>
-                  <p className="text-xs text-gray-500 mt-1">Use the form above to record your first sale!</p>
-                </div>
-              ) : (
-                <>
-                  <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg mb-4 border border-green-200">
-                    <p className="text-sm text-green-700 mb-1">Total Sales Today</p>
-                    <p className="text-3xl font-bold text-green-800">₹{(typeof todayTotal === 'number' ? todayTotal : parseFloat(todayTotal) || 0).toFixed(2)}</p>
-                    <p className="text-xs text-green-600 mt-1">{todaySales.length} transaction(s)</p>
-                  </div>
-
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {todaySales.map((sale, index) => (
-                      <div key={index} className="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:bg-gray-100">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <p className="font-semibold text-gray-800">{sale.inventory_name}</p>
-                            <p className="text-xs text-gray-600 mt-1">
-                              Qty: {sale.quantity} × ₹{Number(sale.rate).toFixed(2)} = ₹{Number(sale.total_amount).toFixed(2)}
-                            </p>
-                            {sale.notes && (
-                              <p className="text-xs text-gray-500 mt-1 italic">"{sale.notes}"</p>
-                            )}
-                          </div>
-                          <div className="text-right ml-2">
-                            <p className="text-sm font-semibold text-green-700">₹{Number(sale.total_amount).toFixed(2)}</p>
-                            <p className="text-xs text-gray-500">{new Date(sale._creationTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <button 
-                      onClick={() => window.open('/admin/medicines/sales', '_blank')}
-                      className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
-                    >
-                      View Full Sales Report →
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Tips and Help Card */}
-            <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-              <h3 className="text-lg font-bold text-gray-800 mb-3">Quick Tips</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h4 className="text-sm font-semibold text-blue-700 mb-2">Managing Inventory</h4>
-                  <ul className="text-sm text-blue-600 space-y-1">
-                    <li>• Items with less than 5 units are highlighted in red</li>
-                    <li>• Click column headers to sort your inventory</li>
-                    <li>• Use search to quickly find Inventorys</li>
-                  </ul>
-                </div>
-                <div className="bg-purple-50 p-4 rounded-lg">
-                  <h4 className="text-sm font-semibold text-purple-700 mb-2">Adding New Inventorys</h4>
-                  <ul className="text-sm text-purple-600 space-y-1">
-                    <li>• Required fields are marked with *</li>
-                    <li>• Include detailed descriptions for better organization</li>
-                    <li>• Company names help track suppliers</li>
-                  </ul>
-                </div>
-              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Inward / Outward Stock Transaction Modal */}
+      {stockModalType && selectedStockItem && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl animate-scale-up border border-gray-200">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                {stockModalType === 'INWARD' ? (
+                  <span className="text-emerald-600 flex items-center gap-1">
+                    <ArrowDownLeft className="w-5 h-5" /> Record Inward / Purchase
+                  </span>
+                ) : (
+                  <span className="text-orange-600 flex items-center gap-1">
+                    <ArrowUpRight className="w-5 h-5" /> Record Outward / Consumption
+                  </span>
+                )}
+              </h3>
+              <button onClick={() => setStockModalType(null)} className="text-gray-400 hover:text-gray-600">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="bg-gray-50 p-3 rounded-lg mb-4 text-xs">
+              <div className="font-bold text-gray-900">{selectedStockItem.name}</div>
+              <div className="text-gray-500 mt-0.5">
+                Current Stock: {selectedStockItem.quantity} {selectedStockItem.unit || 'pcs'} | Category: {selectedStockItem.subdivision || 'Consumable'}
+              </div>
+            </div>
+
+            <form onSubmit={handleStockSubmit} className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">
+                    {stockModalType === 'INWARD' ? 'Quantity Inward *' : 'Quantity Used *'}
+                  </label>
+                  <input
+                    type="number"
+                    value={stockQty}
+                    onChange={(e) => setStockQty(Math.max(1, Number(e.target.value)))}
+                    required
+                    min="1"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Unit Rate (₹)</label>
+                  <input
+                    type="number"
+                    value={stockRate}
+                    onChange={(e) => setStockRate(Number(e.target.value))}
+                    required
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+              </div>
+
+              {stockModalType === 'INWARD' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Vendor / Supplier</label>
+                    <input
+                      type="text"
+                      value={stockVendor}
+                      onChange={(e) => setStockVendor(e.target.value)}
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-lg"
+                      placeholder="Vendor name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Invoice / Bill #</label>
+                    <input
+                      type="text"
+                      value={stockInvoice}
+                      onChange={(e) => setStockInvoice(e.target.value)}
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-lg"
+                      placeholder="Inv #1234"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Notes / Purpose</label>
+                <input
+                  type="text"
+                  value={stockNotes}
+                  onChange={(e) => setStockNotes(e.target.value)}
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg"
+                  placeholder={stockModalType === 'INWARD' ? 'Batch number or purchase info' : 'Used for patient treatment / cleaning'}
+                />
+              </div>
+
+              <div className="bg-blue-50 p-2.5 rounded-lg text-blue-900 font-medium flex justify-between items-center mt-2">
+                <span>Total Transaction Value:</span>
+                <strong className="text-sm">₹{(stockQty * stockRate).toFixed(2)}</strong>
+              </div>
+
+              <div className="flex gap-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setStockModalType(null)}
+                  className="w-1/2 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isStockSubmitting}
+                  className={`w-1/2 py-2 text-white rounded-lg font-semibold shadow transition ${
+                    stockModalType === 'INWARD' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-orange-600 hover:bg-orange-700'
+                  }`}
+                >
+                  {isStockSubmitting ? 'Saving...' : stockModalType === 'INWARD' ? 'Confirm Inward' : 'Confirm Outward'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Material Register Logs Quick Modal */}
+      {showLogsModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-2xl animate-scale-up border border-gray-200 max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                  <History size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Material Register Inward / Outward Logs</h3>
+                  <p className="text-xs text-gray-500">Complete audit trail of all purchases, usage, and adjustments</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/admin/registers?tab=MATERIAL"
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+                >
+                  <ExternalLink size={13} />
+                  Open Full Registers Hub
+                </Link>
+                <button
+                  onClick={() => setShowLogsModal(false)}
+                  className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto py-4">
+              {isLoadingLogs ? (
+                <div className="py-16 flex flex-col justify-center items-center gap-2">
+                  <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
+                  <span className="text-xs text-gray-500">Loading register logs...</span>
+                </div>
+              ) : materialLogs.length === 0 ? (
+                <div className="py-16 text-center text-gray-500 text-sm bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                  No material transactions logged yet. Use the "+ In" or "- Use" buttons on materials to record transactions.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-gray-50 text-gray-600 uppercase font-semibold border-y border-gray-200">
+                      <tr>
+                        <th className="py-2.5 px-3">Date</th>
+                        <th className="py-2.5 px-3">Material Name</th>
+                        <th className="py-2.5 px-3">Subdivision</th>
+                        <th className="py-2.5 px-3">Type</th>
+                        <th className="py-2.5 px-3 text-center">Quantity</th>
+                        <th className="py-2.5 px-3 text-right">Rate</th>
+                        <th className="py-2.5 px-3 text-right">Total</th>
+                        <th className="py-2.5 px-3">Vendor / Info</th>
+                        <th className="py-2.5 px-3">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {materialLogs.map((m) => (
+                        <tr key={m.id || m._id} className="hover:bg-gray-50/80">
+                          <td className="py-2.5 px-3 font-semibold text-gray-800 whitespace-nowrap">
+                            {m.transaction_date}
+                          </td>
+                          <td className="py-2.5 px-3 font-bold text-gray-900">{m.material_name}</td>
+                          <td className="py-2.5 px-3">
+                            <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-[10px] font-medium">
+                              {m.subdivision}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                m.transaction_type === 'PURCHASE' || m.transaction_type === 'INITIAL_STOCK'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-orange-100 text-orange-800'
+                              }`}
+                            >
+                              {m.transaction_type}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-center font-bold">
+                            {m.quantity} {m.unit || 'pcs'}
+                          </td>
+                          <td className="py-2.5 px-3 text-right text-gray-700">₹{m.rate}</td>
+                          <td className="py-2.5 px-3 text-right font-bold text-gray-900">
+                            ₹{m.total_cost || m.quantity * m.rate}
+                          </td>
+                          <td className="py-2.5 px-3 text-gray-600">
+                            {m.vendor_name || '-'} {m.invoice_no && `(${m.invoice_no})`}
+                          </td>
+                          <td className="py-2.5 px-3 text-gray-500 max-w-xs truncate">{m.notes || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-gray-100 flex justify-between items-center">
+              <span className="text-xs text-gray-500">
+                Total Logs: <strong>{materialLogs.length}</strong>
+              </span>
+              <button
+                onClick={() => setShowLogsModal(false)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -196,7 +196,17 @@ export function BillHistoryWithPayments({ bills, onBillUpdated, defaultSignature
                     <p className="text-gray-500">Balance</p>
                     <p className="font-medium text-orange-600">₹{(Number(bill.balance_amount) || 0).toLocaleString()}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex items-center justify-end gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => window.open(`/print-dues?billId=${bill.id}&signature=${defaultSignature}&doctorName=${encodeURIComponent(defaultDoctorName)}`, '_blank')}
+                      className="mt-1 text-xs flex items-center gap-1 border-blue-300 text-blue-700 hover:bg-blue-50"
+                      title="Print clinic-ready extraction/park dues report"
+                    >
+                      <Printer className="h-3.5 w-3.5" />
+                      Print Dues Report
+                    </Button>
                     {hasBalance && (
                       <Button
                         size="sm"

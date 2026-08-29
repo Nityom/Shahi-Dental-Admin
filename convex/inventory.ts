@@ -9,6 +9,14 @@ export const create = mutation({
         rate: v.number(),
         company: v.optional(v.string()),
         is_consumable: v.boolean(),
+        subdivision: v.optional(v.union(
+            v.literal("One-Time Material"),
+            v.literal("Consumable"),
+            v.literal("Non-Dental / Cleaning Consumable"),
+            v.literal("Record Maintenance Material")
+        )),
+        unit: v.optional(v.string()),
+        min_stock_level: v.optional(v.number()),
         deduction_qty: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
@@ -39,6 +47,14 @@ export const update = mutation({
         rate: v.optional(v.number()),
         company: v.optional(v.string()),
         is_consumable: v.optional(v.boolean()),
+        subdivision: v.optional(v.union(
+            v.literal("One-Time Material"),
+            v.literal("Consumable"),
+            v.literal("Non-Dental / Cleaning Consumable"),
+            v.literal("Record Maintenance Material")
+        )),
+        unit: v.optional(v.string()),
+        min_stock_level: v.optional(v.number()),
         enabled: v.optional(v.boolean()),
         deduction_qty: v.optional(v.number()),
     },

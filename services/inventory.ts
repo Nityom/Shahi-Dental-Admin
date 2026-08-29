@@ -3,11 +3,9 @@ import { ConvexHttpClient } from "convex/browser";
 // @ts-ignore
 import { api } from "@/convex/_generated/api";
 
-const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-if (!convexUrl) {
-  throw new Error("NEXT_PUBLIC_CONVEX_URL is not configured.");
-}
-const convex = new ConvexHttpClient(convexUrl);
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL || "");
+
+export type InventorySubdivision = 'One-Time Material' | 'Consumable' | 'Non-Dental / Cleaning Consumable' | 'Record Maintenance Material';
 
 export type Inventory = {
   id?: string;
@@ -17,6 +15,9 @@ export type Inventory = {
   rate: number;
   company?: string;
   is_consumable?: boolean | number;
+  subdivision?: InventorySubdivision;
+  unit?: string;
+  min_stock_level?: number;
   deduction_qty?: number;
   created_at?: string;
   updated_at?: string;
@@ -30,6 +31,10 @@ export const addInventory = async (inventory: Inventory) => {
     rate: Number(inventory.rate),
     company: inventory.company,
     is_consumable: !!inventory.is_consumable,
+    subdivision: inventory.subdivision,
+    unit: inventory.unit,
+    min_stock_level: inventory.min_stock_level ? Number(inventory.min_stock_level) : undefined,
+    deduction_qty: inventory.deduction_qty ? Number(inventory.deduction_qty) : undefined,
   });
   return data;
 };
@@ -51,6 +56,9 @@ export const updateInventory = async (id: string, updates: Partial<Inventory>) =
   if (updates.rate !== undefined) validUpdate.rate = Number(updates.rate);
   if (updates.company !== undefined) validUpdate.company = updates.company;
   if (updates.is_consumable !== undefined) validUpdate.is_consumable = !!updates.is_consumable;
+  if (updates.subdivision !== undefined) validUpdate.subdivision = updates.subdivision;
+  if (updates.unit !== undefined) validUpdate.unit = updates.unit;
+  if (updates.min_stock_level !== undefined) validUpdate.min_stock_level = Number(updates.min_stock_level);
   if ((updates as any).enabled !== undefined) validUpdate.enabled = !!(updates as any).enabled;
   if (updates.deduction_qty !== undefined) validUpdate.deduction_qty = Number(updates.deduction_qty);
 

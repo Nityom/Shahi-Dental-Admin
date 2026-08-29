@@ -14,10 +14,13 @@ import type * as bills from "../bills.js";
 import type * as consumables from "../consumables.js";
 import type * as inventory from "../inventory.js";
 import type * as inventory_sales from "../inventory_sales.js";
+import type * as investigations from "../investigations.js";
+import type * as material_transactions from "../material_transactions.js";
 import type * as medicines from "../medicines.js";
 import type * as patients from "../patients.js";
 import type * as payment_transactions from "../payment_transactions.js";
 import type * as prescriptions from "../prescriptions.js";
+import type * as registers from "../registers.js";
 
 import type {
   ApiFromModules,
@@ -32,10 +35,13 @@ declare const fullApi: ApiFromModules<{
   consumables: typeof consumables;
   inventory: typeof inventory;
   inventory_sales: typeof inventory_sales;
+  investigations: typeof investigations;
+  material_transactions: typeof material_transactions;
   medicines: typeof medicines;
   patients: typeof patients;
   payment_transactions: typeof payment_transactions;
   prescriptions: typeof prescriptions;
+  registers: typeof registers;
 }>;
 
 /**

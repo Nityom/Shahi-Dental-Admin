@@ -44,14 +44,32 @@ export default function InstallmentsPage() {
   const totalCollected = pendingBills.reduce((sum, bill) => sum + (Number(bill.paid_amount) || 0), 0);
   const totalAmount = pendingBills.reduce((sum, bill) => sum + (Number(bill.total_amount) || 0), 0);
 
-  // Filter bills based on search query
+  const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'EXTRACTION' | 'OTHER'>('ALL');
+
+  const isExtractionBill = (bill: Bill) => {
+    if (!bill.items || !Array.isArray(bill.items)) return false;
+    return bill.items.some((item: any) => {
+      const desc = (item.description || '').toLowerCase();
+      return desc.includes('extraction') || desc.includes('tooth removal') || desc.includes('impaction') || desc.includes('surgical') || desc.includes('park');
+    });
+  };
+
+  // Filter bills based on search query and category
   const filteredBills = useMemo(() => {
+    let list = pendingBills;
+
+    if (categoryFilter === 'EXTRACTION') {
+      list = list.filter(isExtractionBill);
+    } else if (categoryFilter === 'OTHER') {
+      list = list.filter((b) => !isExtractionBill(b));
+    }
+
     if (!searchQuery.trim()) {
-      return pendingBills;
+      return list;
     }
 
     const query = searchQuery.toLowerCase();
-    return pendingBills.filter((bill) => {
+    return list.filter((bill) => {
       const patientName = (bill.patient_name || '').toLowerCase();
       const phoneNumber = (bill.phone_number || '').toLowerCase();
       const billNumber = (bill.bill_number || '').toLowerCase();
@@ -66,7 +84,7 @@ export default function InstallmentsPage() {
         billId.includes(query)
       );
     });
-  }, [pendingBills, searchQuery]);
+  }, [pendingBills, searchQuery, categoryFilter]);
 
   if (loading) {
     return (
@@ -82,30 +100,54 @@ export default function InstallmentsPage() {
   return (
     <div className="w-full min-h-screen px-6 pt-6 pb-6">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Payment Installments</h1>
-        <p className="text-gray-600">
-          Track all pending payments and installments for ongoing treatments
-        </p>
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Payment Installments & Dues</h1>
+          <p className="text-gray-600">
+            Track all pending payments, installments, and print extraction/surgical dues statements
+          </p>
+        </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="mb-6">
-        <div className="relative max-w-md">
+      {/* Filter Tabs & Search */}
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
+        <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
+          <button
+            onClick={() => setCategoryFilter('ALL')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
+              categoryFilter === 'ALL' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            All Pending Bills ({pendingBills.length})
+          </button>
+          <button
+            onClick={() => setCategoryFilter('EXTRACTION')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
+              categoryFilter === 'EXTRACTION' ? 'bg-white text-red-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Extraction & Surgical Dues ({pendingBills.filter(isExtractionBill).length})
+          </button>
+          <button
+            onClick={() => setCategoryFilter('OTHER')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
+              categoryFilter === 'OTHER' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Other Treatments ({pendingBills.filter((b) => !isExtractionBill(b)).length})
+          </button>
+        </div>
+
+        <div className="relative w-full md:max-w-xs">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             type="text"
-            placeholder="Search by patient name, phone, bill number..."
+            placeholder="Search by patient, phone..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-4"
+            className="pl-9 pr-3 text-sm h-9"
           />
         </div>
-        {searchQuery && (
-          <p className="text-sm text-gray-600 mt-2">
-            Found {filteredBills.length} of {pendingBills.length} bills
-          </p>
-        )}
       </div>
 
       {/* Summary Cards */}
@@ -213,6 +255,7 @@ export default function InstallmentsPage() {
                           <th className="text-right p-2 font-semibold">Paid</th>
                           <th className="text-right p-2 font-semibold">Balance</th>
                           <th className="text-center p-2 font-semibold">Status</th>
+                          <th className="text-center p-2 font-semibold">Action</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -233,6 +276,15 @@ export default function InstallmentsPage() {
                               }`}>
                                 {bill.payment_status}
                               </span>
+                            </td>
+                            <td className="p-2 text-center">
+                              <button
+                                onClick={() => window.open(`/print-dues?billId=${bill.id}`, '_blank')}
+                                className="px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 border border-blue-200 rounded transition"
+                                title="Print Dues Slip"
+                              >
+                                Print Dues
+                              </button>
                             </td>
                           </tr>
                         ))}

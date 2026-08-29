@@ -123,6 +123,14 @@ export default defineSchema({
     rate: v.number(),
     company: v.optional(v.string()),
     is_consumable: v.boolean(),
+    subdivision: v.optional(v.union(
+      v.literal("One-Time Material"),
+      v.literal("Consumable"),
+      v.literal("Non-Dental / Cleaning Consumable"),
+      v.literal("Record Maintenance Material")
+    )),
+    unit: v.optional(v.string()),
+    min_stock_level: v.optional(v.number()),
     enabled: v.optional(v.boolean()),
     deduction_qty: v.optional(v.number()),
   }).index("by_name", ["name"]),
@@ -194,4 +202,192 @@ export default defineSchema({
     counter_id: v.number(), // Use 1 for the singleton
     current_number: v.number(),
   }).index("by_counter_id", ["counter_id"]),
+
+  review_register: defineTable({
+    patient_name: v.string(),
+    phone_number: v.string(),
+    reference_number: v.optional(v.string()),
+    review_date: v.string(), // YYYY-MM-DD
+    doctor_name: v.optional(v.string()),
+    chief_complaint_or_treatment: v.optional(v.string()),
+    findings_notes: v.optional(v.string()),
+    status: v.union(v.literal("Scheduled"), v.literal("Visited"), v.literal("Completed"), v.literal("Missed"), v.literal("Rescheduled")),
+    prescription_id: v.optional(v.string()),
+    created_at: v.optional(v.number()),
+    updated_at: v.optional(v.number()),
+  })
+    .index("by_date", ["review_date"])
+    .index("by_phone", ["phone_number"])
+    .index("by_status", ["status"])
+    .index("by_reference", ["reference_number"]),
+
+  patient_recalls: defineTable({
+    patient_name: v.string(),
+    phone_number: v.string(),
+    reference_number: v.optional(v.string()),
+    recall_type: v.string(), // e.g. "6-Month Checkup", "Scaling/Cleaning Recall", "Post-RCT Review", "Crown Evaluation"
+    due_date: v.string(), // YYYY-MM-DD
+    last_visit_date: v.optional(v.string()),
+    status: v.union(v.literal("Due"), v.literal("Contacted"), v.literal("Scheduled"), v.literal("Completed"), v.literal("Dismissed")),
+    doctor_name: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    contacted_date: v.optional(v.string()),
+    created_at: v.optional(v.number()),
+    updated_at: v.optional(v.number()),
+  })
+    .index("by_due_date", ["due_date"])
+    .index("by_phone", ["phone_number"])
+    .index("by_status", ["status"]),
+
+  patient_followups: defineTable({
+    patient_name: v.string(),
+    phone_number: v.string(),
+    reference_number: v.optional(v.string()),
+    followup_date: v.string(), // YYYY-MM-DD
+    treatment_summary: v.optional(v.string()),
+    doctor_name: v.optional(v.string()),
+    status: v.union(v.literal("Pending"), v.literal("Called - Reached"), v.literal("Called - No Answer"), v.literal("Confirmed"), v.literal("Completed"), v.literal("Cancelled")),
+    notes: v.optional(v.string()),
+    next_followup_date: v.optional(v.string()),
+    prescription_id: v.optional(v.string()),
+    created_at: v.optional(v.number()),
+    updated_at: v.optional(v.number()),
+  })
+    .index("by_followup_date", ["followup_date"])
+    .index("by_phone", ["phone_number"])
+    .index("by_status", ["status"]),
+
+  crown_cutting_register: defineTable({
+    patient_name: v.string(),
+    phone_number: v.string(),
+    reference_number: v.optional(v.string()),
+    tooth_numbers: v.string(), // e.g. "16, 17"
+    crown_type: v.string(), // "PFM", "Zirconia", "E-Max", "Full Metal", "Monolithic Zirconia", "Temporary", etc.
+    shade: v.optional(v.string()), // "A2", "A3.5", etc.
+    cutting_date: v.string(), // YYYY-MM-DD
+    dentist_name: v.string(),
+    lab_name: v.string(),
+    impression_type: v.optional(v.string()),
+    expected_delivery_date: v.optional(v.string()),
+    lab_cost: v.optional(v.number()),
+    patient_cost: v.optional(v.number()),
+    status: v.union(v.literal("Sent to Lab"), v.literal("In Lab"), v.literal("Received"), v.literal("Trial Done"), v.literal("Cemented / Completed"), v.literal("Sent for Redo")),
+    notes: v.optional(v.string()),
+    prescription_id: v.optional(v.string()),
+    created_at: v.optional(v.number()),
+    updated_at: v.optional(v.number()),
+  })
+    .index("by_cutting_date", ["cutting_date"])
+    .index("by_lab", ["lab_name"])
+    .index("by_status", ["status"])
+    .index("by_phone", ["phone_number"]),
+
+  crown_received_register: defineTable({
+    crown_cutting_id: v.optional(v.id("crown_cutting_register")),
+    patient_name: v.string(),
+    phone_number: v.string(),
+    reference_number: v.optional(v.string()),
+    tooth_numbers: v.string(),
+    crown_type: v.string(),
+    shade: v.optional(v.string()),
+    lab_name: v.string(),
+    cutting_date: v.optional(v.string()),
+    received_date: v.string(), // YYYY-MM-DD
+    received_by: v.optional(v.string()),
+    fitting_date: v.optional(v.string()),
+    status: v.union(v.literal("Received in Clinic"), v.literal("Trial Scheduled"), v.literal("Trial Done - Fit OK"), v.literal("Cemented / Delivered"), v.literal("Rejected / Redo Needed")),
+    lab_bill_no: v.optional(v.string()),
+    lab_amount: v.optional(v.number()),
+    remarks: v.optional(v.string()),
+    created_at: v.optional(v.number()),
+    updated_at: v.optional(v.number()),
+  })
+    .index("by_received_date", ["received_date"])
+    .index("by_lab", ["lab_name"])
+    .index("by_status", ["status"])
+    .index("by_crown_cutting", ["crown_cutting_id"]),
+
+  material_transactions: defineTable({
+    material_id: v.optional(v.id("inventory")),
+    material_name: v.string(),
+    subdivision: v.union(
+      v.literal("One-Time Material"),
+      v.literal("Consumable"),
+      v.literal("Non-Dental / Cleaning Consumable"),
+      v.literal("Record Maintenance Material")
+    ),
+    transaction_type: v.union(
+      v.literal("PURCHASE"),
+      v.literal("USAGE"),
+      v.literal("INITIAL_STOCK"),
+      v.literal("ADJUSTMENT"),
+      v.literal("SCRAP")
+    ),
+    quantity: v.number(),
+    unit: v.optional(v.string()),
+    rate: v.number(),
+    total_cost: v.number(),
+    vendor_name: v.optional(v.string()),
+    invoice_no: v.optional(v.string()),
+    transaction_date: v.string(), // YYYY-MM-DD
+    recorded_by: v.optional(v.string()),
+    balance_after: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    created_at: v.optional(v.number()),
+  })
+    .index("by_date", ["transaction_date"])
+    .index("by_subdivision", ["subdivision"])
+    .index("by_type", ["transaction_type"])
+    .index("by_material", ["material_id"]),
+
+  staff_payments: defineTable({
+    staff_name: v.string(),
+    staff_role: v.string(), // "Dental Assistant", "Receptionist", "Associate Dentist", "Clinic Staff", etc.
+    staff_phone: v.optional(v.string()),
+    salary_month: v.string(), // e.g. "2026-08"
+    payment_date: v.string(), // YYYY-MM-DD
+    payment_type: v.union(
+      v.literal("Salary"),
+      v.literal("Advance"),
+      v.literal("Incentive / Bonus"),
+      v.literal("Reimbursement"),
+      v.literal("Deduction")
+    ),
+    base_salary: v.optional(v.number()),
+    amount_paid: v.number(),
+    previous_payments_total: v.optional(v.number()),
+    pending_balance: v.optional(v.number()),
+    payment_mode: v.union(v.literal("Cash"), v.literal("UPI"), v.literal("Bank Transfer"), v.literal("Cheque"), v.literal("Other")),
+    transaction_reference: v.optional(v.string()),
+    paid_by: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    created_at: v.optional(v.number()),
+  })
+    .index("by_staff_name", ["staff_name"])
+    .index("by_payment_date", ["payment_date"])
+    .index("by_month", ["salary_month"])
+    .index("by_payment_type", ["payment_type"]),
+
+  investigations: defineTable({
+    patient_id: v.optional(v.string()),
+    patient_name: v.string(),
+    phone_number: v.string(),
+    reference_number: v.optional(v.string()),
+    prescription_id: v.optional(v.string()),
+    investigation_type: v.string(), // "OPG", "IOPAR", "CBCT", "Lateral Ceph", "Blood Test", etc.
+    investigation_date: v.string(), // YYYY-MM-DD
+    doctor_name: v.optional(v.string()),
+    technician_name: v.optional(v.string()),
+    indication: v.optional(v.string()), // e.g. "Impaction", "Ortho Planning", "Pathology", "Full Mouth"
+    findings: v.optional(v.string()),
+    film_type: v.optional(v.union(v.literal("Digital"), v.literal("Printed Film"), v.literal("Both"))),
+    cost: v.optional(v.number()),
+    payment_status: v.optional(v.union(v.literal("PAID"), v.literal("PENDING"), v.literal("INCLUDED_IN_TREATMENT"))),
+    notes: v.optional(v.string()),
+    created_at: v.optional(v.number()),
+  })
+    .index("by_date", ["investigation_date"])
+    .index("by_type_date", ["investigation_type", "investigation_date"])
+    .index("by_phone", ["phone_number"])
+    .index("by_reference", ["reference_number"]),
 });
