@@ -11,6 +11,8 @@ import { getCurrentUser } from '@/services/adminuser';
 import { createBill, Bill, getBillByPrescriptionId, updateBill } from '@/services/bills';
 import { deductInventoryStock, recordInventorySale } from '@/services/inventory';
 import { getEnabledConsumablesForDeduction } from '@/services/consumables';
+import { doctorService } from '@/services/doctors';
+import { Doctor } from '@/types/doctor';
 import { ConvexHttpClient } from 'convex/browser';
 // @ts-ignore
 import { api } from '@/convex/_generated/api';
@@ -161,7 +163,10 @@ const PrescriptionPage = () => {
 
   const [treatmentItems, setTreatmentItems] = useState<TreatmentItem[]>([]);
   const [newTreatmentStep, setNewTreatmentStep] = useState('');
-  const [xrayCount, setXrayCount] = useState<number>(0);
+  const [ioparCount, setIoparCount] = useState<number>(1);
+  const [xrayCount, setXrayCount] = useState<number>(1);
+  const [bloodCount, setBloodCount] = useState<number>(1);
+  const [sugarCount, setSugarCount] = useState<number>(1);
   const XRAY_PRICE = 200;
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -222,6 +227,8 @@ const PrescriptionPage = () => {
   });
 
   // Doctor / signature selector
+  const [availableDoctors, setAvailableDoctors] = useState<Doctor[]>([]);
+  const [selectedDoctorName, setSelectedDoctorName] = useState<string>('Dr. Kautilya Swaroop');
   const [selectedDoctor, setSelectedDoctor] = useState<'kautilya' | 'anjali'>('kautilya');
 
   // Consultation charge
@@ -250,7 +257,28 @@ const PrescriptionPage = () => {
       }
     };
 
+    const fetchDoctorsList = async () => {
+      try {
+        const list = await doctorService.list({ status: 'ACTIVE' });
+        if (list && list.length > 0) {
+          setAvailableDoctors(list);
+          if (!selectedDoctorName) {
+            setSelectedDoctorName(list[0].name);
+          }
+        } else {
+          const defaults: Doctor[] = [
+            { name: 'Dr. Kautilya Swaroop', doctor_type: 'MAIN', status: 'ACTIVE', signature_url: '/sign.png' },
+            { name: 'Dr. Anjali Swaroop', doctor_type: 'MAIN', status: 'ACTIVE', signature_url: '/sign1.png' },
+          ];
+          setAvailableDoctors(defaults);
+        }
+      } catch (err) {
+        console.error('Failed to fetch doctors list:', err);
+      }
+    };
+
     fetchMedicines();
+    fetchDoctorsList();
 
     // Cleanup function to revoke object URL when component unmounts
     return () => {
@@ -639,6 +667,10 @@ const PrescriptionPage = () => {
         // Set reference number in separate state
         setPatientReferenceNumber(prescription.reference_number || '');
 
+        if (prescription.doctor_name) {
+          setSelectedDoctorName(prescription.doctor_name);
+        }
+
         if (prescription.oral_exam_notes) {
           setOralExamNotes(prescription.oral_exam_notes);
         }
@@ -727,7 +759,7 @@ const PrescriptionPage = () => {
         })),
         advice: formData.advice,
         followup_date: formData.followupDate || undefined,
-        doctor_name: selectedDoctor === 'anjali' ? 'Dr. Anjali Swaroop' : 'Dr. Kautilya Swaroop',
+        doctor_name: selectedDoctorName || 'Dr. Kautilya Swaroop',
       };
 
       let savedPrescription;
@@ -1205,10 +1237,10 @@ const PrescriptionPage = () => {
     if (!currentBill) return;
 
     try {
-      // Update bill with payment details
       const discountAmt = Math.round((Number(currentBill.total_amount) * paymentDetails.discountPercent) / 100);
       const newTotal = Math.round(Number(currentBill.total_amount) - discountAmt);
       const safePaid = Math.round(Math.min(Math.max(paymentDetails.amountPaid, 0), newTotal));
+
       await updateBill(currentBill.id, {
         paid_amount: safePaid,
         payment_method: paymentDetails.paymentMethod,
@@ -1222,8 +1254,9 @@ const PrescriptionPage = () => {
       setShowPaymentModal(false);
 
       // Build signature params from selected doctor
-      const sigFile = selectedDoctor === 'anjali' ? 'sign1.png' : 'sign.png';
-      const docName = selectedDoctor === 'anjali' ? 'Dr. Anjali Swaroop' : 'Dr. Kautilya Swaroop';
+      const docObj = availableDoctors.find((d) => d.name === selectedDoctorName);
+      const docName = docObj?.name || selectedDoctorName || 'Dr. Kautilya Swaroop';
+      const sigFile = docObj?.signature_url ? docObj.signature_url.replace(/^\//, '') : (docName.includes('Anjali') ? 'sign1.png' : 'sign.png');
 
       // Open new printable bill page (fresh fetch ensures updated balance)
       window.open(`/print-bill?billId=${currentBill.id}&signature=${sigFile}&doctorName=${encodeURIComponent(docName)}`, '_blank');
@@ -1463,58 +1496,285 @@ const PrescriptionPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Investigation <span className="text-gray-500 text-xs">(Optional)</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Investigation <span className="text-gray-500 text-xs">(Optional)</span>
+                    </label>
+                    <span className="text-[11px] text-blue-600 font-medium">Auto-extracted to OPG & IOPAR Register</span>
+                  </div>
                   <textarea
                     name="investigation"
                     value={formData.investigation}
                     onChange={handleChange}
-                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
+                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                     rows={2}
-                    placeholder="Any investigations or tests recommended (e.g., X-ray, CBCT, Blood tests)"
+                    placeholder="Any investigations or tests recommended (e.g., OPG, IOPAR wrt 16, CBCT, Blood tests)"
                   />
 
-                  <div className="flex items-end gap-3 mt-3">
-                    <div className="w-40">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">No. of X-rays</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={xrayCount || ''}
-                        onChange={(e) => setXrayCount(parseInt(e.target.value) || 0)}
-                        className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                        placeholder="0"
-                      />
+                  {/* Quick Preset Buttons for Advanced / External Investigations */}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                    <span className="text-xs font-semibold text-gray-500 mr-1">Quick Add:</span>
+                    {[
+                      { label: '+ OPG', text: 'OPG' },
+                      { label: '+ CBCT', text: 'CBCT' },
+                      { label: '+ Lateral Ceph', text: 'Lateral Ceph' },
+                      { label: '+ TMJ View', text: 'TMJ View' },
+                      { label: '+ Biopsy / Histopath', text: 'Biopsy / Histopath' },
+                    ].map((item) => (
+                      <button
+                        key={item.text}
+                        type="button"
+                        onClick={() => {
+                          const current = (formData.investigation || '').trim();
+                          if (!current) {
+                            setFormData((prev) => ({ ...prev, investigation: item.text }));
+                          } else if (!current.toLowerCase().includes(item.text.toLowerCase())) {
+                            setFormData((prev) => ({ ...prev, investigation: `${current}, ${item.text}` }));
+                          }
+                        }}
+                        className="px-2.5 py-1 text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition"
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Diagnostic Test Charges to Bill */}
+                  <div className="mt-3 p-3.5 bg-blue-50/60 rounded-xl border border-blue-100 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-blue-900">Add Tests & Investigations to Bill</span>
+                      <span className="text-[11px] text-blue-600 font-medium">Included in Final Bill & Diagnostics Report</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (xrayCount <= 0) return;
-                        const existingIndex = treatmentItems.findIndex(i => i.description === 'X-ray');
-                        if (existingIndex >= 0) {
-                          const newItems = [...treatmentItems];
-                          newItems[existingIndex] = {
-                            ...newItems[existingIndex],
-                            quantity: xrayCount,
-                            total: xrayCount * XRAY_PRICE,
-                          };
-                          setTreatmentItems(newItems);
-                        } else {
-                          setTreatmentItems([...treatmentItems, {
-                            id: treatmentItems.length + 1,
-                            description: 'X-ray',
-                            quantity: xrayCount,
-                            unitPrice: XRAY_PRICE,
-                            total: xrayCount * XRAY_PRICE,
-                            date: new Date().toISOString().slice(0, 10)
-                          }]);
-                        }
-                      }}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm whitespace-nowrap"
-                    >
-                      Add X-ray to Bill (₹{XRAY_PRICE} each)
-                    </button>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                      {/* 1. IOPAR (₹200) */}
+                      <div className="bg-white p-2.5 rounded-lg border border-blue-200 flex flex-col justify-between gap-2 shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-xs font-bold text-gray-900 block">IOPAR</span>
+                            <span className="text-[11px] font-semibold text-blue-700">₹200 / unit</span>
+                          </div>
+                          <input
+                            type="number"
+                            min="1"
+                            value={ioparCount}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              setIoparCount(isNaN(val) || val < 1 ? 1 : val);
+                            }}
+                            onBlur={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              if (isNaN(val) || val < 1) setIoparCount(1);
+                            }}
+                            className="w-14 p-1 text-center border border-gray-300 rounded text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const count = Math.max(1, ioparCount || 1);
+                            const existingIndex = treatmentItems.findIndex(i => i.description.toUpperCase() === 'IOPAR');
+                            if (existingIndex >= 0) {
+                              const newItems = [...treatmentItems];
+                              newItems[existingIndex] = {
+                                ...newItems[existingIndex],
+                                description: 'IOPAR',
+                                quantity: count,
+                                unitPrice: 200,
+                                total: count * 200,
+                              };
+                              setTreatmentItems(newItems);
+                            } else {
+                              setTreatmentItems([...treatmentItems, {
+                                id: treatmentItems.length + 1,
+                                description: 'IOPAR',
+                                quantity: count,
+                                unitPrice: 200,
+                                total: count * 200,
+                                date: new Date().toISOString().slice(0, 10),
+                              }]);
+                            }
+                            const current = (formData.investigation || '').trim();
+                            if (!current) setFormData(prev => ({ ...prev, investigation: 'IOPAR' }));
+                            else if (!current.toUpperCase().includes('IOPAR')) setFormData(prev => ({ ...prev, investigation: `${current}, IOPAR` }));
+                          }}
+                          className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1"
+                        >
+                          + Add IOPAR (₹{Math.max(1, ioparCount || 1) * 200})
+                        </button>
+                      </div>
+
+                      {/* 2. Dental X-Ray (₹200) */}
+                      <div className="bg-white p-2.5 rounded-lg border border-blue-200 flex flex-col justify-between gap-2 shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-xs font-bold text-gray-900 block">Dental X-Ray</span>
+                            <span className="text-[11px] font-semibold text-blue-700">₹200 / unit</span>
+                          </div>
+                          <input
+                            type="number"
+                            min="1"
+                            value={xrayCount}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              setXrayCount(isNaN(val) || val < 1 ? 1 : val);
+                            }}
+                            onBlur={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              if (isNaN(val) || val < 1) setXrayCount(1);
+                            }}
+                            className="w-14 p-1 text-center border border-gray-300 rounded text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const count = Math.max(1, xrayCount || 1);
+                            const existingIndex = treatmentItems.findIndex(i => i.description.toLowerCase().includes('x-ray') || i.description.toLowerCase().includes('xray'));
+                            if (existingIndex >= 0) {
+                              const newItems = [...treatmentItems];
+                              newItems[existingIndex] = {
+                                ...newItems[existingIndex],
+                                description: 'Dental X-Ray',
+                                quantity: count,
+                                unitPrice: 200,
+                                total: count * 200,
+                              };
+                              setTreatmentItems(newItems);
+                            } else {
+                              setTreatmentItems([...treatmentItems, {
+                                id: treatmentItems.length + 1,
+                                description: 'Dental X-Ray',
+                                quantity: count,
+                                unitPrice: 200,
+                                total: count * 200,
+                                date: new Date().toISOString().slice(0, 10),
+                              }]);
+                            }
+                            const current = (formData.investigation || '').trim();
+                            if (!current) setFormData(prev => ({ ...prev, investigation: 'Dental X-Ray' }));
+                            else if (!current.toLowerCase().includes('x-ray')) setFormData(prev => ({ ...prev, investigation: `${current}, Dental X-Ray` }));
+                          }}
+                          className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1"
+                        >
+                          + Add X-Ray (₹{Math.max(1, xrayCount || 1) * 200})
+                        </button>
+                      </div>
+
+                      {/* 3. Blood Test (₹50) */}
+                      <div className="bg-white p-2.5 rounded-lg border border-blue-200 flex flex-col justify-between gap-2 shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-xs font-bold text-gray-900 block">Blood Test (CBC/BT)</span>
+                            <span className="text-[11px] font-semibold text-blue-700">₹50 / test</span>
+                          </div>
+                          <input
+                            type="number"
+                            min="1"
+                            value={bloodCount}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              setBloodCount(isNaN(val) || val < 1 ? 1 : val);
+                            }}
+                            onBlur={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              if (isNaN(val) || val < 1) setBloodCount(1);
+                            }}
+                            className="w-14 p-1 text-center border border-gray-300 rounded text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const count = Math.max(1, bloodCount || 1);
+                            const existingIndex = treatmentItems.findIndex(i => i.description.toLowerCase().includes('blood test'));
+                            if (existingIndex >= 0) {
+                              const newItems = [...treatmentItems];
+                              newItems[existingIndex] = {
+                                ...newItems[existingIndex],
+                                description: 'Blood Test',
+                                quantity: count,
+                                unitPrice: 50,
+                                total: count * 50,
+                              };
+                              setTreatmentItems(newItems);
+                            } else {
+                              setTreatmentItems([...treatmentItems, {
+                                id: treatmentItems.length + 1,
+                                description: 'Blood Test',
+                                quantity: count,
+                                unitPrice: 50,
+                                total: count * 50,
+                                date: new Date().toISOString().slice(0, 10),
+                              }]);
+                            }
+                            const current = (formData.investigation || '').trim();
+                            if (!current) setFormData(prev => ({ ...prev, investigation: 'Blood Test' }));
+                            else if (!current.toLowerCase().includes('blood')) setFormData(prev => ({ ...prev, investigation: `${current}, Blood Test` }));
+                          }}
+                          className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1"
+                        >
+                          + Add Blood Test (₹{Math.max(1, bloodCount || 1) * 50})
+                        </button>
+                      </div>
+
+                      {/* 4. Sugar Test (₹50) */}
+                      <div className="bg-white p-2.5 rounded-lg border border-blue-200 flex flex-col justify-between gap-2 shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-xs font-bold text-gray-900 block">Sugar Test (RBS/FBS)</span>
+                            <span className="text-[11px] font-semibold text-blue-700">₹50 / test</span>
+                          </div>
+                          <input
+                            type="number"
+                            min="1"
+                            value={sugarCount}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              setSugarCount(isNaN(val) || val < 1 ? 1 : val);
+                            }}
+                            onBlur={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              if (isNaN(val) || val < 1) setSugarCount(1);
+                            }}
+                            className="w-14 p-1 text-center border border-gray-300 rounded text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const count = Math.max(1, sugarCount || 1);
+                            const existingIndex = treatmentItems.findIndex(i => i.description.toLowerCase().includes('sugar test'));
+                            if (existingIndex >= 0) {
+                              const newItems = [...treatmentItems];
+                              newItems[existingIndex] = {
+                                ...newItems[existingIndex],
+                                description: 'Sugar Test',
+                                quantity: count,
+                                unitPrice: 50,
+                                total: count * 50,
+                              };
+                              setTreatmentItems(newItems);
+                            } else {
+                              setTreatmentItems([...treatmentItems, {
+                                id: treatmentItems.length + 1,
+                                description: 'Sugar Test',
+                                quantity: count,
+                                unitPrice: 50,
+                                total: count * 50,
+                                date: new Date().toISOString().slice(0, 10),
+                              }]);
+                            }
+                            const current = (formData.investigation || '').trim();
+                            if (!current) setFormData(prev => ({ ...prev, investigation: 'Sugar Test' }));
+                            else if (!current.toLowerCase().includes('sugar')) setFormData(prev => ({ ...prev, investigation: `${current}, Sugar Test` }));
+                          }}
+                          className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1"
+                        >
+                          + Add Sugar Test (₹{Math.max(1, sugarCount || 1) * 50})
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -2291,31 +2551,43 @@ const PrescriptionPage = () => {
 
             {/* Action Buttons */}
             {/* Doctor / Signature Selector */}
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Signing Doctor</label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="selectedDoctor"
-                    value="kautilya"
-                    checked={selectedDoctor === 'kautilya'}
-                    onChange={() => setSelectedDoctor('kautilya')}
-                    className="h-4 w-4 text-blue-600"
-                  />
-                  <span className="text-sm">Dr. Kautilya Swaroop</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="selectedDoctor"
-                    value="anjali"
-                    checked={selectedDoctor === 'anjali'}
-                    onChange={() => setSelectedDoctor('anjali')}
-                    className="h-4 w-4 text-blue-600"
-                  />
-                  <span className="text-sm">Dr. Anjali Swaroop</span>
-                </label>
+            <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-bold text-gray-800">Attending / Signing Doctor</label>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {availableDoctors.map((doc) => {
+                  const isSelected = (selectedDoctorName || '').toLowerCase() === doc.name.toLowerCase();
+                  return (
+                    <div
+                      key={doc.id || doc._id || doc.name}
+                      onClick={() => {
+                        setSelectedDoctorName(doc.name);
+                        if (doc.name.toLowerCase().includes('anjali')) {
+                          setSelectedDoctor('anjali');
+                        } else {
+                          setSelectedDoctor('kautilya');
+                        }
+                      }}
+                      className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                        isSelected
+                          ? 'border-blue-600 bg-blue-50/70 shadow-sm ring-1 ring-blue-600'
+                          : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <input
+                          type="radio"
+                          name="doctor_selection_radio"
+                          checked={isSelected}
+                          onChange={() => {}}
+                          className="h-4 w-4 text-blue-600 cursor-pointer"
+                        />
+                        <p className="text-sm font-bold text-gray-900 leading-tight">{doc.name}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -2596,14 +2868,17 @@ const PrescriptionPage = () => {
               <div className="mt-12 text-right">
                 <div className="mb-4">
                   <img
-                    src={selectedDoctor === 'anjali' ? '/sign1.png' : '/sign.png'}
+                    src={
+                      availableDoctors.find((d) => d.name === selectedDoctorName)?.signature_url ||
+                      (selectedDoctorName.toLowerCase().includes('anjali') ? '/sign1.png' : '/sign.png')
+                    }
                     alt="Doctor's Signature"
                     className="inline-block"
                     style={{ height: '60px', width: 'auto' }}
                   />
                 </div>
                 <div className="font-semibold">
-                  {selectedDoctor === 'anjali' ? 'Dr. Anjali Swaroop' : 'Dr. Kautilya Swaroop'}
+                  {selectedDoctorName || 'Dr. Kautilya Swaroop'}
                 </div>
               </div>
             </div>

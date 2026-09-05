@@ -54,7 +54,18 @@ export interface PatientFollowup {
   updated_at?: number;
 }
 
-export type CrownCuttingStatus = 'Sent to Lab' | 'In Lab' | 'Received' | 'Trial Done' | 'Cemented / Completed' | 'Sent for Redo';
+export type CrownStatusCategory = 'Crown Not Required' | 'Crown Cutting' | 'Crown Received';
+
+export type CrownCuttingStatus =
+  | 'Crown Not Required'
+  | 'Crown Cutting'
+  | 'Crown Received'
+  | 'Sent to Lab'
+  | 'In Lab'
+  | 'Received'
+  | 'Trial Done'
+  | 'Cemented / Completed'
+  | 'Sent for Redo';
 
 export interface CrownCuttingRecord {
   _id?: string;
@@ -63,15 +74,17 @@ export interface CrownCuttingRecord {
   phone_number: string;
   reference_number?: string;
   tooth_numbers: string;
-  crown_type: string;
+  crown_type?: string;
   shade?: string;
   cutting_date: string; // YYYY-MM-DD
-  dentist_name: string;
-  lab_name: string;
+  dentist_name?: string;
+  lab_name?: string;
   impression_type?: string;
   expected_delivery_date?: string;
   lab_cost?: number;
   patient_cost?: number;
+  treatment_reference?: string;
+  crown_status?: CrownStatusCategory;
   status: CrownCuttingStatus;
   notes?: string;
   prescription_id?: string;
@@ -79,7 +92,15 @@ export interface CrownCuttingRecord {
   updated_at?: number;
 }
 
-export type CrownReceivedStatus = 'Received in Clinic' | 'Trial Scheduled' | 'Trial Done - Fit OK' | 'Cemented / Delivered' | 'Rejected / Redo Needed';
+export type CrownReceivedStatus =
+  | 'Crown Not Required'
+  | 'Crown Cutting'
+  | 'Crown Received'
+  | 'Received in Clinic'
+  | 'Trial Scheduled'
+  | 'Trial Done - Fit OK'
+  | 'Cemented / Delivered'
+  | 'Rejected / Redo Needed';
 
 export interface CrownReceivedRecord {
   _id?: string;
@@ -89,9 +110,9 @@ export interface CrownReceivedRecord {
   phone_number: string;
   reference_number?: string;
   tooth_numbers: string;
-  crown_type: string;
+  crown_type?: string;
   shade?: string;
-  lab_name: string;
+  lab_name?: string;
   cutting_date?: string;
   received_date: string; // YYYY-MM-DD
   received_by?: string;
@@ -100,6 +121,7 @@ export interface CrownReceivedRecord {
   lab_bill_no?: string;
   lab_amount?: number;
   remarks?: string;
+  prescription_id?: string;
   created_at?: number;
   updated_at?: number;
 }

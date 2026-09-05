@@ -5,20 +5,14 @@ import {
   reviewService,
   recallService,
   followupService,
-  crownCuttingService,
-  crownReceivedService,
   staffPaymentService,
-  materialTransactionService,
 } from '@/services/registers';
 import { getPatients } from '@/services/patients';
 import {
   ReviewRecord,
   PatientRecall,
   PatientFollowup,
-  CrownCuttingRecord,
-  CrownReceivedRecord,
   StaffPaymentRecord,
-  MaterialTransaction,
 } from '@/types/registers';
 import { Patient } from '@/types/patient';
 import { useIsAdmin } from '@/hooks/use-is-admin';
@@ -26,8 +20,6 @@ import {
   ClipboardList,
   Calendar,
   PhoneCall,
-  Crown,
-  Layers,
   IndianRupee,
   Search,
   Plus,
@@ -35,7 +27,6 @@ import {
   Edit,
   Trash2,
   X,
-  CheckCircle2,
   UserCheck,
 } from 'lucide-react';
 
@@ -46,9 +37,6 @@ type RegisterTab =
   | 'REVIEW'
   | 'RECALL'
   | 'FOLLOWUP'
-  | 'CROWN_CUTTING'
-  | 'CROWN_RECEIVED'
-  | 'MATERIAL'
   | 'STAFF_PAYMENTS';
 
 function RegistersContent() {
@@ -66,7 +54,7 @@ function RegistersContent() {
 
   useEffect(() => {
     const tabParam = searchParams.get('tab') as RegisterTab;
-    if (tabParam && ['REVIEW', 'RECALL', 'FOLLOWUP', 'CROWN_CUTTING', 'CROWN_RECEIVED', 'MATERIAL', 'STAFF_PAYMENTS'].includes(tabParam)) {
+    if (tabParam && ['REVIEW', 'RECALL', 'FOLLOWUP', 'STAFF_PAYMENTS'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
@@ -80,9 +68,6 @@ function RegistersContent() {
   const [reviews, setReviews] = useState<ReviewRecord[]>([]);
   const [recalls, setRecalls] = useState<PatientRecall[]>([]);
   const [followups, setFollowups] = useState<PatientFollowup[]>([]);
-  const [crownCuttings, setCrownCuttings] = useState<CrownCuttingRecord[]>([]);
-  const [crownReceived, setCrownReceived] = useState<CrownReceivedRecord[]>([]);
-  const [materials, setMaterials] = useState<MaterialTransaction[]>([]);
   const [staffPayments, setStaffPayments] = useState<StaffPaymentRecord[]>([]);
 
   // Selected staff for ledger view
@@ -118,6 +103,7 @@ function RegistersContent() {
     status: 'Due',
     doctor_name: 'Dr. Kautilya Swaroop',
     notes: '',
+    contacted_date: '',
   });
 
   const [followupForm, setFollowupForm] = useState<Omit<PatientFollowup, '_id' | 'id' | 'created_at' | 'updated_at'>>({
@@ -129,53 +115,7 @@ function RegistersContent() {
     doctor_name: 'Dr. Kautilya Swaroop',
     status: 'Pending',
     notes: '',
-  });
-
-  const [crownCuttingForm, setCrownCuttingForm] = useState<Omit<CrownCuttingRecord, '_id' | 'id' | 'created_at' | 'updated_at'>>({
-    patient_name: '',
-    phone_number: '',
-    reference_number: '',
-    tooth_numbers: '',
-    crown_type: 'Zirconia',
-    shade: 'A2',
-    cutting_date: todayStr,
-    dentist_name: 'Dr. Kautilya Swaroop',
-    lab_name: 'DentCare Dental Lab',
-    impression_type: 'Addition Silicone',
-    expected_delivery_date: '',
-    lab_cost: 0,
-    patient_cost: 0,
-    status: 'Sent to Lab',
-    notes: '',
-  });
-
-  const [crownReceivedForm, setCrownReceivedForm] = useState<Omit<CrownReceivedRecord, '_id' | 'id' | 'created_at' | 'updated_at'>>({
-    crown_cutting_id: '',
-    patient_name: '',
-    phone_number: '',
-    reference_number: '',
-    tooth_numbers: '',
-    crown_type: 'Zirconia',
-    shade: 'A2',
-    lab_name: '',
-    received_date: todayStr,
-    received_by: 'Staff',
-    status: 'Received in Clinic',
-    remarks: '',
-  });
-
-  const [materialForm, setMaterialForm] = useState({
-    material_name: '',
-    subdivision: 'Consumable' as any,
-    transaction_type: 'PURCHASE' as any,
-    quantity: 1,
-    unit: 'pcs',
-    rate: 0,
-    vendor_name: '',
-    invoice_no: '',
-    transaction_date: todayStr,
-    recorded_by: 'Admin',
-    notes: '',
+    next_followup_date: '',
   });
 
   const [staffPaymentForm, setStaffPaymentForm] = useState<Omit<StaffPaymentRecord, '_id' | 'id' | 'created_at'>>({
@@ -218,23 +158,33 @@ function RegistersContent() {
   };
 
   const selectPatientForForm = (p: Patient) => {
-    setPatientSearchQuery(p.name);
-    setShowSuggestions(false);
-
     if (activeTab === 'REVIEW') {
-      setReviewForm((prev) => ({ ...prev, patient_name: p.name, phone_number: p.phone_number, reference_number: p.reference_number }));
+      setReviewForm((prev) => ({
+        ...prev,
+        patient_name: p.name,
+        phone_number: p.phone_number,
+        reference_number: p.reference_number,
+      }));
     } else if (activeTab === 'RECALL') {
-      setRecallForm((prev) => ({ ...prev, patient_name: p.name, phone_number: p.phone_number, reference_number: p.reference_number }));
+      setRecallForm((prev) => ({
+        ...prev,
+        patient_name: p.name,
+        phone_number: p.phone_number,
+        reference_number: p.reference_number,
+      }));
     } else if (activeTab === 'FOLLOWUP') {
-      setFollowupForm((prev) => ({ ...prev, patient_name: p.name, phone_number: p.phone_number, reference_number: p.reference_number }));
-    } else if (activeTab === 'CROWN_CUTTING') {
-      setCrownCuttingForm((prev) => ({ ...prev, patient_name: p.name, phone_number: p.phone_number, reference_number: p.reference_number }));
-    } else if (activeTab === 'CROWN_RECEIVED') {
-      setCrownReceivedForm((prev) => ({ ...prev, patient_name: p.name, phone_number: p.phone_number, reference_number: p.reference_number }));
+      setFollowupForm((prev) => ({
+        ...prev,
+        patient_name: p.name,
+        phone_number: p.phone_number,
+        reference_number: p.reference_number,
+      }));
     }
+    setShowSuggestions(false);
+    setPatientSearchQuery(`${p.name} (${p.reference_number || p.phone_number})`);
   };
 
-  // Fetch Current Tab Data
+  // Fetch Data Function
   const fetchData = useCallback(async () => {
     setLoading(true);
     const filter = {
@@ -254,19 +204,6 @@ function RegistersContent() {
       } else if (activeTab === 'FOLLOWUP') {
         const data = await followupService.list(filter);
         setFollowups(data);
-      } else if (activeTab === 'CROWN_CUTTING') {
-        const data = await crownCuttingService.list(filter);
-        setCrownCuttings(data);
-      } else if (activeTab === 'CROWN_RECEIVED') {
-        const data = await crownReceivedService.list(filter);
-        setCrownReceived(data);
-      } else if (activeTab === 'MATERIAL') {
-        const data = await materialTransactionService.list({
-          startDate: startDate || undefined,
-          endDate: endDate || undefined,
-          search: searchTerm || undefined,
-        });
-        setMaterials(data);
       } else if (activeTab === 'STAFF_PAYMENTS') {
         const data = await staffPaymentService.list({
           staffName: selectedStaffName === 'ALL' ? undefined : selectedStaffName,
@@ -319,14 +256,6 @@ function RegistersContent() {
       } else if (activeTab === 'FOLLOWUP') {
         if (isEditMode && editingId) await followupService.update(editingId, followupForm);
         else await followupService.create(followupForm);
-      } else if (activeTab === 'CROWN_CUTTING') {
-        if (isEditMode && editingId) await crownCuttingService.update(editingId, crownCuttingForm);
-        else await crownCuttingService.create(crownCuttingForm);
-      } else if (activeTab === 'CROWN_RECEIVED') {
-        if (isEditMode && editingId) await crownReceivedService.update(editingId, crownReceivedForm);
-        else await crownReceivedService.create(crownReceivedForm);
-      } else if (activeTab === 'MATERIAL') {
-        await materialTransactionService.record(materialForm);
       } else if (activeTab === 'STAFF_PAYMENTS') {
         if (isEditMode && editingId) await staffPaymentService.update(editingId, staffPaymentForm);
         else await staffPaymentService.create(staffPaymentForm);
@@ -339,49 +268,26 @@ function RegistersContent() {
     }
   };
 
-  // 1-Click Receive Crown from Cutting Register
-  const handleReceiveFromCutting = (cutting: CrownCuttingRecord) => {
-    setCrownReceivedForm({
-      crown_cutting_id: cutting.id || cutting._id || '',
-      patient_name: cutting.patient_name,
-      phone_number: cutting.phone_number,
-      reference_number: cutting.reference_number,
-      tooth_numbers: cutting.tooth_numbers,
-      crown_type: cutting.crown_type,
-      shade: cutting.shade,
-      lab_name: cutting.lab_name,
-      cutting_date: cutting.cutting_date,
-      received_date: todayStr,
-      received_by: 'Staff',
-      status: 'Received in Clinic',
-      remarks: `Linked to cutting on ${cutting.cutting_date}`,
-    });
-    setActiveTab('CROWN_RECEIVED');
-    setIsEditMode(false);
-    setEditingId(null);
-    setIsModalOpen(true);
-  };
-
   return (
     <div className="min-h-screen bg-gray-50/50 w-full p-4 md:p-6 space-y-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2.5">
-              <ClipboardList className="text-blue-600 h-8 w-8" />
-              Clinic Registers & Records
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+              <ClipboardList className="text-blue-600" />
+              <span>Registers & Clinical Records</span>
             </h1>
-            <p className="text-gray-600 text-sm mt-1">
-              Maintain review, recall, follow-up, crown cutting/received registers, material log, and staff payments
+            <p className="text-xs md:text-sm text-gray-500 mt-1">
+              Patient reviews, recalls, follow-ups, and staff payments history.
             </p>
           </div>
 
           <button
             onClick={openAddModal}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow flex items-center gap-1.5 transition self-start sm:self-auto"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs md:text-sm font-semibold shadow-sm transition"
           >
-            <Plus className="w-4 h-4" />
+            <Plus size={16} />
             Add Entry
           </button>
         </div>
@@ -392,10 +298,7 @@ function RegistersContent() {
             { id: 'REVIEW', label: 'Review Register', icon: UserCheck },
             { id: 'RECALL', label: 'Patient Recall', icon: Calendar },
             { id: 'FOLLOWUP', label: 'Follow-up Register', icon: PhoneCall },
-            { id: 'CROWN_CUTTING', label: 'Crown Cutting', icon: Crown },
-            { id: 'CROWN_RECEIVED', label: 'Crown Received', icon: CheckCircle2 },
-            { id: 'MATERIAL', label: 'Material Register', icon: Layers },
-            { id: 'STAFF_PAYMENTS', label: 'Staff Payment History', icon: IndianRupee },
+            { id: 'STAFF_PAYMENTS', label: 'Staff Register & Payments', icon: IndianRupee },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -429,16 +332,18 @@ function RegistersContent() {
               <select
                 value={selectedStaffName}
                 onChange={(e) => setSelectedStaffName(e.target.value)}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs bg-white font-medium text-gray-700"
+                className="px-2.5 py-1 text-xs border border-gray-300 rounded-md bg-white font-medium text-gray-700"
               >
                 <option value="ALL">All Staff Members</option>
                 {staffNamesList.map((name) => (
-                  <option key={name} value={name}>{name}</option>
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
                 ))}
               </select>
             )}
 
-            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+            <div className="flex items-center gap-1 text-xs text-gray-500">
               <span>Date:</span>
               <input
                 type="date"
@@ -476,7 +381,7 @@ function RegistersContent() {
           </div>
         </div>
 
-        {/* Staff Ledger KPI Summary (shown when Staff Payments tab is active) */}
+        {/* Staff Ledger KPI Summary */}
         {activeTab === 'STAFF_PAYMENTS' && staffLedgerSummary && (
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
             <div>
@@ -579,12 +484,12 @@ function RegistersContent() {
                             <div className="font-bold text-gray-900">{rc.patient_name}</div>
                             <div className="text-[11px] text-gray-500">📱 {rc.phone_number}</div>
                           </td>
-                          <td className="py-3 px-3 font-medium text-blue-700">{rc.recall_type}</td>
+                          <td className="py-3 px-3 font-medium text-gray-800">{rc.recall_type}</td>
                           <td className="py-3 px-3">
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                               rc.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                              rc.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
-                              rc.status === 'Contacted' ? 'bg-purple-100 text-purple-800' : 'bg-orange-100 text-orange-800'
+                              rc.status === 'Contacted' ? 'bg-blue-100 text-blue-800' :
+                              rc.status === 'Scheduled' ? 'bg-purple-100 text-purple-800' : 'bg-yellow-100 text-yellow-800'
                             }`}>{rc.status}</span>
                           </td>
                           <td className="py-3 px-3 text-gray-600">{rc.contacted_date || '-'}</td>
@@ -609,16 +514,16 @@ function RegistersContent() {
                     <tr>
                       <th className="py-2.5 px-3">Follow-up Date</th>
                       <th className="py-2.5 px-3">Patient Details</th>
-                      <th className="py-2.5 px-3">Treatment Summary</th>
-                      <th className="py-2.5 px-3">Call / Visit Status</th>
+                      <th className="py-2.5 px-3">Treatment Performed</th>
+                      <th className="py-2.5 px-3">Calling Status</th>
                       <th className="py-2.5 px-3">Next Date</th>
-                      <th className="py-2.5 px-3">Clinical Notes</th>
+                      <th className="py-2.5 px-3">Notes</th>
                       <th className="py-2.5 px-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {followups.length === 0 ? (
-                      <tr><td colSpan={7} className="py-12 text-center text-gray-500">No follow-up records found.</td></tr>
+                      <tr><td colSpan={7} className="py-12 text-center text-gray-500">No followup records found.</td></tr>
                     ) : (
                       followups.map((f) => (
                         <tr key={f.id} className="hover:bg-gray-50/80">
@@ -630,9 +535,8 @@ function RegistersContent() {
                           <td className="py-3 px-3 text-gray-800">{f.treatment_summary || '-'}</td>
                           <td className="py-3 px-3">
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              f.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                              f.status === 'Confirmed' ? 'bg-blue-100 text-blue-800' :
-                              f.status === 'Called - Reached' ? 'bg-purple-100 text-purple-800' : 'bg-yellow-100 text-yellow-800'
+                              f.status === 'Completed' || f.status === 'Confirmed' ? 'bg-green-100 text-green-800' :
+                              f.status === 'Called - Reached' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
                             }`}>{f.status}</span>
                           </td>
                           <td className="py-3 px-3 text-gray-600">{f.next_followup_date || '-'}</td>
@@ -650,201 +554,48 @@ function RegistersContent() {
                 </table>
               )}
 
-              {/* 4. CROWN CUTTING REGISTER TABLE */}
-              {activeTab === 'CROWN_CUTTING' && (
-                <table className="w-full text-xs text-left">
-                  <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase font-semibold">
-                    <tr>
-                      <th className="py-2.5 px-3">Cutting Date</th>
-                      <th className="py-2.5 px-3">Patient</th>
-                      <th className="py-2.5 px-3">Tooth #</th>
-                      <th className="py-2.5 px-3">Crown Type / Shade</th>
-                      <th className="py-2.5 px-3">Lab Name</th>
-                      <th className="py-2.5 px-3">Expected Date</th>
-                      <th className="py-2.5 px-3">Status</th>
-                      <th className="py-2.5 px-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {crownCuttings.length === 0 ? (
-                      <tr><td colSpan={8} className="py-12 text-center text-gray-500">No crown cutting records found.</td></tr>
-                    ) : (
-                      crownCuttings.map((c) => (
-                        <tr key={c.id} className="hover:bg-gray-50/80">
-                          <td className="py-3 px-3 font-semibold text-gray-900 whitespace-nowrap">{c.cutting_date}</td>
-                          <td className="py-3 px-3">
-                            <div className="font-bold text-gray-900">{c.patient_name}</div>
-                            <div className="text-[11px] text-gray-500">📱 {c.phone_number}</div>
-                          </td>
-                          <td className="py-3 px-3 font-bold text-blue-700">{c.tooth_numbers}</td>
-                          <td className="py-3 px-3">
-                            <span className="font-semibold text-gray-800">{c.crown_type}</span>
-                            {c.shade && <span className="text-gray-500 ml-1">({c.shade})</span>}
-                          </td>
-                          <td className="py-3 px-3 text-gray-700">{c.lab_name}</td>
-                          <td className="py-3 px-3 text-gray-600">{c.expected_delivery_date || '-'}</td>
-                          <td className="py-3 px-3">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              c.status === 'Received' || c.status === 'Cemented / Completed' ? 'bg-green-100 text-green-800' :
-                              c.status === 'Sent to Lab' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
-                            }`}>{c.status}</span>
-                          </td>
-                          <td className="py-3 px-3 text-right">
-                            <div className="flex justify-end gap-1.5 items-center">
-                              {c.status !== 'Received' && c.status !== 'Cemented / Completed' && (
-                                <button
-                                  onClick={() => handleReceiveFromCutting(c)}
-                                  className="px-2 py-1 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded font-semibold text-[11px]"
-                                  title="Receive Crown"
-                                >
-                                  Receive
-                                </button>
-                              )}
-                              <button onClick={() => { setCrownCuttingForm(c); setEditingId(c.id || null); setIsEditMode(true); setIsModalOpen(true); }} className="text-blue-600 hover:text-blue-800 p-1"><Edit size={14} /></button>
-                              {isAdmin && <button onClick={async () => { if (confirm('Delete?')) { await crownCuttingService.delete(c.id!); fetchData(); } }} className="text-red-600 hover:text-red-800 p-1"><Trash2 size={14} /></button>}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              )}
-
-              {/* 5. CROWN RECEIVED REGISTER TABLE */}
-              {activeTab === 'CROWN_RECEIVED' && (
-                <table className="w-full text-xs text-left">
-                  <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase font-semibold">
-                    <tr>
-                      <th className="py-2.5 px-3">Received Date</th>
-                      <th className="py-2.5 px-3">Patient Details</th>
-                      <th className="py-2.5 px-3">Tooth # & Type</th>
-                      <th className="py-2.5 px-3">Lab Name</th>
-                      <th className="py-2.5 px-3">Fit Trial / Cementing Status</th>
-                      <th className="py-2.5 px-3">Lab Amount</th>
-                      <th className="py-2.5 px-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {crownReceived.length === 0 ? (
-                      <tr><td colSpan={7} className="py-12 text-center text-gray-500">No crown received records found.</td></tr>
-                    ) : (
-                      crownReceived.map((cr) => (
-                        <tr key={cr.id} className="hover:bg-gray-50/80">
-                          <td className="py-3 px-3 font-semibold text-gray-900 whitespace-nowrap">{cr.received_date}</td>
-                          <td className="py-3 px-3">
-                            <div className="font-bold text-gray-900">{cr.patient_name}</div>
-                            <div className="text-[11px] text-gray-500">📱 {cr.phone_number}</div>
-                          </td>
-                          <td className="py-3 px-3">
-                            <span className="font-bold text-blue-700">{cr.tooth_numbers}</span>
-                            <span className="text-gray-600 ml-1">({cr.crown_type} - {cr.shade || 'A2'})</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-700">{cr.lab_name}</td>
-                          <td className="py-3 px-3">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              cr.status === 'Cemented / Delivered' ? 'bg-green-100 text-green-800' :
-                              cr.status === 'Trial Done - Fit OK' ? 'bg-blue-100 text-blue-800' :
-                              cr.status === 'Trial Scheduled' ? 'bg-purple-100 text-purple-800' : 'bg-yellow-100 text-yellow-800'
-                            }`}>{cr.status}</span>
-                          </td>
-                          <td className="py-3 px-3 font-medium text-gray-900">₹{cr.lab_amount || 0}</td>
-                          <td className="py-3 px-3 text-right">
-                            <div className="flex justify-end gap-1.5">
-                              <button onClick={() => { setCrownReceivedForm(cr); setEditingId(cr.id || null); setIsEditMode(true); setIsModalOpen(true); }} className="text-blue-600 hover:text-blue-800 p-1"><Edit size={14} /></button>
-                              {isAdmin && <button onClick={async () => { if (confirm('Delete?')) { await crownReceivedService.delete(cr.id!); fetchData(); } }} className="text-red-600 hover:text-red-800 p-1"><Trash2 size={14} /></button>}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              )}
-
-              {/* 6. MATERIAL REGISTER TABLE */}
-              {activeTab === 'MATERIAL' && (
-                <table className="w-full text-xs text-left">
-                  <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase font-semibold">
-                    <tr>
-                      <th className="py-2.5 px-3">Date</th>
-                      <th className="py-2.5 px-3">Material Item</th>
-                      <th className="py-2.5 px-3">Subdivision</th>
-                      <th className="py-2.5 px-3">Type</th>
-                      <th className="py-2.5 px-3 text-center">Qty</th>
-                      <th className="py-2.5 px-3 text-right">Rate</th>
-                      <th className="py-2.5 px-3 text-right">Total Cost</th>
-                      <th className="py-2.5 px-3">Vendor / Invoice</th>
-                      <th className="py-2.5 px-3">Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {materials.length === 0 ? (
-                      <tr><td colSpan={9} className="py-12 text-center text-gray-500">No material transaction logs found.</td></tr>
-                    ) : (
-                      materials.map((m) => (
-                        <tr key={m.id} className="hover:bg-gray-50/80">
-                          <td className="py-3 px-3 font-semibold text-gray-900 whitespace-nowrap">{m.transaction_date}</td>
-                          <td className="py-3 px-3 font-bold text-gray-900">{m.material_name}</td>
-                          <td className="py-3 px-3">
-                            <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-[10px] font-semibold">
-                              {m.subdivision}
-                            </span>
-                          </td>
-                          <td className="py-3 px-3">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              m.transaction_type === 'PURCHASE' || m.transaction_type === 'INITIAL_STOCK' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
-                            }`}>{m.transaction_type}</span>
-                          </td>
-                          <td className="py-3 px-3 text-center font-bold">{m.quantity} {m.unit || 'pcs'}</td>
-                          <td className="py-3 px-3 text-right text-gray-700">₹{m.rate}</td>
-                          <td className="py-3 px-3 text-right font-bold text-gray-900">₹{m.total_cost || m.quantity * m.rate}</td>
-                          <td className="py-3 px-3 text-gray-600">{m.vendor_name || '-'} {m.invoice_no && `(${m.invoice_no})`}</td>
-                          <td className="py-3 px-3 text-gray-500 truncate max-w-xs">{m.notes || '-'}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              )}
-
-              {/* 7. STAFF PAYMENTS TABLE */}
+              {/* 4. STAFF PAYMENT HISTORY TABLE */}
               {activeTab === 'STAFF_PAYMENTS' && (
                 <table className="w-full text-xs text-left">
                   <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase font-semibold">
                     <tr>
-                      <th className="py-2.5 px-3">Payment Date</th>
-                      <th className="py-2.5 px-3">Staff Name</th>
-                      <th className="py-2.5 px-3">Role</th>
-                      <th className="py-2.5 px-3">Salary Month</th>
+                      <th className="py-2.5 px-3">Date</th>
+                      <th className="py-2.5 px-3">Staff Name & Role</th>
+                      <th className="py-2.5 px-3">Month</th>
                       <th className="py-2.5 px-3">Payment Type</th>
                       <th className="py-2.5 px-3 text-right">Amount Paid</th>
-                      <th className="py-2.5 px-3">Mode & Ref</th>
-                      <th className="py-2.5 px-3">Paid By / Notes</th>
+                      <th className="py-2.5 px-3">Mode</th>
+                      <th className="py-2.5 px-3">Reference / Paid By</th>
                       <th className="py-2.5 px-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {staffPayments.length === 0 ? (
-                      <tr><td colSpan={9} className="py-12 text-center text-gray-500">No staff payment records found.</td></tr>
+                      <tr><td colSpan={8} className="py-12 text-center text-gray-500">No staff payment records found.</td></tr>
                     ) : (
                       staffPayments.map((sp) => (
                         <tr key={sp.id} className="hover:bg-gray-50/80">
                           <td className="py-3 px-3 font-semibold text-gray-900 whitespace-nowrap">{sp.payment_date}</td>
-                          <td className="py-3 px-3 font-bold text-gray-900">{sp.staff_name}</td>
-                          <td className="py-3 px-3 text-gray-600">{sp.staff_role}</td>
-                          <td className="py-3 px-3 font-medium text-blue-700">{sp.salary_month}</td>
                           <td className="py-3 px-3">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            <div className="font-bold text-gray-900">{sp.staff_name}</div>
+                            <div className="text-[11px] text-gray-500">{sp.staff_role}</div>
+                          </td>
+                          <td className="py-3 px-3 font-medium text-gray-700">{sp.salary_month}</td>
+                          <td className="py-3 px-3">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                               sp.payment_type === 'Salary' ? 'bg-green-100 text-green-800' :
-                              sp.payment_type === 'Advance' ? 'bg-orange-100 text-orange-800' : 'bg-purple-100 text-purple-800'
+                              sp.payment_type === 'Advance' ? 'bg-orange-100 text-orange-800' :
+                              sp.payment_type === 'Incentive / Bonus' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
                             }`}>{sp.payment_type}</span>
                           </td>
-                          <td className="py-3 px-3 text-right font-black text-gray-900">₹{sp.amount_paid.toLocaleString('en-IN')}</td>
-                          <td className="py-3 px-3 text-gray-700">
-                            {sp.payment_mode} {sp.transaction_reference && `• Ref: ${sp.transaction_reference}`}
+                          <td className="py-3 px-3 text-right font-bold text-gray-900 text-sm">
+                            ₹{sp.amount_paid.toLocaleString('en-IN')}
                           </td>
-                          <td className="py-3 px-3 text-gray-500 truncate max-w-xs">{sp.notes || sp.paid_by || '-'}</td>
+                          <td className="py-3 px-3 font-medium text-gray-700">{sp.payment_mode}</td>
+                          <td className="py-3 px-3 text-gray-600">
+                            <div>{sp.transaction_reference || '-'}</div>
+                            <div className="text-[10px] text-gray-400">By: {sp.paid_by || 'Clinic'}</div>
+                          </td>
                           <td className="py-3 px-3 text-right">
                             <div className="flex justify-end gap-1.5">
                               <button onClick={() => { setStaffPaymentForm(sp); setEditingId(sp.id || null); setIsEditMode(true); setIsModalOpen(true); }} className="text-blue-600 hover:text-blue-800 p-1"><Edit size={14} /></button>
@@ -862,42 +613,41 @@ function RegistersContent() {
         </div>
       </div>
 
-      {/* Dynamic Modal for Adding/Editing Register Entries */}
+      {/* Modal Form */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl animate-scale-up border border-gray-200">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-base font-bold text-gray-900">
-                {isEditMode ? 'Edit Register Entry' : `Add Entry to ${activeTab.replace('_', ' ')}`}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+              <h3 className="font-bold text-gray-900 text-sm">
+                {isEditMode ? 'Edit Record' : 'New Entry'} - {activeTab.replace('_', ' ')}
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleFormSubmit} className="space-y-3.5 text-xs">
-              {/* Patient Autocomplete for patient-related registers */}
-              {activeTab !== 'MATERIAL' && activeTab !== 'STAFF_PAYMENTS' && (
+            <form onSubmit={handleFormSubmit} className="p-6 space-y-4 text-xs">
+              {/* Autocomplete Patient for relevant tabs */}
+              {['REVIEW', 'RECALL', 'FOLLOWUP'].includes(activeTab) && !isEditMode && (
                 <div className="relative">
-                  <label className="block font-semibold text-gray-700 mb-1">Patient Name *</label>
+                  <label className="block font-semibold text-gray-700 mb-1">Search Patient</label>
                   <input
                     type="text"
+                    placeholder="Search by name, phone or ref #..."
                     value={patientSearchQuery}
                     onChange={(e) => handlePatientQueryChange(e.target.value)}
-                    required
-                    placeholder="Type to search or enter patient name"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    className="w-full px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                   {showSuggestions && patientSuggestions.length > 0 && (
-                    <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg max-h-48 overflow-y-auto">
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
                       {patientSuggestions.map((p) => (
                         <div
                           key={p.id || p.phone_number}
                           onClick={() => selectPatientForForm(p)}
-                          className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-none"
+                          className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-0"
                         >
-                          <div className="font-semibold text-gray-900">{p.name}</div>
-                          <div className="text-[11px] text-gray-500">📱 {p.phone_number} • Ref: {p.reference_number || 'N/A'}</div>
+                          <div className="font-bold text-gray-900">{p.name}</div>
+                          <div className="text-[11px] text-gray-500">📱 {p.phone_number} {p.reference_number && `• ${p.reference_number}`}</div>
                         </div>
                       ))}
                     </div>
@@ -910,15 +660,19 @@ function RegistersContent() {
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
+                      <label className="block font-semibold text-gray-700 mb-1">Patient Name *</label>
+                      <input type="text" value={reviewForm.patient_name} onChange={(e) => setReviewForm({ ...reviewForm, patient_name: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg" />
+                    </div>
+                    <div>
                       <label className="block font-semibold text-gray-700 mb-1">Phone Number *</label>
                       <input type="text" value={reviewForm.phone_number} onChange={(e) => setReviewForm({ ...reviewForm, phone_number: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg" />
                     </div>
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Review Date *</label>
-                      <input type="date" value={reviewForm.review_date} onChange={(e) => setReviewForm({ ...reviewForm, review_date: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-gray-700 mb-1">Review Date</label>
+                      <input type="date" value={reviewForm.review_date} onChange={(e) => setReviewForm({ ...reviewForm, review_date: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg" />
+                    </div>
                     <div>
                       <label className="block font-semibold text-gray-700 mb-1">Status</label>
                       <select value={reviewForm.status} onChange={(e) => setReviewForm({ ...reviewForm, status: e.target.value as any })} className="w-full px-3 py-1.5 border rounded-lg bg-white">
@@ -926,20 +680,17 @@ function RegistersContent() {
                         <option value="Visited">Visited</option>
                         <option value="Completed">Completed</option>
                         <option value="Missed">Missed</option>
+                        <option value="Rescheduled">Rescheduled</option>
                       </select>
                     </div>
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Doctor</label>
-                      <input type="text" value={reviewForm.doctor_name || ''} onChange={(e) => setReviewForm({ ...reviewForm, doctor_name: e.target.value })} className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
                   </div>
                   <div>
-                    <label className="block font-semibold text-gray-700 mb-1">Treatment / Purpose</label>
-                    <input type="text" value={reviewForm.chief_complaint_or_treatment || ''} onChange={(e) => setReviewForm({ ...reviewForm, chief_complaint_or_treatment: e.target.value })} placeholder="e.g. Post RCT Review, Suture Removal" className="w-full px-3 py-1.5 border rounded-lg" />
+                    <label className="block font-semibold text-gray-700 mb-1">Chief Complaint / Treatment</label>
+                    <input type="text" value={reviewForm.chief_complaint_or_treatment || ''} onChange={(e) => setReviewForm({ ...reviewForm, chief_complaint_or_treatment: e.target.value })} placeholder="e.g. Post-RCT Review wrt 46" className="w-full px-3 py-1.5 border rounded-lg" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-gray-700 mb-1">Findings / Clinical Notes</label>
-                    <textarea value={reviewForm.findings_notes || ''} onChange={(e) => setReviewForm({ ...reviewForm, findings_notes: e.target.value })} rows={2} className="w-full px-3 py-1.5 border rounded-lg" />
+                    <label className="block font-semibold text-gray-700 mb-1">Findings / Notes</label>
+                    <textarea rows={2} value={reviewForm.findings_notes || ''} onChange={(e) => setReviewForm({ ...reviewForm, findings_notes: e.target.value })} className="w-full px-3 py-1.5 border rounded-lg" />
                   </div>
                 </>
               )}
@@ -949,19 +700,25 @@ function RegistersContent() {
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Phone Number *</label>
-                      <input type="text" value={recallForm.phone_number} onChange={(e) => setRecallForm({ ...recallForm, phone_number: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg" />
+                      <label className="block font-semibold text-gray-700 mb-1">Patient Name *</label>
+                      <input type="text" value={recallForm.patient_name} onChange={(e) => setRecallForm({ ...recallForm, patient_name: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg" />
                     </div>
                     <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Recall Due Date *</label>
-                      <input type="date" value={recallForm.due_date} onChange={(e) => setRecallForm({ ...recallForm, due_date: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg" />
+                      <label className="block font-semibold text-gray-700 mb-1">Phone Number *</label>
+                      <input type="text" value={recallForm.phone_number} onChange={(e) => setRecallForm({ ...recallForm, phone_number: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg" />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Recall Reason / Type</label>
-                      <input type="text" value={recallForm.recall_type} onChange={(e) => setRecallForm({ ...recallForm, recall_type: e.target.value })} required placeholder="e.g. 6M Checkup, Scaling Recall" className="w-full px-3 py-1.5 border rounded-lg" />
+                      <label className="block font-semibold text-gray-700 mb-1">Recall Reason *</label>
+                      <input type="text" value={recallForm.recall_type} onChange={(e) => setRecallForm({ ...recallForm, recall_type: e.target.value })} placeholder="Scaling, 6-Month Checkup" required className="w-full px-3 py-1.5 border rounded-lg" />
                     </div>
+                    <div>
+                      <label className="block font-semibold text-gray-700 mb-1">Due Date *</label>
+                      <input type="date" value={recallForm.due_date} onChange={(e) => setRecallForm({ ...recallForm, due_date: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block font-semibold text-gray-700 mb-1">Status</label>
                       <select value={recallForm.status} onChange={(e) => setRecallForm({ ...recallForm, status: e.target.value as any })} className="w-full px-3 py-1.5 border rounded-lg bg-white">
@@ -972,10 +729,10 @@ function RegistersContent() {
                         <option value="Dismissed">Dismissed</option>
                       </select>
                     </div>
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-gray-700 mb-1">Notes</label>
-                    <input type="text" value={recallForm.notes || ''} onChange={(e) => setRecallForm({ ...recallForm, notes: e.target.value })} placeholder="Call outcome or remarks" className="w-full px-3 py-1.5 border rounded-lg" />
+                    <div>
+                      <label className="block font-semibold text-gray-700 mb-1">Contacted Date</label>
+                      <input type="date" value={recallForm.contacted_date || ''} onChange={(e) => setRecallForm({ ...recallForm, contacted_date: e.target.value })} className="w-full px-3 py-1.5 border rounded-lg" />
+                    </div>
                   </div>
                 </>
               )}
@@ -985,15 +742,19 @@ function RegistersContent() {
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
+                      <label className="block font-semibold text-gray-700 mb-1">Patient Name *</label>
+                      <input type="text" value={followupForm.patient_name} onChange={(e) => setFollowupForm({ ...followupForm, patient_name: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg" />
+                    </div>
+                    <div>
                       <label className="block font-semibold text-gray-700 mb-1">Phone Number *</label>
                       <input type="text" value={followupForm.phone_number} onChange={(e) => setFollowupForm({ ...followupForm, phone_number: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg" />
                     </div>
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Follow-up Date *</label>
-                      <input type="date" value={followupForm.followup_date} onChange={(e) => setFollowupForm({ ...followupForm, followup_date: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-gray-700 mb-1">Followup Date *</label>
+                      <input type="date" value={followupForm.followup_date} onChange={(e) => setFollowupForm({ ...followupForm, followup_date: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg" />
+                    </div>
                     <div>
                       <label className="block font-semibold text-gray-700 mb-1">Status</label>
                       <select value={followupForm.status} onChange={(e) => setFollowupForm({ ...followupForm, status: e.target.value as any })} className="w-full px-3 py-1.5 border rounded-lg bg-white">
@@ -1004,145 +765,10 @@ function RegistersContent() {
                         <option value="Completed">Completed</option>
                       </select>
                     </div>
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Next Follow-up Date</label>
-                      <input type="date" value={followupForm.next_followup_date || ''} onChange={(e) => setFollowupForm({ ...followupForm, next_followup_date: e.target.value })} className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
                   </div>
                   <div>
-                    <label className="block font-semibold text-gray-700 mb-1">Treatment Summary / Notes</label>
-                    <input type="text" value={followupForm.treatment_summary || ''} onChange={(e) => setFollowupForm({ ...followupForm, treatment_summary: e.target.value })} placeholder="e.g. Post-extraction pain check" className="w-full px-3 py-1.5 border rounded-lg" />
-                  </div>
-                </>
-              )}
-
-              {/* CROWN CUTTING FORM FIELDS */}
-              {activeTab === 'CROWN_CUTTING' && (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Tooth Numbers *</label>
-                      <input type="text" value={crownCuttingForm.tooth_numbers} onChange={(e) => setCrownCuttingForm({ ...crownCuttingForm, tooth_numbers: e.target.value })} required placeholder="e.g. 16, 17" className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Crown Type *</label>
-                      <input type="text" value={crownCuttingForm.crown_type} onChange={(e) => setCrownCuttingForm({ ...crownCuttingForm, crown_type: e.target.value })} required placeholder="Zirconia, PFM, E-Max" className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Shade</label>
-                      <input type="text" value={crownCuttingForm.shade || ''} onChange={(e) => setCrownCuttingForm({ ...crownCuttingForm, shade: e.target.value })} placeholder="A2, A3" className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Cutting Date</label>
-                      <input type="date" value={crownCuttingForm.cutting_date} onChange={(e) => setCrownCuttingForm({ ...crownCuttingForm, cutting_date: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Expected Date</label>
-                      <input type="date" value={crownCuttingForm.expected_delivery_date || ''} onChange={(e) => setCrownCuttingForm({ ...crownCuttingForm, expected_delivery_date: e.target.value })} className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Lab Name *</label>
-                      <input type="text" value={crownCuttingForm.lab_name} onChange={(e) => setCrownCuttingForm({ ...crownCuttingForm, lab_name: e.target.value })} required placeholder="Dental Lab Name" className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Status</label>
-                      <select value={crownCuttingForm.status} onChange={(e) => setCrownCuttingForm({ ...crownCuttingForm, status: e.target.value as any })} className="w-full px-3 py-1.5 border rounded-lg bg-white">
-                        <option value="Sent to Lab">Sent to Lab</option>
-                        <option value="In Lab">In Lab</option>
-                        <option value="Received">Received</option>
-                        <option value="Trial Done">Trial Done</option>
-                        <option value="Cemented / Completed">Cemented / Completed</option>
-                      </select>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* CROWN RECEIVED FORM FIELDS */}
-              {activeTab === 'CROWN_RECEIVED' && (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Tooth # & Crown Type *</label>
-                      <input type="text" value={crownReceivedForm.crown_type} onChange={(e) => setCrownReceivedForm({ ...crownReceivedForm, crown_type: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Lab Name *</label>
-                      <input type="text" value={crownReceivedForm.lab_name} onChange={(e) => setCrownReceivedForm({ ...crownReceivedForm, lab_name: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Received Date *</label>
-                      <input type="date" value={crownReceivedForm.received_date} onChange={(e) => setCrownReceivedForm({ ...crownReceivedForm, received_date: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Status</label>
-                      <select value={crownReceivedForm.status} onChange={(e) => setCrownReceivedForm({ ...crownReceivedForm, status: e.target.value as any })} className="w-full px-3 py-1.5 border rounded-lg bg-white">
-                        <option value="Received in Clinic">Received in Clinic</option>
-                        <option value="Trial Scheduled">Trial Scheduled</option>
-                        <option value="Trial Done - Fit OK">Trial Done - Fit OK</option>
-                        <option value="Cemented / Delivered">Cemented / Delivered</option>
-                        <option value="Rejected / Redo Needed">Rejected / Redo Needed</option>
-                      </select>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* MATERIAL FORM FIELDS */}
-              {activeTab === 'MATERIAL' && (
-                <>
-                  <div>
-                    <label className="block font-semibold text-gray-700 mb-1">Material Name *</label>
-                    <input type="text" value={materialForm.material_name} onChange={(e) => setMaterialForm({ ...materialForm, material_name: e.target.value })} required placeholder="e.g. Alginate Impression Powder" className="w-full px-3 py-1.5 border rounded-lg" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Subdivision *</label>
-                      <select value={materialForm.subdivision} onChange={(e) => setMaterialForm({ ...materialForm, subdivision: e.target.value as any })} className="w-full px-3 py-1.5 border rounded-lg bg-white">
-                        <option value="One-Time Material">One-Time Material</option>
-                        <option value="Consumable">Consumable</option>
-                        <option value="Non-Dental / Cleaning Consumable">Non-Dental / Cleaning Consumable</option>
-                        <option value="Record Maintenance Material">Record Maintenance Material</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Transaction Type *</label>
-                      <select value={materialForm.transaction_type} onChange={(e) => setMaterialForm({ ...materialForm, transaction_type: e.target.value as any })} className="w-full px-3 py-1.5 border rounded-lg bg-white">
-                        <option value="PURCHASE">PURCHASE / INWARD</option>
-                        <option value="USAGE">USAGE / OUTWARD</option>
-                        <option value="ADJUSTMENT">STOCK ADJUSTMENT</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Qty</label>
-                      <input type="number" value={materialForm.quantity} onChange={(e) => setMaterialForm({ ...materialForm, quantity: Number(e.target.value) })} required min="1" className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Unit</label>
-                      <input type="text" value={materialForm.unit} onChange={(e) => setMaterialForm({ ...materialForm, unit: e.target.value })} placeholder="pcs, pkts" className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Rate (₹)</label>
-                      <input type="number" value={materialForm.rate} onChange={(e) => setMaterialForm({ ...materialForm, rate: Number(e.target.value) })} className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Vendor</label>
-                      <input type="text" value={materialForm.vendor_name} onChange={(e) => setMaterialForm({ ...materialForm, vendor_name: e.target.value })} placeholder="Vendor Name" className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Invoice #</label>
-                      <input type="text" value={materialForm.invoice_no} onChange={(e) => setMaterialForm({ ...materialForm, invoice_no: e.target.value })} placeholder="Bill / Inv #" className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
+                    <label className="block font-semibold text-gray-700 mb-1">Treatment Performed</label>
+                    <input type="text" value={followupForm.treatment_summary || ''} onChange={(e) => setFollowupForm({ ...followupForm, treatment_summary: e.target.value })} placeholder="e.g. Tooth Extraction #47" className="w-full px-3 py-1.5 border rounded-lg" />
                   </div>
                 </>
               )}
@@ -1152,35 +778,39 @@ function RegistersContent() {
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Staff Name *</label>
-                      <input type="text" value={staffPaymentForm.staff_name} onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, staff_name: e.target.value })} required placeholder="Staff Full Name" className="w-full px-3 py-1.5 border rounded-lg" />
+                      <label className="block font-semibold text-gray-700 mb-1">Staff Member Name *</label>
+                      <input type="text" value={staffPaymentForm.staff_name} onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, staff_name: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg font-bold" />
                     </div>
                     <div>
                       <label className="block font-semibold text-gray-700 mb-1">Staff Role *</label>
-                      <input type="text" value={staffPaymentForm.staff_role} onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, staff_role: e.target.value })} required placeholder="Assistant, Receptionist" className="w-full px-3 py-1.5 border rounded-lg" />
+                      <input type="text" value={staffPaymentForm.staff_role} onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, staff_role: e.target.value })} required placeholder="Dental Assistant, Receptionist" className="w-full px-3 py-1.5 border rounded-lg" />
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     <div>
                       <label className="block font-semibold text-gray-700 mb-1">Salary Month *</label>
-                      <input type="month" value={staffPaymentForm.salary_month} onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, salary_month: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg" />
+                      <input type="text" value={staffPaymentForm.salary_month} onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, salary_month: e.target.value })} placeholder="2026-08" required className="w-full px-3 py-1.5 border rounded-lg" />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-gray-700 mb-1">Payment Date *</label>
+                      <input type="date" value={staffPaymentForm.payment_date} onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, payment_date: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg" />
                     </div>
                     <div>
                       <label className="block font-semibold text-gray-700 mb-1">Payment Type</label>
                       <select value={staffPaymentForm.payment_type} onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, payment_type: e.target.value as any })} className="w-full px-3 py-1.5 border rounded-lg bg-white">
                         <option value="Salary">Salary</option>
                         <option value="Advance">Advance</option>
-                        <option value="Incentive / Bonus">Bonus</option>
+                        <option value="Incentive / Bonus">Incentive / Bonus</option>
                         <option value="Reimbursement">Reimbursement</option>
                         <option value="Deduction">Deduction</option>
                       </select>
                     </div>
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Amount Paid (₹) *</label>
-                      <input type="number" value={staffPaymentForm.amount_paid} onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, amount_paid: Number(e.target.value) })} required min="1" className="w-full px-3 py-1.5 border rounded-lg font-bold" />
-                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-gray-700 mb-1">Amount Paid (₹) *</label>
+                      <input type="number" value={staffPaymentForm.amount_paid} onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, amount_paid: Number(e.target.value) })} required className="w-full px-3 py-1.5 border rounded-lg font-bold text-green-700" />
+                    </div>
                     <div>
                       <label className="block font-semibold text-gray-700 mb-1">Payment Mode</label>
                       <select value={staffPaymentForm.payment_mode} onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, payment_mode: e.target.value as any })} className="w-full px-3 py-1.5 border rounded-lg bg-white">
@@ -1188,29 +818,19 @@ function RegistersContent() {
                         <option value="UPI">UPI</option>
                         <option value="Bank Transfer">Bank Transfer</option>
                         <option value="Cheque">Cheque</option>
+                        <option value="Other">Other</option>
                       </select>
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Transaction Ref / UTR</label>
-                      <input type="text" value={staffPaymentForm.transaction_reference || ''} onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, transaction_reference: e.target.value })} placeholder="UTR or note" className="w-full px-3 py-1.5 border rounded-lg" />
                     </div>
                   </div>
                 </>
               )}
 
-              <div className="flex gap-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="w-1/2 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium"
-                >
+              <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border rounded-xl hover:bg-gray-100">
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="w-1/2 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow"
-                >
-                  {isEditMode ? 'Save Changes' : 'Record Entry'}
+                <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl">
+                  {isEditMode ? 'Update' : 'Save'}
                 </button>
               </div>
             </form>
@@ -1223,13 +843,7 @@ function RegistersContent() {
 
 export default function RegistersPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="p-8 text-center text-gray-500">Loading registers...</div>}>
       <RegistersContent />
     </Suspense>
   );

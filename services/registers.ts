@@ -91,21 +91,30 @@ export const followupService = {
 
 export const crownCuttingService = {
   create: async (data: Omit<CrownCuttingRecord, '_id' | 'id' | 'created_at' | 'updated_at'>) => {
-    return await convex.mutation(api.registers.createCrownCutting, data);
+    return await convex.mutation(api.registers.createCrownCutting, data as any);
   },
   update: async (id: string, updates: Partial<CrownCuttingRecord>) => {
     const { _id, id: rawId, created_at, updated_at, ...cleanUpdates } = updates;
     return await convex.mutation(api.registers.updateCrownCutting, {
       id: id as any,
       ...cleanUpdates,
-    });
+    } as any);
   },
   delete: async (id: string) => {
     return await convex.mutation(api.registers.deleteCrownCutting, { id: id as any });
   },
-  list: async (filters?: { startDate?: string; endDate?: string; status?: string; labName?: string; search?: string }) => {
+  list: async (filters?: { startDate?: string; endDate?: string; status?: string; crownStatus?: string; labName?: string; search?: string }) => {
     const data = await convex.query(api.registers.listCrownCutting, filters || {});
     return data.map((item: any) => ({ ...item, id: item._id })) as CrownCuttingRecord[];
+  },
+  syncAllPrescriptions: async () => {
+    try {
+      const anyApi: any = api;
+      return await convex.mutation(anyApi.prescriptions.syncAllPrescriptionsToCrownRegister, {});
+    } catch (err) {
+      console.error("Failed to auto-sync prescriptions to crown register:", err);
+      return { success: false, syncedCount: 0 };
+    }
   },
 };
 
@@ -117,8 +126,9 @@ export const crownReceivedService = {
   create: async (data: Omit<CrownReceivedRecord, '_id' | 'id' | 'created_at' | 'updated_at'>) => {
     return await convex.mutation(api.registers.createCrownReceived, {
       ...data,
+      status: data.status as any,
       crown_cutting_id: data.crown_cutting_id ? (data.crown_cutting_id as any) : undefined,
-    });
+    } as any);
   },
   update: async (id: string, updates: Partial<CrownReceivedRecord>) => {
     const { _id, id: rawId, created_at, updated_at, crown_cutting_id, ...cleanUpdates } = updates;
@@ -126,7 +136,7 @@ export const crownReceivedService = {
       id: id as any,
       crown_cutting_id: crown_cutting_id ? (crown_cutting_id as any) : undefined,
       ...cleanUpdates,
-    });
+    } as any);
   },
   delete: async (id: string) => {
     return await convex.mutation(api.registers.deleteCrownReceived, { id: id as any });

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { formatDate } from "@/lib/utils";
 import { PrescriptionWithBill } from "@/types/prescription";
 import { BillSummary } from "@/components/BillSummary";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 
 interface PrescriptionHistoryProps {
   prescriptions: PrescriptionWithBill[];
@@ -12,7 +13,9 @@ interface PrescriptionHistoryProps {
   isAdmin?: boolean;
 }
 
-const PrescriptionHistory: React.FC<PrescriptionHistoryProps> = ({ prescriptions, onDelete, isAdmin = true }) => {
+const PrescriptionHistory: React.FC<PrescriptionHistoryProps> = ({ prescriptions, onDelete, isAdmin: isAdminProp }) => {
+  const { isAdmin: isAdminHook } = useIsAdmin();
+  const isAdmin = isAdminProp !== undefined ? isAdminProp : isAdminHook;
   return (
     <div>
       <h4 className="text-lg font-semibold text-gray-700 mb-3 border-b pb-2">Prescription History</h4>

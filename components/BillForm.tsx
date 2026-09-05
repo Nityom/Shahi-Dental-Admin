@@ -58,7 +58,7 @@ const defaultDentalProcedures = [
 // Temporary bill number shown before saving; real sequential number is assigned by the server
 const generateBillNumber = () => {
   const year = new Date().getFullYear();
-  return `KSD-INV-${year}-???`;
+  return `SDC-INV-${year}-???`;
 };
 
 interface StockUpdateResult {

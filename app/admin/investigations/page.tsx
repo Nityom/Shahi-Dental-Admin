@@ -2,98 +2,87 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { investigationService } from '@/services/investigations';
-import { getPatients } from '@/services/patients';
-import { InvestigationRecord } from '@/types/registers';
-import { Patient } from '@/types/patient';
 import {
   Activity,
   Calendar,
   Search,
-  Plus,
   BarChart3,
   RefreshCw,
-  Edit,
-  Trash2,
-  X,
   TrendingUp,
+  FileText,
+  Sparkles,
+  ExternalLink,
+  Layers,
+  CheckCircle2,
 } from 'lucide-react';
-import { useIsAdmin } from '@/hooks/use-is-admin';
+import Link from 'next/link';
 
 export default function InvestigationsPage() {
-  const { isAdmin } = useIsAdmin();
-  const [investigations, setInvestigations] = useState<InvestigationRecord[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [typeFilter, setTypeFilter] = useState<string>('OPG'); // Default to OPG view
+  const [typeFilter, setTypeFilter] = useState<'ALL' | 'OPG' | 'IOPAR'>('ALL');
 
-  // Date Range States
+  // Date Range Presets
   const todayStr = new Date().toISOString().split('T')[0];
   const firstOfMonthStr = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-  const [dateRangePreset, setDateRangePreset] = useState<'TODAY' | 'YESTERDAY' | 'LAST_7_DAYS' | 'THIS_MONTH' | 'CUSTOM'>('THIS_MONTH');
+  const [dateRangePreset, setDateRangePreset] = useState<'TODAY' | 'YESTERDAY' | 'LAST_7_DAYS' | 'THIS_MONTH' | 'ALL_TIME' | 'CUSTOM'>('THIS_MONTH');
   const [startDate, setStartDate] = useState<string>(firstOfMonthStr);
   const [endDate, setEndDate] = useState<string>(todayStr);
 
-  // Form Modal States
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [isEditMode, setIsEditMode] = useState<boolean>(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [patientSearchQuery, setPatientSearchQuery] = useState<string>('');
-  const [filteredPatientSuggestions, setFilteredPatientSuggestions] = useState<Patient[]>([]);
-  const [showPatientSuggestions, setShowPatientSuggestions] = useState<boolean>(false);
-
-  const [formData, setFormData] = useState<Omit<InvestigationRecord, '_id' | 'id' | 'created_at'>>({
-    patient_name: '',
-    phone_number: '',
-    reference_number: '',
-    investigation_type: 'OPG',
-    investigation_date: todayStr,
-    doctor_name: 'Dr. Kautilya Swaroop',
-    technician_name: '',
-    indication: 'Pre-treatment Full Mouth Evaluation',
-    findings: '',
-    film_type: 'Digital',
-    cost: 500,
-    payment_status: 'PAID',
-    notes: '',
+  // Auto Report State
+  const [reportData, setReportData] = useState<{
+    totalOpg: number;
+    totalIopar: number;
+    totalCount: number;
+    dateWiseBreakdown: Array<{
+      date: string;
+      opgCount: number;
+      ioparCount: number;
+      totalCount: number;
+    }>;
+    records: Array<{
+      id: string;
+      prescription_id: string;
+      patient_name: string;
+      phone_number: string;
+      reference_number?: string;
+      prescription_date: string;
+      doctor_name?: string;
+      investigation_text: string;
+      has_opg: boolean;
+      has_iopar: boolean;
+      investigation_types: string[];
+    }>;
+  }>({
+    totalOpg: 0,
+    totalIopar: 0,
+    totalCount: 0,
+    dateWiseBreakdown: [],
+    records: [],
   });
 
-  const fetchInvestigations = useCallback(async () => {
+  const fetchInvestigationReport = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await investigationService.list({
+      const data = await investigationService.getAutomaticReport({
+        startDate: dateRangePreset === 'ALL_TIME' ? undefined : (startDate || undefined),
+        endDate: dateRangePreset === 'ALL_TIME' ? undefined : (endDate || undefined),
         investigationType: typeFilter === 'ALL' ? undefined : typeFilter,
-        startDate: startDate || undefined,
-        endDate: endDate || undefined,
         search: searchTerm || undefined,
       });
-      setInvestigations(data);
+      setReportData(data);
     } catch (err) {
-      console.error('Failed to load investigations:', err);
+      console.error('Failed to load automatic investigation report:', err);
     } finally {
       setLoading(false);
     }
-  }, [typeFilter, startDate, endDate, searchTerm]);
-
-  const fetchPatientsList = useCallback(async () => {
-    try {
-      const data = await getPatients();
-      setPatients(data || []);
-    } catch (err) {
-      console.error('Failed to load patients list:', err);
-    }
-  }, []);
+  }, [startDate, endDate, dateRangePreset, typeFilter, searchTerm]);
 
   useEffect(() => {
-    fetchInvestigations();
-  }, [fetchInvestigations]);
+    fetchInvestigationReport();
+  }, [fetchInvestigationReport]);
 
-  useEffect(() => {
-    fetchPatientsList();
-  }, [fetchPatientsList]);
-
-  // Handle Date Range Presets
-  const applyDatePreset = (preset: 'TODAY' | 'YESTERDAY' | 'LAST_7_DAYS' | 'THIS_MONTH' | 'CUSTOM') => {
+  const applyDatePreset = (preset: 'TODAY' | 'YESTERDAY' | 'LAST_7_DAYS' | 'THIS_MONTH' | 'ALL_TIME' | 'CUSTOM') => {
     setDateRangePreset(preset);
     const now = new Date();
 
@@ -113,615 +102,330 @@ export default function InvestigationsPage() {
       const first = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
       setStartDate(first);
       setEndDate(new Date().toISOString().split('T')[0]);
+    } else if (preset === 'ALL_TIME') {
+      setStartDate('');
+      setEndDate('');
     }
   };
-
-  // Autocomplete patient handler
-  const handlePatientSelect = (p: Patient) => {
-    setFormData((prev) => ({
-      ...prev,
-      patient_name: p.name,
-      phone_number: p.phone_number,
-      reference_number: p.reference_number || '',
-    }));
-    setPatientSearchQuery(p.name);
-    setShowPatientSuggestions(false);
-  };
-
-  const handlePatientSearchChange = (query: string) => {
-    setPatientSearchQuery(query);
-    setFormData((prev) => ({ ...prev, patient_name: query }));
-    if (query.trim().length > 0) {
-      const q = query.toLowerCase();
-      const matches = patients.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.phone_number.includes(q) ||
-          (p.reference_number && p.reference_number.toLowerCase().includes(q))
-      );
-      setFilteredPatientSuggestions(matches.slice(0, 5));
-      setShowPatientSuggestions(true);
-    } else {
-      setShowPatientSuggestions(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      if (isEditMode && editingId) {
-        await investigationService.update(editingId, formData);
-      } else {
-        await investigationService.create(formData);
-      }
-      setIsModalOpen(false);
-      setIsEditMode(false);
-      setEditingId(null);
-      fetchInvestigations();
-    } catch (err: any) {
-      alert(`Error saving investigation: ${err.message || 'Failed'}`);
-    }
-  };
-
-  const handleEdit = (rec: InvestigationRecord) => {
-    setFormData({
-      patient_id: rec.patient_id,
-      patient_name: rec.patient_name,
-      phone_number: rec.phone_number,
-      reference_number: rec.reference_number,
-      investigation_type: rec.investigation_type,
-      investigation_date: rec.investigation_date,
-      doctor_name: rec.doctor_name || 'Dr. Kautilya Swaroop',
-      technician_name: rec.technician_name || '',
-      indication: rec.indication || '',
-      findings: rec.findings || '',
-      film_type: rec.film_type || 'Digital',
-      cost: rec.cost || 500,
-      payment_status: rec.payment_status || 'PAID',
-      notes: rec.notes || '',
-    });
-    setPatientSearchQuery(rec.patient_name);
-    setEditingId(rec.id || null);
-    setIsEditMode(true);
-    setIsModalOpen(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this investigation record?')) {
-      try {
-        await investigationService.delete(id);
-        fetchInvestigations();
-      } catch (err: any) {
-        alert('Failed to delete investigation record');
-      }
-    }
-  };
-
-  const openNewModal = (type: string = 'OPG') => {
-    setFormData({
-      patient_name: '',
-      phone_number: '',
-      reference_number: '',
-      investigation_type: type,
-      investigation_date: todayStr,
-      doctor_name: 'Dr. Kautilya Swaroop',
-      technician_name: '',
-      indication: type === 'OPG' ? 'Pre-treatment Full Mouth Evaluation' : '',
-      findings: '',
-      film_type: 'Digital',
-      cost: type === 'OPG' ? 500 : 200,
-      payment_status: 'PAID',
-      notes: '',
-    });
-    setPatientSearchQuery('');
-    setIsEditMode(false);
-    setEditingId(null);
-    setIsModalOpen(true);
-  };
-
-  // Date-wise OPG Counting Breakdown calculation
-  const { totalOpgs, dateWiseOpgCounts, totalCost } = useMemo(() => {
-    const opgRecords = investigations.filter((i) => i.investigation_type.toUpperCase() === 'OPG');
-    const dateMap = new Map<string, number>();
-
-    for (const opg of opgRecords) {
-      const d = opg.investigation_date;
-      dateMap.set(d, (dateMap.get(d) || 0) + 1);
-    }
-
-    const dateCounts = Array.from(dateMap.entries())
-      .map(([date, count]) => ({ date, count }))
-      .sort((a, b) => b.date.localeCompare(a.date));
-
-    const totalRev = opgRecords.reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
-
-    return {
-      totalOpgs: opgRecords.length,
-      dateWiseOpgCounts: dateCounts,
-      totalCost: totalRev,
-    };
-  }, [investigations]);
 
   return (
-    <div className="min-h-screen bg-gray-50/50 w-full p-4 md:p-6 space-y-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* Header Banner */}
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+            <Activity size={26} />
+          </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2.5">
-              <Activity className="text-blue-600 h-8 w-8" />
-              Investigation & OPG Module
-            </h1>
-            <p className="text-gray-600 text-sm mt-1">
-              Track OPG counts, date-wise volume, patient records, and diagnostic investigations
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">OPG & IOPAR Investigation Register</h1>
+              <span className="bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded text-xs border border-emerald-200 flex items-center gap-1">
+                <Sparkles size={12} /> Auto-Extracted
+              </span>
+            </div>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Automatically maintains case-insensitive OPG and IOPAR counts directly from prescriptions in real-time.
             </p>
           </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => openNewModal('OPG')}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow flex items-center gap-1.5 transition"
-            >
-              <Plus className="w-4 h-4" />
-              New OPG Record
-            </button>
-            <button
-              onClick={() => openNewModal('IOPAR')}
-              className="px-3.5 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-medium shadow-sm transition"
-            >
-              + Other Test
-            </button>
-          </div>
         </div>
 
-        {/* Date Filter & Preset Bar */}
-        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Date Period:</span>
-              <div className="flex flex-wrap gap-1.5">
-                {[
-                  { key: 'TODAY', label: 'Today' },
-                  { key: 'YESTERDAY', label: 'Yesterday' },
-                  { key: 'LAST_7_DAYS', label: 'Last 7 Days' },
-                  { key: 'THIS_MONTH', label: 'This Month' },
-                  { key: 'CUSTOM', label: 'Custom' },
-                ].map((p) => (
-                  <button
-                    key={p.key}
-                    onClick={() => applyDatePreset(p.key as any)}
-                    className={`px-3 py-1 text-xs font-semibold rounded-md transition ${
-                      dateRangePreset === p.key
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+        <button
+          onClick={() => fetchInvestigationReport()}
+          className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 px-3.5 py-2 rounded-xl font-medium transition-all self-start md:self-auto"
+        >
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          <span>Refresh Counts</span>
+        </button>
+      </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
-                  setDateRangePreset('CUSTOM');
-                }}
-                className="px-2.5 py-1 text-xs border border-gray-300 rounded-md"
-              />
-              <span className="text-xs text-gray-500">to</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value);
-                  setDateRangePreset('CUSTOM');
-                }}
-                className="px-2.5 py-1 text-xs border border-gray-300 rounded-md"
-              />
-              <button
-                onClick={fetchInvestigations}
-                className="p-1.5 bg-gray-100 hover:bg-gray-200 rounded-md text-gray-600"
-                title="Refresh"
-              >
-                <RefreshCw size={14} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* KPI Metric Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-5 rounded-2xl shadow-sm">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-xs font-medium text-blue-100 uppercase tracking-wider">Total OPGs Done</p>
-                <h3 className="text-3xl font-black mt-1">{totalOpgs}</h3>
-              </div>
-              <div className="p-2.5 bg-white/15 rounded-xl">
-                <Activity className="w-6 h-6 text-white" />
-              </div>
-            </div>
-            <p className="text-xs text-blue-100 mt-3 font-medium">In selected date range</p>
-          </div>
-
-          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">OPG Days Active</p>
-                <h3 className="text-3xl font-bold text-gray-900 mt-1">{dateWiseOpgCounts.length}</h3>
-              </div>
-              <div className="p-2.5 bg-blue-50 rounded-xl">
-                <Calendar className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 mt-3">
-              Avg ~{dateWiseOpgCounts.length > 0 ? (totalOpgs / dateWiseOpgCounts.length).toFixed(1) : 0} OPGs / active day
+      {/* KPI Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Total OPG */}
+        <div
+          onClick={() => setTypeFilter(typeFilter === 'OPG' ? 'ALL' : 'OPG')}
+          className={`p-5 rounded-2xl border cursor-pointer transition-all shadow-sm ${
+            typeFilter === 'OPG'
+              ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-600'
+              : 'bg-white border-gray-200 hover:border-blue-300'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <p className={`text-xs font-semibold uppercase tracking-wider ${typeFilter === 'OPG' ? 'text-blue-100' : 'text-gray-500'}`}>
+              OPG Count
             </p>
-          </div>
-
-          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">OPG Revenue</p>
-                <h3 className="text-3xl font-bold text-emerald-600 mt-1">₹{totalCost.toLocaleString('en-IN')}</h3>
-              </div>
-              <div className="p-2.5 bg-emerald-50 rounded-xl">
-                <TrendingUp className="w-6 h-6 text-emerald-600" />
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 mt-3">Total collected for OPGs</p>
-          </div>
-
-          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">All Investigations</p>
-                <h3 className="text-3xl font-bold text-gray-900 mt-1">{investigations.length}</h3>
-              </div>
-              <div className="p-2.5 bg-purple-50 rounded-xl">
-                <BarChart3 className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 mt-3">OPG, IOPAR, CBCT & other tests</p>
-          </div>
-        </div>
-
-        {/* Date-wise OPG Counting Breakdown */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-              <BarChart3 className="text-blue-600 h-5 w-5" />
-              Date-Wise OPG Count Breakdown
-            </h2>
-            <span className="text-xs text-gray-500 font-medium">
-              Period: {startDate} to {endDate}
+            <span className={`text-xs px-2 py-0.5 rounded font-bold ${typeFilter === 'OPG' ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-700'}`}>
+              Full Mouth
             </span>
           </div>
-
-          {dateWiseOpgCounts.length === 0 ? (
-            <div className="py-6 text-center text-xs text-gray-500 bg-gray-50 rounded-xl">
-              No OPGs performed during this date period.
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-              {dateWiseOpgCounts.map((item) => (
-                <div
-                  key={item.date}
-                  className="bg-blue-50/60 border border-blue-200/80 rounded-xl p-3 text-center"
-                >
-                  <div className="text-xs font-semibold text-gray-600">{item.date}</div>
-                  <div className="text-2xl font-extrabold text-blue-700 mt-1">{item.count}</div>
-                  <div className="text-[10px] text-blue-600 font-medium uppercase mt-0.5">OPGs Recorded</div>
-                </div>
-              ))}
-            </div>
-          )}
+          <p className={`text-3xl font-black mt-3 ${typeFilter === 'OPG' ? 'text-white' : 'text-gray-900'}`}>
+            {reportData.totalOpg}
+          </p>
+          <p className={`text-xs mt-1 ${typeFilter === 'OPG' ? 'text-blue-100' : 'text-gray-400'}`}>
+            Auto-detected from prescriptions
+          </p>
         </div>
 
-        {/* Patient-wise Records Table */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setTypeFilter('OPG')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
-                  typeFilter === 'OPG' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
-                }`}
-              >
-                OPG Only ({totalOpgs})
-              </button>
-              <button
-                onClick={() => setTypeFilter('ALL')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
-                  typeFilter === 'ALL' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
-                }`}
-              >
-                All Tests ({investigations.length})
-              </button>
-            </div>
-
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search patient, phone, indication..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+        {/* Total IOPAR */}
+        <div
+          onClick={() => setTypeFilter(typeFilter === 'IOPAR' ? 'ALL' : 'IOPAR')}
+          className={`p-5 rounded-2xl border cursor-pointer transition-all shadow-sm ${
+            typeFilter === 'IOPAR'
+              ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-600'
+              : 'bg-white border-gray-200 hover:border-indigo-300'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <p className={`text-xs font-semibold uppercase tracking-wider ${typeFilter === 'IOPAR' ? 'text-indigo-100' : 'text-gray-500'}`}>
+              IOPAR Count
+            </p>
+            <span className={`text-xs px-2 py-0.5 rounded font-bold ${typeFilter === 'IOPAR' ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-700'}`}>
+              Periapical
+            </span>
           </div>
+          <p className={`text-3xl font-black mt-3 ${typeFilter === 'IOPAR' ? 'text-white' : 'text-gray-900'}`}>
+            {reportData.totalIopar}
+          </p>
+          <p className={`text-xs mt-1 ${typeFilter === 'IOPAR' ? 'text-indigo-100' : 'text-gray-400'}`}>
+            Auto-detected from prescriptions
+          </p>
+        </div>
 
-          {loading ? (
-            <div className="py-20 flex justify-center items-center">
-              <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
-            </div>
-          ) : investigations.length === 0 ? (
-            <div className="py-16 text-center text-gray-500 text-sm bg-gray-50 rounded-xl border border-dashed border-gray-200">
-              No investigation records found for this period.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-gray-50 border-y border-gray-200 text-gray-600 uppercase font-semibold">
-                  <tr>
-                    <th className="py-2.5 px-3">Date</th>
-                    <th className="py-2.5 px-3">Patient Details</th>
-                    <th className="py-2.5 px-3">Type</th>
-                    <th className="py-2.5 px-3">Indication / Notes</th>
-                    <th className="py-2.5 px-3">Format</th>
-                    <th className="py-2.5 px-3">Doctor</th>
-                    <th className="py-2.5 px-3 text-right">Fee</th>
-                    <th className="py-2.5 px-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {investigations.map((rec) => (
-                    <tr key={rec.id} className="hover:bg-gray-50/80 transition">
-                      <td className="py-3 px-3 font-semibold text-gray-800 whitespace-nowrap">
-                        {rec.investigation_date}
-                      </td>
-                      <td className="py-3 px-3">
-                        <div className="font-bold text-gray-900">{rec.patient_name}</div>
-                        <div className="text-gray-500 text-[11px]">
-                          📱 {rec.phone_number} {rec.reference_number && `• Ref: ${rec.reference_number}`}
-                        </div>
-                      </td>
-                      <td className="py-3 px-3">
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          rec.investigation_type === 'OPG' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                        }`}>
-                          {rec.investigation_type}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 max-w-xs">
-                        <div className="text-gray-800 font-medium truncate">{rec.indication || 'General'}</div>
-                        {rec.findings && (
-                          <div className="text-gray-500 text-[11px] truncate italic">{rec.findings}</div>
-                        )}
-                      </td>
-                      <td className="py-3 px-3 text-gray-600">{rec.film_type || 'Digital'}</td>
-                      <td className="py-3 px-3 text-gray-700">{rec.doctor_name || '-'}</td>
-                      <td className="py-3 px-3 text-right font-bold text-gray-900">
-                        ₹{rec.cost || 0}
-                      </td>
-                      <td className="py-3 px-3 text-right">
-                        <div className="flex justify-end items-center gap-1.5">
-                          <button
-                            onClick={() => handleEdit(rec)}
-                            className="p-1 text-blue-600 hover:text-blue-800"
-                            title="Edit"
-                          >
-                            <Edit size={15} />
-                          </button>
-                          {isAdmin && (
-                            <button
-                              onClick={() => rec.id && handleDelete(rec.id)}
-                              className="p-1 text-red-600 hover:text-red-800"
-                              title="Delete"
-                            >
-                              <Trash2 size={15} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        {/* Total Combined */}
+        <div
+          onClick={() => setTypeFilter('ALL')}
+          className={`p-5 rounded-2xl border cursor-pointer transition-all shadow-sm ${
+            typeFilter === 'ALL'
+              ? 'bg-gradient-to-br from-gray-900 to-slate-800 text-white border-gray-900'
+              : 'bg-white border-gray-200'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <p className={`text-xs font-semibold uppercase tracking-wider ${typeFilter === 'ALL' ? 'text-gray-300' : 'text-gray-500'}`}>
+              Total Investigations
+            </p>
+            <span className={`text-xs px-2 py-0.5 rounded font-bold ${typeFilter === 'ALL' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'}`}>
+              OPG + IOPAR
+            </span>
+          </div>
+          <p className={`text-3xl font-black mt-3 ${typeFilter === 'ALL' ? 'text-white' : 'text-gray-900'}`}>
+            {reportData.totalCount}
+          </p>
+          <p className={`text-xs mt-1 ${typeFilter === 'ALL' ? 'text-gray-300' : 'text-gray-400'}`}>
+            Across {reportData.records.length} prescriptions
+          </p>
         </div>
       </div>
 
-      {/* Record Investigation Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl animate-scale-up border border-gray-200">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                <Activity className="text-blue-600 w-5 h-5" />
-                {isEditMode ? 'Edit Investigation Record' : `New ${formData.investigation_type} Record`}
-              </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                <X size={18} />
+      {/* Filter & Controls Bar */}
+      <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 space-y-4">
+        {/* Date Presets Chips */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mr-1 flex items-center gap-1">
+              <Calendar size={14} /> Period:
+            </span>
+            {[
+              { id: 'TODAY', label: 'Today' },
+              { id: 'YESTERDAY', label: 'Yesterday' },
+              { id: 'LAST_7_DAYS', label: 'Last 7 Days' },
+              { id: 'THIS_MONTH', label: 'This Month' },
+              { id: 'ALL_TIME', label: 'All Time' },
+            ].map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => applyDatePreset(preset.id as any)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  dateRangePreset === preset.id
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {preset.label}
               </button>
-            </div>
+            ))}
+          </div>
 
-            <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
-              {/* Patient Autocomplete */}
-              <div className="relative">
-                <label className="block font-semibold text-gray-700 mb-1">Patient Name *</label>
-                <input
-                  type="text"
-                  value={patientSearchQuery}
-                  onChange={(e) => handlePatientSearchChange(e.target.value)}
-                  required
-                  placeholder="Type to search or enter patient name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-                {showPatientSuggestions && filteredPatientSuggestions.length > 0 && (
-                  <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg max-h-48 overflow-y-auto">
-                    {filteredPatientSuggestions.map((p) => (
-                      <div
-                        key={p.id || p.phone_number}
-                        onClick={() => handlePatientSelect(p)}
-                        className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-none"
-                      >
-                        <div className="font-semibold text-gray-900">{p.name}</div>
-                        <div className="text-[11px] text-gray-500">📱 {p.phone_number} • Ref: {p.reference_number || 'N/A'}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+          {/* Type Filter Buttons */}
+          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
+            <button
+              onClick={() => setTypeFilter('ALL')}
+              className={`px-3 py-1 text-xs font-bold rounded-md transition ${
+                typeFilter === 'ALL' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600'
+              }`}
+            >
+              All Types
+            </button>
+            <button
+              onClick={() => setTypeFilter('OPG')}
+              className={`px-3 py-1 text-xs font-bold rounded-md transition ${
+                typeFilter === 'OPG' ? 'bg-white text-blue-700 shadow-xs' : 'text-gray-600'
+              }`}
+            >
+              OPG Only
+            </button>
+            <button
+              onClick={() => setTypeFilter('IOPAR')}
+              className={`px-3 py-1 text-xs font-bold rounded-md transition ${
+                typeFilter === 'IOPAR' ? 'bg-white text-indigo-700 shadow-xs' : 'text-gray-600'
+              }`}
+            >
+              IOPAR Only
+            </button>
+          </div>
+        </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Phone Number *</label>
-                  <input
-                    type="text"
-                    value={formData.phone_number}
-                    onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
-                    required
-                    placeholder="10-digit mobile"
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Reference No.</label>
-                  <input
-                    type="text"
-                    value={formData.reference_number || ''}
-                    onChange={(e) => setFormData({ ...formData, reference_number: e.target.value })}
-                    placeholder="e.g. SDC0012"
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg"
-                  />
-                </div>
-              </div>
+        {/* Custom Date Range & Search Input */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100">
+          <div className="flex items-center gap-2 text-xs text-gray-600">
+            <span className="font-semibold">Custom Range:</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                setDateRangePreset('CUSTOM');
+              }}
+              className="px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs"
+            />
+            <span>to</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                setDateRangePreset('CUSTOM');
+              }}
+              className="px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs"
+            />
+          </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Investigation Type *</label>
-                  <select
-                    value={formData.investigation_type}
-                    onChange={(e) => setFormData({ ...formData, investigation_type: e.target.value })}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg bg-white"
-                  >
-                    <option value="OPG">OPG (Orthopantomogram)</option>
-                    <option value="IOPAR">IOPAR (X-Ray)</option>
-                    <option value="CBCT">CBCT</option>
-                    <option value="Lateral Ceph">Lateral Ceph</option>
-                    <option value="Blood Test">Blood Test</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Date *</label>
-                  <input
-                    type="date"
-                    value={formData.investigation_date}
-                    onChange={(e) => setFormData({ ...formData, investigation_date: e.target.value })}
-                    required
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg"
-                  />
-                </div>
-              </div>
+          <div className="relative flex-1 min-w-[240px] max-w-sm">
+            <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
+            <input
+              type="text"
+              placeholder="Search patient, doctor, investigation text..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-1.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+        </div>
+      </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Film / Delivery Type</label>
-                  <select
-                    value={formData.film_type || 'Digital'}
-                    onChange={(e) => setFormData({ ...formData, film_type: e.target.value as any })}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg bg-white"
-                  >
-                    <option value="Digital">Digital Softcopy</option>
-                    <option value="Printed Film">Printed Film</option>
-                    <option value="Both">Both Film & Digital</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Doctor</label>
-                  <input
-                    type="text"
-                    value={formData.doctor_name || ''}
-                    onChange={(e) => setFormData({ ...formData, doctor_name: e.target.value })}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg"
-                  />
+      {/* Date-wise Breakdown Accordion / Summary */}
+      {reportData.dateWiseBreakdown.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-3">
+          <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+            <BarChart3 size={16} className="text-blue-600" />
+            <span>Date-wise Investigation Frequency</span>
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5">
+            {reportData.dateWiseBreakdown.slice(0, 12).map((item) => (
+              <div key={item.date} className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-center">
+                <p className="text-[11px] font-semibold text-gray-500">{item.date}</p>
+                <div className="flex items-center justify-center gap-2 mt-1.5">
+                  <span className="text-xs font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
+                    OPG: {item.opgCount}
+                  </span>
+                  <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded">
+                    IOPAR: {item.ioparCount}
+                  </span>
                 </div>
               </div>
-
-              <div>
-                <label className="block font-semibold text-gray-700 mb-1">Clinical Indication / Reason</label>
-                <input
-                  type="text"
-                  value={formData.indication || ''}
-                  onChange={(e) => setFormData({ ...formData, indication: e.target.value })}
-                  placeholder="e.g. Full mouth scan, 3rd Molar Impaction, Ortho Planning"
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-gray-700 mb-1">Findings / Diagnostic Notes</label>
-                <textarea
-                  value={formData.findings || ''}
-                  onChange={(e) => setFormData({ ...formData, findings: e.target.value })}
-                  rows={2}
-                  placeholder="Radiographic findings or notes"
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Charge / Cost (₹)</label>
-                  <input
-                    type="number"
-                    value={formData.cost || 0}
-                    onChange={(e) => setFormData({ ...formData, cost: Number(e.target.value) })}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Payment Status</label>
-                  <select
-                    value={formData.payment_status || 'PAID'}
-                    onChange={(e) => setFormData({ ...formData, payment_status: e.target.value as any })}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg bg-white"
-                  >
-                    <option value="PAID">PAID</option>
-                    <option value="PENDING">PENDING</option>
-                    <option value="INCLUDED_IN_TREATMENT">INCLUDED IN TREATMENT</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="w-1/2 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="w-1/2 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow"
-                >
-                  {isEditMode ? 'Update Record' : 'Save Record'}
-                </button>
-              </div>
-            </form>
+            ))}
           </div>
         </div>
       )}
+
+      {/* Main Investigations List Table */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-gray-900">
+            Detected Investigation Records ({reportData.records.length})
+          </h3>
+          <span className="text-xs text-gray-400">
+            Auto-synchronized with Prescription Management
+          </span>
+        </div>
+
+        {loading ? (
+          <div className="p-16 text-center text-gray-400">
+            <RefreshCw size={32} className="animate-spin mx-auto mb-2 text-blue-600" />
+            <p className="font-medium">Scanning prescriptions for OPG & IOPAR investigations...</p>
+          </div>
+        ) : reportData.records.length === 0 ? (
+          <div className="p-16 text-center text-gray-400">
+            <Activity size={40} className="mx-auto mb-2 opacity-50" />
+            <p className="font-semibold text-gray-700">No OPG or IOPAR investigations found for this period.</p>
+            <p className="text-xs mt-1 text-gray-400">
+              Prescriptions with "OPG" or "IOPAR" in their investigation field appear here automatically.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-gray-600">
+              <thead className="bg-gray-50 text-gray-700 uppercase text-xs border-b border-gray-200">
+                <tr>
+                  <th className="px-5 py-3.5">Date</th>
+                  <th className="px-5 py-3.5">Patient Details</th>
+                  <th className="px-4 py-3.5">Ref No.</th>
+                  <th className="px-4 py-3.5">Doctor</th>
+                  <th className="px-4 py-3.5">Prescription Investigation Text</th>
+                  <th className="px-4 py-3.5 text-center">Detected Type</th>
+                  <th className="px-5 py-3.5 text-right">Prescription</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {reportData.records.map((rec) => (
+                  <tr key={rec.id} className="hover:bg-gray-50 transition">
+                    <td className="px-5 py-4 font-bold text-gray-900 whitespace-nowrap">
+                      {rec.prescription_date}
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="font-bold text-gray-900">{rec.patient_name}</div>
+                      <div className="text-xs text-gray-400">📱 {rec.phone_number || "No phone"}</div>
+                    </td>
+                    <td className="px-4 py-4 text-xs font-mono text-gray-600">
+                      {rec.reference_number || "-"}
+                    </td>
+                    <td className="px-4 py-4 font-medium text-gray-800">
+                      {rec.doctor_name || "Dr. Kautilya Swaroop"}
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="font-semibold text-gray-900 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100 text-xs">
+                        {rec.investigation_text}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                        {rec.has_opg && (
+                          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                            OPG
+                          </span>
+                        )}
+                        {rec.has_iopar && (
+                          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">
+                            IOPAR
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <Link
+                        href={`/admin/prescription?patientId=${rec.prescription_id}&reference=${rec.reference_number || ''}`}
+                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-semibold bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition"
+                      >
+                        <span>View Rx</span>
+                        <ExternalLink size={12} />
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

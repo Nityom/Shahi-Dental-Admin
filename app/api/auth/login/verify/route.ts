@@ -74,20 +74,22 @@ export async function POST(request: NextRequest) {
       userId: payload.user._id as any,
     });
 
-    const { rawSessionToken, expiresAt } = await createAndStoreSession(payload.user._id);
+    const userRole = payload.user.role || "admin";
+    const { rawSessionToken, expiresAt } = await createAndStoreSession(payload.user._id, userRole);
 
     const response = NextResponse.json(
       {
         success: true,
         user: {
           email: payload.user.email,
-          name: payload.user.name || "Administrator",
-          role: payload.user.role || "admin",
+          name: payload.user.name || (userRole === "admin" ? "Administrator" : "Staff"),
+          role: userRole,
         },
       },
       { status: 200 }
     );
 
+    const isAdmin = userRole === "admin";
     response.cookies.set({
       name: SESSION_COOKIE_NAME,
       value: rawSessionToken,
@@ -96,6 +98,7 @@ export async function POST(request: NextRequest) {
       sameSite: "lax",
       path: "/",
       expires: new Date(expiresAt),
+      maxAge: isAdmin ? 365 * 24 * 60 * 60 : 10 * 60 * 60,
     });
 
     return response;

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { TrendingUp, Calendar, Package, IndianRupee, Percent, RefreshCw, PieChart, Users, Pill } from 'lucide-react';
+import { TrendingUp, Calendar, Package, IndianRupee, Percent, RefreshCw, PieChart, Users, Pill, Activity, Search } from 'lucide-react';
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
@@ -86,7 +86,7 @@ interface ConsumableUsageResponse {
 export default function SalesReportPage() {
   const router = useRouter();
   const { isAdmin, loading: isAdminLoading } = useIsAdmin();
-  const [activeTab, setActiveTab] = useState<'medicine' | 'patient' | 'inventory'>('medicine');
+  const [activeTab, setActiveTab] = useState<'medicine' | 'patient' | 'inventory' | 'diagnostics'>('medicine');
   // Medicine Sales States
   const [reportType, setReportType] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
   const [groupBy, setGroupBy] = useState<'medicine' | 'company'>('medicine');
@@ -121,6 +121,28 @@ export default function SalesReportPage() {
   const [consumableStartDate, setConsumableStartDate] = useState('');
   const [consumableEndDate, setConsumableEndDate] = useState('');
 
+  // Diagnostic Tests States
+  const [diagnosticReportType, setDiagnosticReportType] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
+  const [diagnosticStartDate, setDiagnosticStartDate] = useState('');
+  const [diagnosticEndDate, setDiagnosticEndDate] = useState('');
+  const [diagnosticTypeFilter, setDiagnosticTypeFilter] = useState<string>('ALL');
+  const [diagnosticSearch, setDiagnosticSearch] = useState('');
+  const [diagnosticData, setDiagnosticData] = useState<{
+    totalOpg: number;
+    totalIopar: number;
+    totalBlood: number;
+    totalSugar: number;
+    totalCount: number;
+    totalIoparRevenue: number;
+    totalBloodRevenue: number;
+    totalSugarRevenue: number;
+    totalRevenue: number;
+    dateWiseBreakdown: any[];
+    records: any[];
+  } | null>(null);
+  const [isLoadingDiagnostics, setIsLoadingDiagnostics] = useState(false);
+  const [diagnosticError, setDiagnosticError] = useState('');
+
   useEffect(() => {
     if (!isAdminLoading && !isAdmin) {
       router.replace('/admin/patients');
@@ -140,7 +162,14 @@ export default function SalesReportPage() {
     setEndDate(endDateStr);
     setPatientStartDate(dateStr);
     setPatientEndDate(endDateStr);
+    setInventoryStartDate(dateStr);
+    setInventoryEndDate(endDateStr);
+    setConsumableStartDate(dateStr);
+    setConsumableEndDate(endDateStr);
+    setDiagnosticStartDate(dateStr);
+    setDiagnosticEndDate(endDateStr);
   }, []);
+
 
   // Update dates when report type changes
   useEffect(() => {
@@ -436,6 +465,57 @@ export default function SalesReportPage() {
     setConsumableEndDate(end.toISOString().split('T')[0]);
   }, [consumableReportType]);
 
+  // Update diagnostic dates when diagnostic report type changes
+  useEffect(() => {
+    const today = new Date();
+    let start = new Date();
+    let end = today;
+
+    switch (diagnosticReportType) {
+      case 'weekly':
+        start = new Date(today);
+        start.setDate(today.getDate() - 6);
+        break;
+      case 'monthly':
+        start = new Date(today);
+        start.setDate(today.getDate() - 30);
+        break;
+      case 'yearly':
+        start = new Date(today);
+        start.setDate(today.getDate() - 365);
+        break;
+    }
+
+    setDiagnosticStartDate(start.toISOString().split('T')[0]);
+    setDiagnosticEndDate(end.toISOString().split('T')[0]);
+  }, [diagnosticReportType]);
+
+  const fetchDiagnosticReport = useCallback(async () => {
+    setIsLoadingDiagnostics(true);
+    setDiagnosticError('');
+    try {
+      const res = await convex.query(api.investigations.getAutomaticInvestigationReport, {
+        startDate: diagnosticStartDate || undefined,
+        endDate: diagnosticEndDate || undefined,
+        investigationType: diagnosticTypeFilter,
+        search: diagnosticSearch || undefined,
+      });
+      setDiagnosticData(res);
+    } catch (err: any) {
+      console.error('Error fetching diagnostic report:', err);
+      setDiagnosticError(err.message || 'Failed to fetch diagnostic report');
+      setDiagnosticData(null);
+    } finally {
+      setIsLoadingDiagnostics(false);
+    }
+  }, [diagnosticStartDate, diagnosticEndDate, diagnosticTypeFilter, diagnosticSearch]);
+
+  useEffect(() => {
+    if (activeTab === 'diagnostics') {
+      fetchDiagnosticReport();
+    }
+  }, [diagnosticStartDate, diagnosticEndDate, diagnosticTypeFilter, diagnosticSearch, activeTab, fetchDiagnosticReport]);
+
   const totalStats = (Array.isArray(salesData) ? salesData : []).reduce(
     (acc, item) => ({
       transactions: acc.transactions + Number(item.total_transactions),
@@ -519,6 +599,17 @@ export default function SalesReportPage() {
             >
               <Package className="mr-2" size={18} />
               Inventory Sales
+            </button>
+            <button
+              onClick={() => setActiveTab('diagnostics')}
+              className={`flex items-center px-6 py-4 text-sm font-medium transition-colors ${
+                activeTab === 'diagnostics'
+                  ? 'border-b-2 border-blue-500 text-blue-600'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              <Activity className="mr-2" size={18} />
+              Diagnostic Tests & IOPAR
             </button>
           </div>
         </div>
@@ -1218,6 +1309,232 @@ export default function SalesReportPage() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-semibold">
                             ₹{Number(row.total_amount || 0).toFixed(2)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Diagnostic Tests & IOPAR Report */}
+        {activeTab === 'diagnostics' && (
+          <>
+            {/* Filters */}
+            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+              <h2 className="text-lg font-semibold text-gray-800 mb-4">Diagnostic & Test Filters</h2>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Report Period
+                  </label>
+                  <select
+                    value={diagnosticReportType}
+                    onChange={(e) => setDiagnosticReportType(e.target.value as any)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="weekly">Weekly (Last 7 Days)</option>
+                    <option value="monthly">Monthly (Last 30 Days)</option>
+                    <option value="yearly">Yearly (Last 365 Days)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={diagnosticStartDate}
+                    onChange={(e) => setDiagnosticStartDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={diagnosticEndDate}
+                    onChange={(e) => setDiagnosticEndDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Test Type Filter
+                  </label>
+                  <select
+                    value={diagnosticTypeFilter}
+                    onChange={(e) => setDiagnosticTypeFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="ALL">All Diagnostic Tests</option>
+                    <option value="IOPAR">IOPAR / X-Ray (₹200)</option>
+                    <option value="BLOOD">Blood Test (₹50)</option>
+                    <option value="SUGAR">Sugar Test (₹50)</option>
+                    <option value="OPG">OPG</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Search Bar */}
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Search Patient or Test
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                  <input
+                    type="text"
+                    placeholder="Search by patient name, phone, doctor, or test type..."
+                    value={diagnosticSearch}
+                    onChange={(e) => setDiagnosticSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {diagnosticError && (
+              <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+                <p className="text-sm text-red-700">{diagnosticError}</p>
+              </div>
+            )}
+
+            {/* Diagnostic Metrics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+              <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">IOPAR / X-Rays (₹200)</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{diagnosticData?.totalIopar || 0} Tests</p>
+                    <p className="text-sm font-semibold text-blue-700 mt-1">₹{Number(diagnosticData?.totalIoparRevenue || 0).toLocaleString('en-IN')}</p>
+                  </div>
+                  <div className="p-3 bg-blue-50 rounded-full">
+                    <Activity className="text-blue-500" size={24} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-rose-500">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-rose-600 uppercase tracking-wider">Blood Tests (₹50)</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{diagnosticData?.totalBlood || 0} Tests</p>
+                    <p className="text-sm font-semibold text-rose-700 mt-1">₹{Number(diagnosticData?.totalBloodRevenue || 0).toLocaleString('en-IN')}</p>
+                  </div>
+                  <div className="p-3 bg-rose-50 rounded-full">
+                    <Activity className="text-rose-500" size={24} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-amber-500">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Sugar Tests (₹50)</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{diagnosticData?.totalSugar || 0} Tests</p>
+                    <p className="text-sm font-semibold text-amber-700 mt-1">₹{Number(diagnosticData?.totalSugarRevenue || 0).toLocaleString('en-IN')}</p>
+                  </div>
+                  <div className="p-3 bg-amber-50 rounded-full">
+                    <Activity className="text-amber-500" size={24} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-emerald-500">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Total Diagnostic Revenue</p>
+                    <p className="text-2xl font-bold text-emerald-700 mt-1">₹{Number(diagnosticData?.totalRevenue || 0).toLocaleString('en-IN')}</p>
+                    <p className="text-xs text-gray-500 mt-1">{diagnosticData?.totalCount || 0} total tests performed</p>
+                  </div>
+                  <div className="p-3 bg-emerald-50 rounded-full">
+                    <IndianRupee className="text-emerald-500" size={24} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Diagnostic Records Table */}
+            <div className="bg-white rounded-xl shadow-md overflow-hidden">
+              <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-800">Diagnostic Tests & IOPAR Register</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">Admin-only sales & test logs auto-detected from prescriptions</p>
+                </div>
+                <button
+                  onClick={fetchDiagnosticReport}
+                  className="flex items-center text-sm font-medium text-blue-600 hover:text-blue-800"
+                >
+                  <RefreshCw className={`mr-1 ${isLoadingDiagnostics ? 'animate-spin' : ''}`} size={16} />
+                  Refresh
+                </button>
+              </div>
+
+              {isLoadingDiagnostics ? (
+                <div className="p-8 text-center text-gray-500">
+                  <RefreshCw className="animate-spin inline-block mr-2" size={20} />
+                  Loading diagnostic sales records...
+                </div>
+              ) : !diagnosticData?.records || diagnosticData.records.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                  No diagnostic tests found for the selected period and filters.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Patient Name</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Phone</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Doctor</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tests Performed</th>
+                        <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Billed Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {diagnosticData.records.map((row, idx) => (
+                        <tr key={row.id || idx} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {row.prescription_date ? new Date(row.prescription_date).toLocaleDateString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric'
+                            }) : '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                            {row.patient_name}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {row.phone_number}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {row.doctor_name || 'Dr. Kautilya Swaroop'}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-700">
+                            <div className="flex flex-wrap gap-1.5">
+                              {row.investigation_types?.map((type: string, tIdx: number) => (
+                                <span
+                                  key={tIdx}
+                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
+                                >
+                                  {type}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-emerald-600">
+                            ₹{Number(row.total_amount || 0).toLocaleString('en-IN')}
                           </td>
                         </tr>
                       ))}

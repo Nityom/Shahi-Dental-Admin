@@ -279,16 +279,28 @@ export const createCrownCutting = mutation({
     phone_number: v.string(),
     reference_number: v.optional(v.string()),
     tooth_numbers: v.string(),
-    crown_type: v.string(),
+    crown_type: v.optional(v.string()),
     shade: v.optional(v.string()),
     cutting_date: v.string(),
-    dentist_name: v.string(),
-    lab_name: v.string(),
+    dentist_name: v.optional(v.string()),
+    lab_name: v.optional(v.string()),
     impression_type: v.optional(v.string()),
     expected_delivery_date: v.optional(v.string()),
     lab_cost: v.optional(v.number()),
     patient_cost: v.optional(v.number()),
-    status: v.union(v.literal("Sent to Lab"), v.literal("In Lab"), v.literal("Received"), v.literal("Trial Done"), v.literal("Cemented / Completed"), v.literal("Sent for Redo")),
+    treatment_reference: v.optional(v.string()),
+    crown_status: v.optional(v.union(v.literal("Crown Not Required"), v.literal("Crown Cutting"), v.literal("Crown Received"))),
+    status: v.union(
+      v.literal("Sent to Lab"),
+      v.literal("In Lab"),
+      v.literal("Received"),
+      v.literal("Trial Done"),
+      v.literal("Cemented / Completed"),
+      v.literal("Sent for Redo"),
+      v.literal("Crown Not Required"),
+      v.literal("Crown Cutting"),
+      v.literal("Crown Received")
+    ),
     notes: v.optional(v.string()),
     prescription_id: v.optional(v.string()),
   },
@@ -318,7 +330,19 @@ export const updateCrownCutting = mutation({
     expected_delivery_date: v.optional(v.string()),
     lab_cost: v.optional(v.number()),
     patient_cost: v.optional(v.number()),
-    status: v.optional(v.union(v.literal("Sent to Lab"), v.literal("In Lab"), v.literal("Received"), v.literal("Trial Done"), v.literal("Cemented / Completed"), v.literal("Sent for Redo"))),
+    treatment_reference: v.optional(v.string()),
+    crown_status: v.optional(v.union(v.literal("Crown Not Required"), v.literal("Crown Cutting"), v.literal("Crown Received"))),
+    status: v.optional(v.union(
+      v.literal("Sent to Lab"),
+      v.literal("In Lab"),
+      v.literal("Received"),
+      v.literal("Trial Done"),
+      v.literal("Cemented / Completed"),
+      v.literal("Sent for Redo"),
+      v.literal("Crown Not Required"),
+      v.literal("Crown Cutting"),
+      v.literal("Crown Received")
+    )),
     notes: v.optional(v.string()),
     prescription_id: v.optional(v.string()),
   },
@@ -342,6 +366,7 @@ export const listCrownCutting = query({
     startDate: v.optional(v.string()),
     endDate: v.optional(v.string()),
     status: v.optional(v.string()),
+    crownStatus: v.optional(v.string()), // "ALL" | "Crown Not Required" | "Crown Cutting" | "Crown Received"
     labName: v.optional(v.string()),
     search: v.optional(v.string()),
   },
@@ -357,8 +382,11 @@ export const listCrownCutting = query({
     if (args.status && args.status !== "ALL") {
       cases = cases.filter((c) => c.status === args.status);
     }
+    if (args.crownStatus && args.crownStatus !== "ALL") {
+      cases = cases.filter((c) => (c.crown_status === args.crownStatus) || (c.status === args.crownStatus));
+    }
     if (args.labName && args.labName !== "ALL") {
-      cases = cases.filter((c) => c.lab_name.toLowerCase() === args.labName!.toLowerCase());
+      cases = cases.filter((c) => c.lab_name && c.lab_name.toLowerCase() === args.labName!.toLowerCase());
     }
     if (args.search) {
       const q = args.search.toLowerCase();
@@ -368,8 +396,9 @@ export const listCrownCutting = query({
           c.phone_number.includes(q) ||
           (c.reference_number && c.reference_number.toLowerCase().includes(q)) ||
           c.tooth_numbers.toLowerCase().includes(q) ||
-          c.crown_type.toLowerCase().includes(q) ||
-          c.lab_name.toLowerCase().includes(q)
+          (c.crown_type && c.crown_type.toLowerCase().includes(q)) ||
+          (c.lab_name && c.lab_name.toLowerCase().includes(q)) ||
+          (c.treatment_reference && c.treatment_reference.toLowerCase().includes(q))
       );
     }
 
@@ -486,7 +515,7 @@ export const listCrownReceived = query({
       received = received.filter((r) => r.status === args.status);
     }
     if (args.labName && args.labName !== "ALL") {
-      received = received.filter((r) => r.lab_name.toLowerCase() === args.labName!.toLowerCase());
+      received = received.filter((r) => (r.lab_name || "").toLowerCase() === args.labName!.toLowerCase());
     }
     if (args.search) {
       const q = args.search.toLowerCase();
@@ -496,8 +525,8 @@ export const listCrownReceived = query({
           r.phone_number.includes(q) ||
           (r.reference_number && r.reference_number.toLowerCase().includes(q)) ||
           r.tooth_numbers.toLowerCase().includes(q) ||
-          r.crown_type.toLowerCase().includes(q) ||
-          r.lab_name.toLowerCase().includes(q)
+          (r.crown_type && r.crown_type.toLowerCase().includes(q)) ||
+          (r.lab_name && r.lab_name.toLowerCase().includes(q))
       );
     }
 

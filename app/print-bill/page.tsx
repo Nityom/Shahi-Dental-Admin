@@ -64,15 +64,24 @@ function PrintBillContent() {
           throw new Error('Bill not found');
         }
 
-        // Parse items
-        const items = Array.isArray(bill.items)
-          ? bill.items.map((item: any) => ({
+        // Parse items safely whether Array or JSON string
+        let rawItems = bill.items;
+        if (typeof rawItems === 'string') {
+          try {
+            rawItems = JSON.parse(rawItems);
+          } catch {
+            rawItems = [];
+          }
+        }
+
+        const items = Array.isArray(rawItems)
+          ? rawItems.map((item: any) => ({
               id: item.id,
-              description: item.description,
+              description: item.description || item.name || 'Service',
               quantity: parseFloat(item.quantity) || 1,
-              unitPrice: parseFloat(item.unit_price ?? item.unitPrice) || 0,
+              unitPrice: parseFloat(item.unit_price ?? item.unitPrice ?? item.price) || 0,
               unit: item.unit || (item.item_type === 'medicine' || item.itemType === 'medicine' ? 'PCS' : 'EACH'),
-              total: parseFloat(item.total) || (parseFloat(item.quantity) * parseFloat(item.unit_price ?? item.unitPrice)),
+              total: parseFloat(item.total) || ((parseFloat(item.quantity) || 1) * (parseFloat(item.unit_price ?? item.unitPrice ?? item.price) || 0)),
               itemType: item.itemType || item.item_type || 'other',
               date: item.date,
             }))

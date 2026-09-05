@@ -25,12 +25,13 @@ export const create = mutation({
             payment_status = "PAID";
         }
 
-        // Generate sequential bill number: KSD-INV-{YEAR}-{SEQ}
+        // Generate sequential bill number: SDC-INV-{YEAR}-{SEQ}
         const year = new Date().getFullYear();
         const allBills = await ctx.db.query("bills").collect();
-        const yearPrefix = `KSD-INV-${year}-`;
+        const yearPrefix = `SDC-INV-${year}-`;
+        const legacyPrefix = `KSD-INV-${year}-`;
         const yearBills = allBills.filter(
-            (b) => typeof b.bill_number === "string" && b.bill_number.startsWith(yearPrefix)
+            (b) => typeof b.bill_number === "string" && (b.bill_number.startsWith(yearPrefix) || b.bill_number.startsWith(legacyPrefix))
         );
         const seq = (yearBills.length + 1).toString().padStart(3, "0");
         const bill_number = `${yearPrefix}${seq}`;

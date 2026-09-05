@@ -262,16 +262,32 @@ export default defineSchema({
     phone_number: v.string(),
     reference_number: v.optional(v.string()),
     tooth_numbers: v.string(), // e.g. "16, 17"
-    crown_type: v.string(), // "PFM", "Zirconia", "E-Max", "Full Metal", "Monolithic Zirconia", "Temporary", etc.
+    crown_type: v.optional(v.string()), // "PFM", "Zirconia", "E-Max", "Full Metal", "Monolithic Zirconia", "Temporary", etc.
     shade: v.optional(v.string()), // "A2", "A3.5", etc.
     cutting_date: v.string(), // YYYY-MM-DD
-    dentist_name: v.string(),
-    lab_name: v.string(),
+    dentist_name: v.optional(v.string()),
+    lab_name: v.optional(v.string()),
     impression_type: v.optional(v.string()),
     expected_delivery_date: v.optional(v.string()),
     lab_cost: v.optional(v.number()),
     patient_cost: v.optional(v.number()),
-    status: v.union(v.literal("Sent to Lab"), v.literal("In Lab"), v.literal("Received"), v.literal("Trial Done"), v.literal("Cemented / Completed"), v.literal("Sent for Redo")),
+    treatment_reference: v.optional(v.string()),
+    crown_status: v.optional(v.union(
+      v.literal("Crown Not Required"),
+      v.literal("Crown Cutting"),
+      v.literal("Crown Received")
+    )),
+    status: v.union(
+      v.literal("Sent to Lab"),
+      v.literal("In Lab"),
+      v.literal("Received"),
+      v.literal("Trial Done"),
+      v.literal("Cemented / Completed"),
+      v.literal("Sent for Redo"),
+      v.literal("Crown Not Required"),
+      v.literal("Crown Cutting"),
+      v.literal("Crown Received")
+    ),
     notes: v.optional(v.string()),
     prescription_id: v.optional(v.string()),
     created_at: v.optional(v.number()),
@@ -280,7 +296,8 @@ export default defineSchema({
     .index("by_cutting_date", ["cutting_date"])
     .index("by_lab", ["lab_name"])
     .index("by_status", ["status"])
-    .index("by_phone", ["phone_number"]),
+    .index("by_phone", ["phone_number"])
+    .index("by_prescription", ["prescription_id"]),
 
   crown_received_register: defineTable({
     crown_cutting_id: v.optional(v.id("crown_cutting_register")),
@@ -288,17 +305,27 @@ export default defineSchema({
     phone_number: v.string(),
     reference_number: v.optional(v.string()),
     tooth_numbers: v.string(),
-    crown_type: v.string(),
+    crown_type: v.optional(v.string()),
     shade: v.optional(v.string()),
-    lab_name: v.string(),
+    lab_name: v.optional(v.string()),
     cutting_date: v.optional(v.string()),
     received_date: v.string(), // YYYY-MM-DD
     received_by: v.optional(v.string()),
     fitting_date: v.optional(v.string()),
-    status: v.union(v.literal("Received in Clinic"), v.literal("Trial Scheduled"), v.literal("Trial Done - Fit OK"), v.literal("Cemented / Delivered"), v.literal("Rejected / Redo Needed")),
+    status: v.union(
+      v.literal("Received in Clinic"),
+      v.literal("Trial Scheduled"),
+      v.literal("Trial Done - Fit OK"),
+      v.literal("Cemented / Delivered"),
+      v.literal("Rejected / Redo Needed"),
+      v.literal("Crown Not Required"),
+      v.literal("Crown Cutting"),
+      v.literal("Crown Received")
+    ),
     lab_bill_no: v.optional(v.string()),
     lab_amount: v.optional(v.number()),
     remarks: v.optional(v.string()),
+    prescription_id: v.optional(v.string()),
     created_at: v.optional(v.number()),
     updated_at: v.optional(v.number()),
   })
@@ -390,4 +417,49 @@ export default defineSchema({
     .index("by_type_date", ["investigation_type", "investigation_date"])
     .index("by_phone", ["phone_number"])
     .index("by_reference", ["reference_number"]),
+
+  doctors: defineTable({
+    name: v.string(),
+    doctor_type: v.union(v.literal("MAIN"), v.literal("ASSISTANT")),
+    commission_percentage: v.optional(v.number()), // 2, 5, 7, 10
+    phone: v.optional(v.string()),
+    email: v.optional(v.string()),
+    status: v.union(v.literal("ACTIVE"), v.literal("INACTIVE")),
+    joining_date: v.optional(v.string()), // YYYY-MM-DD
+    notes: v.optional(v.string()),
+    signature_url: v.optional(v.string()),
+    created_at: v.optional(v.number()),
+    updated_at: v.optional(v.number()),
+  })
+    .index("by_status", ["status"])
+    .index("by_type", ["doctor_type"])
+    .index("by_name", ["name"]),
+
+  doctor_payouts: defineTable({
+    doctor_id: v.id("doctors"),
+    doctor_name: v.string(),
+    month: v.string(), // YYYY-MM
+    total_revenue: v.number(),
+    medicine_cost: v.number(),
+    crown_cap_cost: v.number(),
+    xray_cost: v.number(),
+    consultation_cost: v.number(),
+    braces_cost: v.number(),
+    prostho_implant_cost: v.optional(v.number()),
+    total_excluded: v.number(),
+    eligible_revenue: v.number(),
+    commission_percentage: v.number(),
+    payout_amount: v.number(),
+    paid_amount: v.number(),
+    payment_status: v.union(v.literal("PENDING"), v.literal("PARTIAL"), v.literal("PAID")),
+    payment_date: v.optional(v.string()), // YYYY-MM-DD
+    payment_mode: v.optional(v.union(v.literal("Cash"), v.literal("UPI"), v.literal("Bank Transfer"), v.literal("Cheque"), v.literal("Other"))),
+    transaction_reference: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    created_at: v.optional(v.number()),
+    updated_at: v.optional(v.number()),
+  })
+    .index("by_doctor", ["doctor_id"])
+    .index("by_month", ["month"])
+    .index("by_doctor_month", ["doctor_id", "month"]),
 });

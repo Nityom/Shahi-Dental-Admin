@@ -240,9 +240,12 @@ export async function issueLoginOtp(user: AuthUser) {
   };
 }
 
-export async function createAndStoreSession(userId: string) {
+export async function createAndStoreSession(userId: string, role: string = "admin") {
   const rawSessionToken = createRandomToken();
-  const expiresAt = Date.now() + 10 * 60 * 60 * 1000;
+  const isAdmin = role === "admin";
+  // Admin session stays persistent (1 year); staff session lasts 10 hours (as before)
+  const sessionDurationMs = isAdmin ? 365 * 24 * 60 * 60 * 1000 : 10 * 60 * 60 * 1000;
+  const expiresAt = Date.now() + sessionDurationMs;
 
   await convex.mutation(convexAuthFns.createAuthSession, {
     userId: userId as any,

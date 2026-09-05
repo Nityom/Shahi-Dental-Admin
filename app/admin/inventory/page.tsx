@@ -441,28 +441,11 @@ export default function AddInventoryPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
               <Layers className="text-blue-600 h-8 w-8" />
-              Material & Inventory Management
+              Inventory & Stock Management
             </h1>
             <p className="text-gray-600 mt-1">
-              Organize clinic inventory across 4 subdivisions with complete stock & inward/outward tracking
+              Organize clinic inventory across subdivisions with complete stock & usage tracking
             </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={openLogsModal}
-              className="px-4 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-medium flex items-center gap-1.5 shadow-sm transition cursor-pointer"
-            >
-              <History className="w-4 h-4 text-blue-600" />
-              Material Register Logs
-            </button>
-            <Link
-              href="/admin/registers?tab=MATERIAL"
-              className="px-3.5 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-medium flex items-center gap-1 transition"
-              title="Open in Registers & Records hub"
-            >
-              <ExternalLink className="w-4 h-4" />
-              Full Register Hub
-            </Link>
           </div>
         </header>
 

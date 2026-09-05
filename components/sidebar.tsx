@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useEffect } from 'react';
-import { Inbox, Menu, ChevronRight, Pill, FileText, LogOut, Wrench, TrendingUp, CreditCard, Package, Calendar, ClipboardList, Activity } from "lucide-react";
+import { Inbox, Menu, ChevronRight, Pill, FileText, LogOut, Wrench, TrendingUp, CreditCard, Package, Calendar, ClipboardList, Activity, UserCheck, Crown } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { getCurrentUser, signOut } from "@/services/adminuser";
 import { useIsAdmin } from "@/hooks/use-is-admin";
@@ -134,11 +134,12 @@ export function AppSidebar({ children }: { children?: React.ReactNode }): React.
   const items: MenuItemDef[] = [
     { id: "patient-management", title: "Patient Management", url: "/admin/patients", icon: Inbox },
     { id: "appointments", title: "Appointments", url: "/admin/appointments", icon: Calendar },
+    { id: "crown-management", title: "Crowns & Revenue", url: "/admin/crowns", icon: Crown },
     { id: "registers-records", title: "Registers & Records", url: "/admin/registers", icon: ClipboardList },
+    ...(isAdmin ? [{ id: "doctor-management", title: "Doctor Management", url: "/admin/doctors", icon: UserCheck }] : []),
     { id: "investigations-opg", title: "Investigation & OPG", url: "/admin/investigations", icon: Activity },
     { id: "medicine-management", title: "Medicine Management", url: "/admin/medicines", icon: Pill },
     { id: "Inventory-management", title: "Inventory Management", url: "/admin/inventory", icon: Wrench },
-    { id: "consumable-settings", title: "Consumable Settings", url: "/admin/consumable-settings", icon: Package },
     ...(isAdmin ? [{ id: "sales-report", title: "Sales Report", url: "/admin/medicines/sales", icon: TrendingUp }] : []),
     { id: "installments", title: "Payment Installments", url: "/admin/installments", icon: CreditCard },
     { id: "generate-prescription", title: "Generate Prescription", url: "/admin/prescription", icon: FileText },

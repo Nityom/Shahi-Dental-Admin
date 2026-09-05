@@ -118,55 +118,221 @@ export const list = query({
 });
 
 /**
- * Special OPG Counting & Analytics Query
- * Returns total OPG count, date-wise breakdown, and patient-wise list for selected date range
+ * Automatic OPG & IOPAR Detection & Reporting from Prescriptions
+ * Automatically scans the investigation field (and treatment items) of all prescriptions
  */
-export const getOpgAnalytics = query({
+export const getAutomaticInvestigationReport = query({
   args: {
     startDate: v.optional(v.string()),
     endDate: v.optional(v.string()),
+    doctorName: v.optional(v.string()),
+    investigationType: v.optional(v.string()), // "ALL" | "OPG" | "IOPAR" | "BLOOD" | "SUGAR"
     search: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const all = await ctx.db.query("investigations").collect();
-    let opgs = all.filter((i) => i.investigation_type.toUpperCase() === "OPG");
+    const allPrescriptions = await ctx.db.query("prescriptions").order("desc").collect();
+    const records: Array<{
+      id: string;
+      prescription_id: string;
+      patient_name: string;
+      phone_number: string;
+      reference_number?: string;
+      prescription_date: string;
+      doctor_name?: string;
+      investigation_text: string;
+      has_opg: boolean;
+      has_iopar: boolean;
+      has_blood: boolean;
+      has_sugar: boolean;
+      investigation_types: string[];
+      total_amount: number;
+    }> = [];
 
-    if (args.startDate) {
-      opgs = opgs.filter((i) => i.investigation_date >= args.startDate!);
-    }
-    if (args.endDate) {
-      opgs = opgs.filter((i) => i.investigation_date <= args.endDate!);
-    }
-    if (args.search) {
-      const q = args.search.toLowerCase();
-      opgs = opgs.filter(
-        (i) =>
-          i.patient_name.toLowerCase().includes(q) ||
-          i.phone_number.includes(q) ||
-          (i.reference_number && i.reference_number.toLowerCase().includes(q)) ||
-          (i.doctor_name && i.doctor_name.toLowerCase().includes(q)) ||
-          (i.indication && i.indication.toLowerCase().includes(q))
-      );
+    let totalOpg = 0;
+    let totalIopar = 0;
+    let totalBlood = 0;
+    let totalSugar = 0;
+    let totalIoparRevenue = 0;
+    let totalBloodRevenue = 0;
+    let totalSugarRevenue = 0;
+    let totalRevenue = 0;
+
+    for (const rx of allPrescriptions) {
+      const invText = (rx.investigation || "").trim();
+      let treatments: any[] = [];
+      if (rx.treatment_done) {
+        try {
+          treatments = typeof rx.treatment_done === "string" ? JSON.parse(rx.treatment_done) : rx.treatment_done;
+        } catch {
+          treatments = [];
+        }
+      }
+
+      const rxTreatmentText = Array.isArray(treatments)
+        ? treatments.map((t) => (t.description || t.name || "").toString()).join(" ")
+        : "";
+
+      const combinedText = `${invText} ${rxTreatmentText}`.toLowerCase();
+
+      // Case-insensitive detection
+      const hasOpg = /\bopg\b/i.test(combinedText) || combinedText.includes("opg");
+      const hasIopar = /\biopar\b/i.test(combinedText) || combinedText.includes("iopar") || combinedText.includes("x-ray") || combinedText.includes("xray");
+      const hasBlood = combinedText.includes("blood test") || combinedText.includes("cbc") || combinedText.includes("hemogram");
+      const hasSugar = combinedText.includes("sugar test") || combinedText.includes("rbs") || combinedText.includes("fbs") || combinedText.includes("blood sugar") || combinedText.includes("random blood sugar");
+
+      if (!hasOpg && !hasIopar && !hasBlood && !hasSugar && !invText) {
+        continue;
+      }
+
+      // Calculate amounts for each test from treatments or fallback to standard rates
+      let rxIoparAmount = 0;
+      let rxBloodAmount = 0;
+      let rxSugarAmount = 0;
+
+      if (Array.isArray(treatments)) {
+        for (const t of treatments) {
+          const desc = (t.description || t.name || "").toLowerCase();
+          const cost = Number(t.cost) || 0;
+          if (desc.includes("iopar") || desc.includes("x-ray") || desc.includes("xray")) {
+            rxIoparAmount += cost > 0 ? cost : 200;
+          }
+          if (desc.includes("blood test") || desc.includes("cbc") || desc.includes("hemogram")) {
+            rxBloodAmount += cost > 0 ? cost : 50;
+          }
+          if (desc.includes("sugar test") || desc.includes("rbs") || desc.includes("fbs") || desc.includes("blood sugar")) {
+            rxSugarAmount += cost > 0 ? cost : 50;
+          }
+        }
+      }
+
+      if (hasIopar && rxIoparAmount === 0) rxIoparAmount = 200;
+      if (hasBlood && rxBloodAmount === 0) rxBloodAmount = 50;
+      if (hasSugar && rxSugarAmount === 0) rxSugarAmount = 50;
+
+      const types: string[] = [];
+      if (hasOpg) types.push("OPG");
+      if (hasIopar) types.push("IOPAR (₹" + rxIoparAmount + ")");
+      if (hasBlood) types.push("Blood Test (₹" + rxBloodAmount + ")");
+      if (hasSugar) types.push("Sugar Test (₹" + rxSugarAmount + ")");
+
+      // Apply date filters
+      if (args.startDate && rx.prescription_date < args.startDate) {
+        continue;
+      }
+      if (args.endDate && rx.prescription_date > args.endDate) {
+        continue;
+      }
+
+      // Apply doctor filter
+      if (args.doctorName && args.doctorName !== "ALL") {
+        if (!rx.doctor_name || rx.doctor_name.toLowerCase() !== args.doctorName.toLowerCase()) {
+          continue;
+        }
+      }
+
+      // Apply search filter
+      if (args.search) {
+        const q = args.search.toLowerCase();
+        const matches =
+          rx.patient_name.toLowerCase().includes(q) ||
+          rx.phone_number.includes(q) ||
+          (rx.reference_number && rx.reference_number.toLowerCase().includes(q)) ||
+          (rx.doctor_name && rx.doctor_name.toLowerCase().includes(q)) ||
+          invText.toLowerCase().includes(q);
+        if (!matches) continue;
+      }
+
+      // Apply type filter
+      if (args.investigationType === "OPG" && !hasOpg) {
+        continue;
+      }
+      if (args.investigationType === "IOPAR" && !hasIopar) {
+        continue;
+      }
+      if (args.investigationType === "BLOOD" && !hasBlood) {
+        continue;
+      }
+      if (args.investigationType === "SUGAR" && !hasSugar) {
+        continue;
+      }
+
+      if (hasOpg) totalOpg++;
+      if (hasIopar) {
+        totalIopar++;
+        totalIoparRevenue += rxIoparAmount;
+      }
+      if (hasBlood) {
+        totalBlood++;
+        totalBloodRevenue += rxBloodAmount;
+      }
+      if (hasSugar) {
+        totalSugar++;
+        totalSugarRevenue += rxSugarAmount;
+      }
+
+      const rxTestRevenue = rxIoparAmount + rxBloodAmount + rxSugarAmount;
+      totalRevenue += rxTestRevenue;
+
+      records.push({
+        id: rx._id,
+        prescription_id: rx._id,
+        patient_name: rx.patient_name,
+        phone_number: rx.phone_number,
+        reference_number: rx.reference_number,
+        prescription_date: rx.prescription_date,
+        doctor_name: rx.doctor_name || "Dr. Kautilya Swaroop",
+        investigation_text: invText || types.join(", "),
+        has_opg: hasOpg,
+        has_iopar: hasIopar,
+        has_blood: hasBlood,
+        has_sugar: hasSugar,
+        investigation_types: types,
+        total_amount: rxTestRevenue,
+      });
     }
 
-    // Sort by date descending
-    opgs.sort((a, b) => b.investigation_date.localeCompare(a.investigation_date));
+    // Sort descending by date
+    records.sort((a, b) => b.prescription_date.localeCompare(a.prescription_date));
 
-    // Date-wise counts
-    const dateCountMap = new Map<string, number>();
-    for (const opg of opgs) {
-      const d = opg.investigation_date;
-      dateCountMap.set(d, (dateCountMap.get(d) || 0) + 1);
+    // Date-wise breakdown
+    const dateMap = new Map<string, { opgCount: number; ioparCount: number; bloodCount: number; sugarCount: number; totalCount: number; totalAmount: number }>();
+    for (const r of records) {
+      const d = r.prescription_date;
+      const current = dateMap.get(d) || { opgCount: 0, ioparCount: 0, bloodCount: 0, sugarCount: 0, totalCount: 0, totalAmount: 0 };
+      if (r.has_opg) current.opgCount++;
+      if (r.has_iopar) current.ioparCount++;
+      if (r.has_blood) current.bloodCount++;
+      if (r.has_sugar) current.sugarCount++;
+      current.totalCount += (r.has_opg ? 1 : 0) + (r.has_iopar ? 1 : 0) + (r.has_blood ? 1 : 0) + (r.has_sugar ? 1 : 0);
+      current.totalAmount += r.total_amount;
+      dateMap.set(d, current);
     }
 
-    const dateWiseCounts = Array.from(dateCountMap.entries())
-      .map(([date, count]) => ({ date, count }))
+    const dateWiseBreakdown = Array.from(dateMap.entries())
+      .map(([date, counts]) => ({
+        date,
+        opgCount: counts.opgCount,
+        ioparCount: counts.ioparCount,
+        bloodCount: counts.bloodCount,
+        sugarCount: counts.sugarCount,
+        totalCount: counts.totalCount,
+        totalAmount: counts.totalAmount,
+      }))
       .sort((a, b) => b.date.localeCompare(a.date));
 
     return {
-      totalCount: opgs.length,
-      dateWiseCounts,
-      records: opgs,
+      totalOpg,
+      totalIopar,
+      totalBlood,
+      totalSugar,
+      totalCount: totalOpg + totalIopar + totalBlood + totalSugar,
+      totalIoparRevenue,
+      totalBloodRevenue,
+      totalSugarRevenue,
+      totalRevenue,
+      dateWiseBreakdown,
+      records,
     };
   },
 });
+

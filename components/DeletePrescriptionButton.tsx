@@ -11,6 +11,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { deletePrescription } from '@/services/prescription';
+import { useIsAdmin } from '@/hooks/use-is-admin';
 
 interface DeletePrescriptionButtonProps {
   prescriptionId: string;
@@ -18,6 +19,12 @@ interface DeletePrescriptionButtonProps {
 }
 
 const DeletePrescriptionButton: React.FC<DeletePrescriptionButtonProps> = ({ prescriptionId, onDelete }) => {
+  const { isAdmin } = useIsAdmin();
+
+  if (!isAdmin) {
+    return null;
+  }
+
   const handleDelete = async () => {
     try {
       await deletePrescription(prescriptionId);
