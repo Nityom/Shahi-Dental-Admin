@@ -103,8 +103,16 @@ export const crownCuttingService = {
   delete: async (id: string) => {
     return await convex.mutation(api.registers.deleteCrownCutting, { id: id as any });
   },
-  list: async (filters?: { startDate?: string; endDate?: string; status?: string; crownStatus?: string; labName?: string; search?: string }) => {
-    const data = await convex.query(api.registers.listCrownCutting, filters || {});
+  list: async (filters?: {
+    startDate?: string;
+    endDate?: string;
+    dateFilterType?: 'cutting_date' | 'fixed_date';
+    status?: string;
+    crownStatus?: string;
+    labName?: string;
+    search?: string;
+  }) => {
+    const data = await convex.query(api.registers.listCrownCutting, (filters || {}) as any);
     return data.map((item: any) => ({ ...item, id: item._id })) as CrownCuttingRecord[];
   },
   syncAllPrescriptions: async () => {

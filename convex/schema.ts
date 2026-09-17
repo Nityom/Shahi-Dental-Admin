@@ -269,13 +269,15 @@ export default defineSchema({
     lab_name: v.optional(v.string()),
     impression_type: v.optional(v.string()),
     expected_delivery_date: v.optional(v.string()),
+    fixed_date: v.optional(v.string()), // YYYY-MM-DD when crown was fixed / fitted
     lab_cost: v.optional(v.number()),
     patient_cost: v.optional(v.number()),
     treatment_reference: v.optional(v.string()),
     crown_status: v.optional(v.union(
       v.literal("Crown Not Required"),
       v.literal("Crown Cutting"),
-      v.literal("Crown Received")
+      v.literal("Crown Received"),
+      v.literal("Crown Fixed")
     )),
     status: v.union(
       v.literal("Sent to Lab"),
@@ -286,7 +288,8 @@ export default defineSchema({
       v.literal("Sent for Redo"),
       v.literal("Crown Not Required"),
       v.literal("Crown Cutting"),
-      v.literal("Crown Received")
+      v.literal("Crown Received"),
+      v.literal("Crown Fixed")
     ),
     notes: v.optional(v.string()),
     prescription_id: v.optional(v.string()),
@@ -294,9 +297,11 @@ export default defineSchema({
     updated_at: v.optional(v.number()),
   })
     .index("by_cutting_date", ["cutting_date"])
+    .index("by_fixed_date", ["fixed_date"])
     .index("by_lab", ["lab_name"])
     .index("by_status", ["status"])
     .index("by_phone", ["phone_number"])
+    .index("by_reference", ["reference_number"])
     .index("by_prescription", ["prescription_id"]),
 
   crown_received_register: defineTable({
@@ -462,4 +467,59 @@ export default defineSchema({
     .index("by_doctor", ["doctor_id"])
     .index("by_month", ["month"])
     .index("by_doctor_month", ["doctor_id", "month"]),
+
+  stockists: defineTable({
+    name: v.string(),
+    contact_person: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    email: v.optional(v.string()),
+    address: v.optional(v.string()),
+    gst_number: v.optional(v.string()),
+    drug_license_no: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    created_at: v.optional(v.number()),
+    updated_at: v.optional(v.number()),
+  }).index("by_name", ["name"]),
+
+  stockist_bills: defineTable({
+    stockist_id: v.optional(v.id("stockists")),
+    stockist_name: v.string(),
+    bill_number: v.string(),
+    bill_date: v.string(), // YYYY-MM-DD
+    due_date: v.optional(v.string()), // YYYY-MM-DD
+    total_amount: v.number(),
+    paid_amount: v.number(),
+    balance_amount: v.number(),
+    payment_status: v.union(v.literal("PENDING"), v.literal("PARTIAL"), v.literal("PAID")),
+    items: v.optional(v.any()), // JSON array of line items
+    has_physical_copy: v.optional(v.boolean()),
+    physical_copy_notes: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    created_at: v.optional(v.number()),
+    updated_at: v.optional(v.number()),
+  })
+    .index("by_stockist_name", ["stockist_name"])
+    .index("by_bill_date", ["bill_date"])
+    .index("by_status", ["payment_status"])
+    .index("by_stockist_id", ["stockist_id"]),
+
+  stockist_payments: defineTable({
+    stockist_bill_id: v.id("stockist_bills"),
+    stockist_id: v.optional(v.id("stockists")),
+    stockist_name: v.string(),
+    bill_number: v.string(),
+    payment_date: v.string(), // YYYY-MM-DD
+    amount: v.number(),
+    payment_mode: v.union(v.literal("Cash"), v.literal("UPI"), v.literal("Bank Transfer"), v.literal("Cheque"), v.literal("Other")),
+    transaction_reference: v.optional(v.string()),
+    noted_on_physical_copy: v.optional(v.boolean()),
+    collected_by: v.optional(v.string()),
+    paid_by: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    created_at: v.optional(v.number()),
+  })
+    .index("by_bill", ["stockist_bill_id"])
+    .index("by_date", ["payment_date"])
+    .index("by_stockist", ["stockist_name"]),
 });
+

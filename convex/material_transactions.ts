@@ -47,8 +47,11 @@ export const recordTransaction = mutation({
 
     if (targetInventory) {
       let newQty = targetInventory.quantity;
-      if (args.transaction_type === "PURCHASE" || args.transaction_type === "INITIAL_STOCK") {
+      if (args.transaction_type === "PURCHASE") {
         newQty += args.quantity;
+      } else if (args.transaction_type === "INITIAL_STOCK") {
+        // Initial stock defines the base stock, do not double-increment
+        newQty = args.quantity;
       } else if (args.transaction_type === "USAGE" || args.transaction_type === "SCRAP") {
         newQty = Math.max(0, newQty - args.quantity);
       } else if (args.transaction_type === "ADJUSTMENT") {

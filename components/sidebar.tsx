@@ -1,7 +1,7 @@
 "use client"
 import React, { useState, useEffect } from 'react';
-import { Inbox, Menu, ChevronRight, Pill, FileText, LogOut, Wrench, TrendingUp, CreditCard, Package, Calendar, ClipboardList, Activity, UserCheck, Crown } from "lucide-react";
-import { useRouter } from 'next/navigation';
+import { Inbox, Menu, ChevronRight, Pill, FileText, LogOut, Wrench, TrendingUp, CreditCard, Package, Calendar, ClipboardList, Activity, UserCheck, Crown, ReceiptText } from "lucide-react";
+import { useRouter, usePathname } from 'next/navigation';
 import { getCurrentUser, signOut } from "@/services/adminuser";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 
@@ -93,6 +93,7 @@ interface MenuItemDef {
 
 export function AppSidebar({ children }: { children?: React.ReactNode }): React.ReactElement {
   const router = useRouter();
+  const pathname = usePathname();
   const [activeItem, setActiveItem] = useState<string>("patient-management");
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
   const [isMobile, setIsMobile] = useState<boolean>(false);
@@ -139,11 +140,21 @@ export function AppSidebar({ children }: { children?: React.ReactNode }): React.
     ...(isAdmin ? [{ id: "doctor-management", title: "Doctor Management", url: "/admin/doctors", icon: UserCheck }] : []),
     { id: "investigations-opg", title: "Investigation & OPG", url: "/admin/investigations", icon: Activity },
     { id: "medicine-management", title: "Medicine Management", url: "/admin/medicines", icon: Pill },
+    { id: "stockist-bills", title: "Stockist Bills & Dues", url: "/admin/stockists", icon: ReceiptText },
     { id: "Inventory-management", title: "Inventory Management", url: "/admin/inventory", icon: Wrench },
     ...(isAdmin ? [{ id: "sales-report", title: "Sales Report", url: "/admin/medicines/sales", icon: TrendingUp }] : []),
     { id: "installments", title: "Payment Installments", url: "/admin/installments", icon: CreditCard },
     { id: "generate-prescription", title: "Generate Prescription", url: "/admin/prescription", icon: FileText },
   ];
+
+  useEffect(() => {
+    if (pathname) {
+      const current = items.find((item) => pathname.startsWith(item.url));
+      if (current) {
+        setActiveItem(current.id);
+      }
+    }
+  }, [pathname]);
 
   const handleItemClick = async (id: string, url: string): Promise<void> => {
     try {

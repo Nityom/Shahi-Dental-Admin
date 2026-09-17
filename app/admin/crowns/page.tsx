@@ -31,6 +31,7 @@ export default function CrownManagementPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [dateFilterType, setDateFilterType] = useState<'cutting_date' | 'fixed_date'>('cutting_date');
 
   // Date Range Presets - Default to ALL_TIME so all crown records are visible immediately
   const todayStr = new Date().toISOString().split('T')[0];
@@ -56,6 +57,7 @@ export default function CrownManagementPage() {
     crown_type: 'Zirconia',
     shade: 'A2',
     cutting_date: todayStr,
+    fixed_date: '',
     dentist_name: 'Dr. Kautilya Swaroop',
     lab_name: 'DentCare Dental Lab',
     impression_type: 'Addition Silicone',
@@ -81,6 +83,7 @@ export default function CrownManagementPage() {
       const data = await crownCuttingService.list({
         startDate: dateRangePreset === 'ALL_TIME' ? undefined : (startDate || undefined),
         endDate: dateRangePreset === 'ALL_TIME' ? undefined : (endDate || undefined),
+        dateFilterType,
         crownStatus: statusFilter === 'ALL' ? undefined : statusFilter,
         search: searchTerm || undefined,
       });
@@ -90,7 +93,7 @@ export default function CrownManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate, dateRangePreset, statusFilter, searchTerm]);
+  }, [startDate, endDate, dateRangePreset, dateFilterType, statusFilter, searchTerm]);
 
   useEffect(() => {
     fetchCrowns();
@@ -101,6 +104,7 @@ export default function CrownManagementPage() {
     let totalRevenue = 0;
     let countCutting = 0;
     let countReceived = 0;
+    let countFixed = 0;
     let countNotRequired = 0;
 
     crowns.forEach((c) => {
@@ -109,13 +113,16 @@ export default function CrownManagementPage() {
 
       const st =
         (c.crown_status as string) ||
-        (c.status === 'Crown Received' || c.status === 'Received' || c.status === 'Cemented / Completed'
+        (c.status === 'Crown Fixed'
+          ? 'Crown Fixed'
+          : c.status === 'Crown Received' || c.status === 'Received' || c.status === 'Cemented / Completed'
           ? 'Crown Received'
           : c.status === 'Crown Not Required'
           ? 'Crown Not Required'
           : 'Crown Cutting');
 
-      if (st === 'Crown Received') countReceived++;
+      if (st === 'Crown Fixed') countFixed++;
+      else if (st === 'Crown Received') countReceived++;
       else if (st === 'Crown Not Required') countNotRequired++;
       else countCutting++;
     });
@@ -124,6 +131,7 @@ export default function CrownManagementPage() {
       totalRevenue,
       countCutting,
       countReceived,
+      countFixed,
       countNotRequired,
       totalRecords: crowns.length,
     };
@@ -196,6 +204,7 @@ export default function CrownManagementPage() {
       crown_type: 'Zirconia',
       shade: 'A2',
       cutting_date: todayStr,
+      fixed_date: '',
       dentist_name: 'Dr. Kautilya Swaroop',
       lab_name: 'DentCare Dental Lab',
       impression_type: 'Addition Silicone',
@@ -224,12 +233,17 @@ export default function CrownManagementPage() {
     }
   };
 
-  const handleQuickStatusChange = async (id: string, newStatus: CrownStatusCategory) => {
+  const handleQuickStatusChange = async (record: CrownCuttingRecord, newStatus: CrownStatusCategory) => {
     try {
-      await crownCuttingService.update(id, {
+      const updateData: Partial<CrownCuttingRecord> = {
         crown_status: newStatus,
         status: newStatus as any,
-      });
+      };
+      // When transitioning to Crown Fixed, automatically default fixed_date to today if not already set
+      if (newStatus === 'Crown Fixed' && !record.fixed_date) {
+        updateData.fixed_date = todayStr;
+      }
+      await crownCuttingService.update(record.id || record._id || '', updateData);
       fetchCrowns();
     } catch (err) {
       console.error('Failed to update crown status:', err);
@@ -254,7 +268,7 @@ export default function CrownManagementPage() {
                 </span>
               </div>
               <p className="text-xs md:text-sm text-gray-500 mt-0.5">
-                Automatically maintained from RCT and Crown treatments. Track statuses (Cutting, Received, No Crown) and revenue.
+                Automatically maintained from RCT and Crown treatments. Track statuses (Cutting, Received, Fixed, No Crown) and revenue.
               </p>
             </div>
           </div>
@@ -277,17 +291,17 @@ export default function CrownManagementPage() {
           </div>
         </div>
 
-        {/* Financial & Status KPI Cards (Single Crown Revenue & 3 Statuses in Blue Theme) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Financial & Status KPI Cards (Single Crown Revenue & 4 Statuses) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
           {/* Total Crown Revenue */}
-          <div className="bg-blue-600 text-white p-5 rounded-2xl shadow-sm">
+          <div className="bg-blue-600 text-white p-4.5 rounded-2xl shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-100">Total Crown Revenue</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-blue-100">Crown Revenue</span>
               <span className="p-1.5 bg-white/20 text-white rounded-lg">
-                <IndianRupee size={18} />
+                <IndianRupee size={16} />
               </span>
             </div>
-            <div className="text-3xl md:text-4xl font-black text-white mt-2">
+            <div className="text-2xl md:text-3xl font-black text-white mt-2">
               ₹{metrics.totalRevenue.toLocaleString('en-IN')}
             </div>
             <p className="text-[11px] text-blue-100 mt-1">From {metrics.totalRecords} crown records</p>
@@ -296,75 +310,100 @@ export default function CrownManagementPage() {
           {/* 1. Crown Cutting */}
           <div
             onClick={() => setStatusFilter(statusFilter === 'Crown Cutting' ? 'ALL' : 'Crown Cutting')}
-            className={`p-5 rounded-2xl border cursor-pointer transition-all shadow-sm ${
+            className={`p-4.5 rounded-2xl border cursor-pointer transition-all shadow-sm ${
               statusFilter === 'Crown Cutting'
                 ? 'bg-blue-500 text-white border-blue-500 ring-2 ring-blue-500'
                 : 'bg-white border-gray-200 hover:border-blue-300'
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className={`text-xs font-bold uppercase tracking-wider ${statusFilter === 'Crown Cutting' ? 'text-blue-100' : 'text-gray-500'}`}>
+              <span className={`text-[11px] font-bold uppercase tracking-wider ${statusFilter === 'Crown Cutting' ? 'text-blue-100' : 'text-gray-500'}`}>
                 1. Crown Cutting
               </span>
               <span className={`p-1.5 rounded-lg ${statusFilter === 'Crown Cutting' ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-700'}`}>
                 <Clock size={16} />
               </span>
             </div>
-            <div className={`text-3xl font-black mt-2 ${statusFilter === 'Crown Cutting' ? 'text-white' : 'text-gray-900'}`}>
+            <div className={`text-2xl md:text-3xl font-black mt-2 ${statusFilter === 'Crown Cutting' ? 'text-white' : 'text-gray-900'}`}>
               {metrics.countCutting}
             </div>
             <p className={`text-[11px] mt-1 ${statusFilter === 'Crown Cutting' ? 'text-blue-100' : 'text-gray-400'}`}>
-              In Progress / Preparation
+              In Progress / Cutting
             </p>
           </div>
 
           {/* 2. Crown Received */}
           <div
             onClick={() => setStatusFilter(statusFilter === 'Crown Received' ? 'ALL' : 'Crown Received')}
-            className={`p-5 rounded-2xl border cursor-pointer transition-all shadow-sm ${
+            className={`p-4.5 rounded-2xl border cursor-pointer transition-all shadow-sm ${
               statusFilter === 'Crown Received'
                 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-600'
                 : 'bg-white border-gray-200 hover:border-indigo-300'
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className={`text-xs font-bold uppercase tracking-wider ${statusFilter === 'Crown Received' ? 'text-indigo-100' : 'text-gray-500'}`}>
+              <span className={`text-[11px] font-bold uppercase tracking-wider ${statusFilter === 'Crown Received' ? 'text-indigo-100' : 'text-gray-500'}`}>
                 2. Crown Received
               </span>
               <span className={`p-1.5 rounded-lg ${statusFilter === 'Crown Received' ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-700'}`}>
                 <CheckCircle2 size={16} />
               </span>
             </div>
-            <div className={`text-3xl font-black mt-2 ${statusFilter === 'Crown Received' ? 'text-white' : 'text-gray-900'}`}>
+            <div className={`text-2xl md:text-3xl font-black mt-2 ${statusFilter === 'Crown Received' ? 'text-white' : 'text-gray-900'}`}>
               {metrics.countReceived}
             </div>
             <p className={`text-[11px] mt-1 ${statusFilter === 'Crown Received' ? 'text-indigo-100' : 'text-gray-400'}`}>
-              Received in clinic / fitted
+              Received from lab
             </p>
           </div>
 
-          {/* 3. Crown Not Required */}
+          {/* 3. Crown Fixed */}
+          <div
+            onClick={() => setStatusFilter(statusFilter === 'Crown Fixed' ? 'ALL' : 'Crown Fixed')}
+            className={`p-4.5 rounded-2xl border cursor-pointer transition-all shadow-sm ${
+              statusFilter === 'Crown Fixed'
+                ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-600'
+                : 'bg-white border-gray-200 hover:border-emerald-300'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className={`text-[11px] font-bold uppercase tracking-wider ${statusFilter === 'Crown Fixed' ? 'text-emerald-100' : 'text-gray-500'}`}>
+                3. Crown Fixed
+              </span>
+              <span className={`p-1.5 rounded-lg ${statusFilter === 'Crown Fixed' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'}`}>
+                <CheckCircle2 size={16} />
+              </span>
+            </div>
+            <div className={`text-2xl md:text-3xl font-black mt-2 ${statusFilter === 'Crown Fixed' ? 'text-white' : 'text-gray-900'}`}>
+              {metrics.countFixed}
+            </div>
+            <p className={`text-[11px] mt-1 ${statusFilter === 'Crown Fixed' ? 'text-emerald-100' : 'text-gray-400'}`}>
+              Fitted on patient
+            </p>
+          </div>
+
+          {/* 4. Crown Not Required */}
           <div
             onClick={() => setStatusFilter(statusFilter === 'Crown Not Required' ? 'ALL' : 'Crown Not Required')}
-            className={`p-5 rounded-2xl border cursor-pointer transition-all shadow-sm ${
+            className={`p-4.5 rounded-2xl border cursor-pointer transition-all shadow-sm ${
               statusFilter === 'Crown Not Required'
                 ? 'bg-slate-800 text-white border-slate-800 ring-2 ring-slate-800'
                 : 'bg-white border-gray-200 hover:border-gray-400'
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className={`text-xs font-bold uppercase tracking-wider ${statusFilter === 'Crown Not Required' ? 'text-slate-300' : 'text-gray-500'}`}>
-                3. Crown Not Required
+              <span className={`text-[11px] font-bold uppercase tracking-wider ${statusFilter === 'Crown Not Required' ? 'text-slate-300' : 'text-gray-500'}`}>
+                4. Crown Not Req.
               </span>
               <span className={`p-1.5 rounded-lg ${statusFilter === 'Crown Not Required' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'}`}>
                 <Ban size={16} />
               </span>
             </div>
-            <div className={`text-3xl font-black mt-2 ${statusFilter === 'Crown Not Required' ? 'text-white' : 'text-gray-900'}`}>
+            <div className={`text-2xl md:text-3xl font-black mt-2 ${statusFilter === 'Crown Not Required' ? 'text-white' : 'text-gray-900'}`}>
               {metrics.countNotRequired}
             </div>
             <p className={`text-[11px] mt-1 ${statusFilter === 'Crown Not Required' ? 'text-slate-300' : 'text-gray-400'}`}>
-              Crown No. / Not required
+              Crown No. / Not req.
             </p>
           </div>
         </div>
@@ -379,7 +418,8 @@ export default function CrownManagementPage() {
                 { id: 'ALL', label: `All Crowns (${metrics.totalRecords})` },
                 { id: 'Crown Cutting', label: `1. Crown Cutting (${metrics.countCutting})` },
                 { id: 'Crown Received', label: `2. Crown Received (${metrics.countReceived})` },
-                { id: 'Crown Not Required', label: `3. Crown Not Required (${metrics.countNotRequired})` },
+                { id: 'Crown Fixed', label: `3. Crown Fixed (${metrics.countFixed})` },
+                { id: 'Crown Not Required', label: `4. Crown Not Req. (${metrics.countNotRequired})` },
               ].map((chip) => (
                 <button
                   key={chip.id}
@@ -419,29 +459,55 @@ export default function CrownManagementPage() {
             </div>
           </div>
 
-          {/* Date Picker & Search Input */}
+          {/* Date Picker & Search Input with Date Filter Type Selector */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100">
-            <div className="flex items-center gap-2 text-xs text-gray-600">
-              <span className="font-semibold">Period:</span>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
-                  setDateRangePreset('CUSTOM');
-                }}
-                className="px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs"
-              />
-              <span>to</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value);
-                  setDateRangePreset('CUSTOM');
-                }}
-                className="px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs"
-              />
+            <div className="flex flex-wrap items-center gap-2.5 text-xs text-gray-600">
+              <div className="flex items-center gap-1.5 bg-gray-100 p-0.5 rounded-lg border border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setDateFilterType('cutting_date')}
+                  className={`px-2.5 py-1 rounded-md text-xs font-bold transition ${
+                    dateFilterType === 'cutting_date'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Treatment Done Date
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDateFilterType('fixed_date')}
+                  className={`px-2.5 py-1 rounded-md text-xs font-bold transition ${
+                    dateFilterType === 'fixed_date'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Crown Fixed Date
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    setDateRangePreset('CUSTOM');
+                  }}
+                  className="px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs"
+                />
+                <span className="text-gray-400">to</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    setDateRangePreset('CUSTOM');
+                  }}
+                  className="px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs"
+                />
+              </div>
             </div>
 
             <div className="relative flex-1 min-w-[240px] max-w-sm">
@@ -486,11 +552,12 @@ export default function CrownManagementPage() {
               <table className="w-full text-left text-xs text-gray-600">
                 <thead className="bg-gray-50 text-gray-700 uppercase font-bold text-[11px] border-b border-gray-200">
                   <tr>
-                    <th className="py-3.5 px-4">Date</th>
+                    <th className="py-3.5 px-4">Treatment Date</th>
                     <th className="py-3.5 px-4">Patient Details</th>
                     <th className="py-3.5 px-4">Tooth #</th>
                     <th className="py-3.5 px-4">Treatment Ref</th>
                     <th className="py-3.5 px-4">Crown Status</th>
+                    <th className="py-3.5 px-4">Fixed Date</th>
                     <th className="py-3.5 px-4 text-right">Crown Price</th>
                     <th className="py-3.5 px-4">Crown Type</th>
                     <th className="py-3.5 px-4 text-right">Actions</th>
@@ -500,7 +567,9 @@ export default function CrownManagementPage() {
                   {crowns.map((c) => {
                     const currentStatus: CrownStatusCategory =
                       (c.crown_status as any) ||
-                      (c.status === 'Crown Received' || c.status === 'Received' || c.status === 'Cemented / Completed'
+                      (c.status === 'Crown Fixed'
+                        ? 'Crown Fixed'
+                        : c.status === 'Crown Received' || c.status === 'Received' || c.status === 'Cemented / Completed'
                         ? 'Crown Received'
                         : c.status === 'Crown Not Required'
                         ? 'Crown Not Required'
@@ -535,10 +604,12 @@ export default function CrownManagementPage() {
                           <select
                             value={currentStatus}
                             onChange={(e) =>
-                              handleQuickStatusChange(c.id || c._id || '', e.target.value as CrownStatusCategory)
+                              handleQuickStatusChange(c, e.target.value as CrownStatusCategory)
                             }
                             className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border outline-none cursor-pointer ${
-                              currentStatus === 'Crown Received'
+                              currentStatus === 'Crown Fixed'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                : currentStatus === 'Crown Received'
                                 ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
                                 : currentStatus === 'Crown Not Required'
                                 ? 'bg-gray-100 text-gray-700 border-gray-300'
@@ -547,8 +618,19 @@ export default function CrownManagementPage() {
                           >
                             <option value="Crown Cutting">1. Crown Cutting</option>
                             <option value="Crown Received">2. Crown Received</option>
-                            <option value="Crown Not Required">3. Crown Not Required</option>
+                            <option value="Crown Fixed">3. Crown Fixed</option>
+                            <option value="Crown Not Required">4. Crown Not Required</option>
                           </select>
+                        </td>
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          {c.fixed_date ? (
+                            <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 text-[11px] inline-flex items-center gap-1">
+                              <CheckCircle2 size={11} />
+                              {c.fixed_date}
+                            </span>
+                          ) : (
+                            <span className="text-gray-300 font-mono">—</span>
+                          )}
                         </td>
                         <td className="py-3.5 px-4 text-right font-black text-blue-700 text-sm">
                           {pCost ? `₹${pCost.toLocaleString('en-IN')}` : '₹0'}
@@ -578,6 +660,7 @@ export default function CrownManagementPage() {
                                   crown_type: c.crown_type || 'Zirconia',
                                   shade: c.shade || '',
                                   cutting_date: c.cutting_date,
+                                  fixed_date: c.fixed_date || '',
                                   dentist_name: c.dentist_name || 'Dr. Kautilya Swaroop',
                                   lab_name: c.lab_name || '',
                                   impression_type: c.impression_type || '',
@@ -706,18 +789,29 @@ export default function CrownManagementPage() {
                   <label className="block font-semibold text-gray-700 mb-1">Crown Status *</label>
                   <select
                     value={form.crown_status || 'Crown Cutting'}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const newSt = e.target.value as any;
                       setForm({
                         ...form,
-                        crown_status: e.target.value as any,
-                        status: e.target.value as any,
-                      })
-                    }
-                    className="w-full px-3 py-1.5 border rounded-lg bg-white font-bold text-blue-700"
+                        crown_status: newSt,
+                        status: newSt,
+                        fixed_date: newSt === 'Crown Fixed' && !form.fixed_date ? todayStr : form.fixed_date,
+                      });
+                    }}
+                    className={`w-full px-3 py-1.5 border rounded-lg bg-white font-bold ${
+                      form.crown_status === 'Crown Fixed'
+                        ? 'text-emerald-700'
+                        : form.crown_status === 'Crown Received'
+                        ? 'text-indigo-700'
+                        : form.crown_status === 'Crown Not Required'
+                        ? 'text-gray-700'
+                        : 'text-blue-700'
+                    }`}
                   >
                     <option value="Crown Cutting">1. Crown Cutting</option>
                     <option value="Crown Received">2. Crown Received</option>
-                    <option value="Crown Not Required">3. Crown Not Required</option>
+                    <option value="Crown Fixed">3. Crown Fixed</option>
+                    <option value="Crown Not Required">4. Crown Not Required</option>
                   </select>
                 </div>
               </div>
@@ -745,7 +839,7 @@ export default function CrownManagementPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div>
                   <label className="block font-semibold text-gray-700 mb-1">Shade</label>
                   <input
@@ -757,7 +851,7 @@ export default function CrownManagementPage() {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Record Date *</label>
+                  <label className="block font-semibold text-gray-700 mb-1">Treatment Date *</label>
                   <input
                     type="date"
                     value={form.cutting_date}
@@ -767,7 +861,16 @@ export default function CrownManagementPage() {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Crown Price (₹) *</label>
+                  <label className="block font-semibold text-emerald-700 mb-1">Crown Fixed Date</label>
+                  <input
+                    type="date"
+                    value={form.fixed_date || ''}
+                    onChange={(e) => setForm({ ...form, fixed_date: e.target.value })}
+                    className="w-full px-3 py-1.5 border border-emerald-300 rounded-lg text-emerald-800"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Price (₹) *</label>
                   <input
                     type="number"
                     value={form.patient_cost || 0}

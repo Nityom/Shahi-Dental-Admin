@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { addMedicine, getAllMedicines, deleteMedicine, updateMedicine, Medicine } from '@/services/medicine';
-import { PlusCircle, X, Trash2, Search, ArrowUp, ArrowDown, Package, Pill, RefreshCw, Edit } from 'lucide-react';
+import { PlusCircle, X, Trash2, Search, ArrowUp, ArrowDown, Package, Pill, RefreshCw, Edit, ReceiptText } from 'lucide-react';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 
 export default function AddMedicinePage() {
@@ -242,10 +243,19 @@ export default function AddMedicinePage() {
   return (
     <div className="min-h-screen bg-white w-full overflow-auto scrollbar-none">
       <div className="w-full">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Medicine Management</h1>
-          <p className="text-gray-600 mt-1">Add and manage medicines for your dental clinic</p>
-        </header>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <header>
+            <h1 className="text-3xl font-bold text-gray-800">Medicine Management</h1>
+            <p className="text-gray-600 mt-1">Add and manage medicines for your dental clinic</p>
+          </header>
+          <Link
+            href="/admin/stockists"
+            className="inline-flex items-center space-x-2 px-4 py-2.5 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-xl text-sm font-semibold transition-all shadow-xs"
+          >
+            <ReceiptText size={18} />
+            <span>Stockist Bills & Dues →</span>
+          </Link>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Add Medicine Form */}

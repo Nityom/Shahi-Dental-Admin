@@ -54,12 +54,13 @@ export interface PatientFollowup {
   updated_at?: number;
 }
 
-export type CrownStatusCategory = 'Crown Not Required' | 'Crown Cutting' | 'Crown Received';
+export type CrownStatusCategory = 'Crown Not Required' | 'Crown Cutting' | 'Crown Received' | 'Crown Fixed';
 
 export type CrownCuttingStatus =
   | 'Crown Not Required'
   | 'Crown Cutting'
   | 'Crown Received'
+  | 'Crown Fixed'
   | 'Sent to Lab'
   | 'In Lab'
   | 'Received'
@@ -76,11 +77,12 @@ export interface CrownCuttingRecord {
   tooth_numbers: string;
   crown_type?: string;
   shade?: string;
-  cutting_date: string; // YYYY-MM-DD
+  cutting_date: string; // YYYY-MM-DD (Treatment Done / Cutting Date)
   dentist_name?: string;
   lab_name?: string;
   impression_type?: string;
   expected_delivery_date?: string;
+  fixed_date?: string; // YYYY-MM-DD (Crown Fixed Date)
   lab_cost?: number;
   patient_cost?: number;
   treatment_reference?: string;

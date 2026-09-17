@@ -157,11 +157,12 @@ export default function AddInventoryPage() {
         await updateInventory(editingId, formData);
         setSuccess(true);
       } else {
-        await addInventory(formData);
+        const createdId = await addInventory(formData);
         // Log initial stock in material transactions
         if (formData.quantity > 0) {
           try {
             await materialTransactionService.record({
+              material_id: createdId as any,
               material_name: formData.name,
               subdivision: formData.subdivision || 'Consumable',
               transaction_type: 'INITIAL_STOCK',

@@ -286,10 +286,11 @@ export const createCrownCutting = mutation({
     lab_name: v.optional(v.string()),
     impression_type: v.optional(v.string()),
     expected_delivery_date: v.optional(v.string()),
+    fixed_date: v.optional(v.string()),
     lab_cost: v.optional(v.number()),
     patient_cost: v.optional(v.number()),
     treatment_reference: v.optional(v.string()),
-    crown_status: v.optional(v.union(v.literal("Crown Not Required"), v.literal("Crown Cutting"), v.literal("Crown Received"))),
+    crown_status: v.optional(v.union(v.literal("Crown Not Required"), v.literal("Crown Cutting"), v.literal("Crown Received"), v.literal("Crown Fixed"))),
     status: v.union(
       v.literal("Sent to Lab"),
       v.literal("In Lab"),
@@ -299,7 +300,8 @@ export const createCrownCutting = mutation({
       v.literal("Sent for Redo"),
       v.literal("Crown Not Required"),
       v.literal("Crown Cutting"),
-      v.literal("Crown Received")
+      v.literal("Crown Received"),
+      v.literal("Crown Fixed")
     ),
     notes: v.optional(v.string()),
     prescription_id: v.optional(v.string()),
@@ -328,10 +330,11 @@ export const updateCrownCutting = mutation({
     lab_name: v.optional(v.string()),
     impression_type: v.optional(v.string()),
     expected_delivery_date: v.optional(v.string()),
+    fixed_date: v.optional(v.string()),
     lab_cost: v.optional(v.number()),
     patient_cost: v.optional(v.number()),
     treatment_reference: v.optional(v.string()),
-    crown_status: v.optional(v.union(v.literal("Crown Not Required"), v.literal("Crown Cutting"), v.literal("Crown Received"))),
+    crown_status: v.optional(v.union(v.literal("Crown Not Required"), v.literal("Crown Cutting"), v.literal("Crown Received"), v.literal("Crown Fixed"))),
     status: v.optional(v.union(
       v.literal("Sent to Lab"),
       v.literal("In Lab"),
@@ -341,7 +344,8 @@ export const updateCrownCutting = mutation({
       v.literal("Sent for Redo"),
       v.literal("Crown Not Required"),
       v.literal("Crown Cutting"),
-      v.literal("Crown Received")
+      v.literal("Crown Received"),
+      v.literal("Crown Fixed")
     )),
     notes: v.optional(v.string()),
     prescription_id: v.optional(v.string()),
@@ -365,19 +369,28 @@ export const listCrownCutting = query({
   args: {
     startDate: v.optional(v.string()),
     endDate: v.optional(v.string()),
+    dateFilterType: v.optional(v.union(v.literal("cutting_date"), v.literal("fixed_date"))),
     status: v.optional(v.string()),
-    crownStatus: v.optional(v.string()), // "ALL" | "Crown Not Required" | "Crown Cutting" | "Crown Received"
+    crownStatus: v.optional(v.string()), // "ALL" | "Crown Not Required" | "Crown Cutting" | "Crown Received" | "Crown Fixed"
     labName: v.optional(v.string()),
     search: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     let cases = await ctx.db.query("crown_cutting_register").order("desc").collect();
 
+    const isFixedDateFilter = args.dateFilterType === "fixed_date";
+
     if (args.startDate) {
-      cases = cases.filter((c) => c.cutting_date >= args.startDate!);
+      cases = cases.filter((c) => {
+        const dateVal = isFixedDateFilter ? c.fixed_date : c.cutting_date;
+        return dateVal ? dateVal >= args.startDate! : false;
+      });
     }
     if (args.endDate) {
-      cases = cases.filter((c) => c.cutting_date <= args.endDate!);
+      cases = cases.filter((c) => {
+        const dateVal = isFixedDateFilter ? c.fixed_date : c.cutting_date;
+        return dateVal ? dateVal <= args.endDate! : false;
+      });
     }
     if (args.status && args.status !== "ALL") {
       cases = cases.filter((c) => c.status === args.status);

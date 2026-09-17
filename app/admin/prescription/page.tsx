@@ -88,10 +88,12 @@ const DEFAULT_DENTAL_PROCEDURES = [
   { id: 4, name: 'Tooth Extraction', price: 1500 },
   { id: 5, name: 'Dental Filling', price: 1200 },
   { id: 6, name: 'Dental Crown', price: 8000 },
-  { id: 7, name: 'Dental Bridge', price: 15000 },
-  { id: 8, name: 'Dental Implant', price: 25000 },
-  { id: 9, name: 'Teeth Whitening', price: 4000 },
-  { id: 10, name: 'Braces Consultation', price: 1000 },
+  { id: 7, name: 'Crown Fixed', price: 0 },
+  { id: 8, name: 'Crown Cutting', price: 0 },
+  { id: 9, name: 'Dental Bridge', price: 15000 },
+  { id: 10, name: 'Dental Implant', price: 25000 },
+  { id: 11, name: 'Teeth Whitening', price: 4000 },
+  { id: 12, name: 'Braces Consultation', price: 1000 },
 ];
 
 // Treatment plan item with catalog reference, cost, and optional notes

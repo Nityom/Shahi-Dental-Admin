@@ -13,6 +13,10 @@ export function isRctOrCrownTreatment(text: string): boolean {
         s.includes("root canal") ||
         s.includes("crown") ||
         s.includes("cap") ||
+        s.includes("fixed") ||
+        s.includes("cementation") ||
+        s.includes("cemented") ||
+        s.includes("fitting") ||
         s.includes("endodontic") ||
         s.includes("endo") ||
         s.includes("pulpectomy") ||
@@ -84,7 +88,7 @@ export function extractTeeth(selectedTeeth: any, treatmentDesc?: string, diagnos
 /**
  * Helper to process a prescription and return crown details if applicable
  */
-function extractCrownInfoFromPrescription(rx: any): { isCrown: boolean; toothStr: string; cost: number; ref: string; crownType: string } {
+function extractCrownInfoFromPrescription(rx: any): { isCrown: boolean; isFixed: boolean; toothStr: string; cost: number; ref: string; crownType: string } {
     let treatments: any[] = [];
     if (rx.treatment_done) {
         treatments = typeof rx.treatment_done === "string" ? JSON.parse(rx.treatment_done) : rx.treatment_done;
@@ -107,8 +111,14 @@ function extractCrownInfoFromPrescription(rx: any): { isCrown: boolean; toothStr
 
     const isCrown = rctOrCrownDone.length > 0 || rctOrCrownPlan.length > 0 || diagMatch || ccMatch;
     if (!isCrown) {
-        return { isCrown: false, toothStr: "", cost: 0, ref: "", crownType: "Zirconia" };
+        return { isCrown: false, isFixed: false, toothStr: "", cost: 0, ref: "", crownType: "Zirconia" };
     }
+
+    // Check if specifically Crown Fixed / Cemented
+    const isFixed = treatments.some((t: any) => {
+        const desc = (t.description || t.name || "").toString().toLowerCase();
+        return (desc.includes("crown") && (desc.includes("fix") || desc.includes("cement") || desc.includes("fitting"))) || desc.includes("crown fixed") || desc.includes("crown cementation");
+    }) || (rx.diagnosis && rx.diagnosis.toLowerCase().includes("crown fixed"));
 
     // Determine primary description
     let primaryDesc = "";
@@ -155,6 +165,7 @@ function extractCrownInfoFromPrescription(rx: any): { isCrown: boolean; toothStr
 
     return {
         isCrown: true,
+        isFixed,
         toothStr,
         cost,
         ref: cleanRef,
@@ -191,23 +202,51 @@ export const create = mutation({
             const crownInfo = extractCrownInfoFromPrescription(args);
             if (crownInfo.isCrown) {
                 const now = Date.now();
-                await ctx.db.insert("crown_cutting_register", {
-                    patient_name: args.patient_name,
-                    phone_number: args.phone_number,
-                    reference_number: args.reference_number,
-                    tooth_numbers: crownInfo.toothStr,
-                    crown_type: crownInfo.crownType,
-                    cutting_date: args.prescription_date,
-                    dentist_name: args.doctor_name || "Dr. Kautilya Swaroop",
-                    lab_name: "Dental Lab",
-                    treatment_reference: crownInfo.ref,
-                    crown_status: "Crown Cutting",
-                    status: "Crown Cutting",
-                    patient_cost: crownInfo.cost,
-                    prescription_id: newPrescriptionId,
-                    created_at: now,
-                    updated_at: now,
-                });
+
+                // If isFixed, check if patient has an existing crown record
+                let existingCrown = null;
+                if (crownInfo.isFixed) {
+                    if (args.reference_number) {
+                        existingCrown = await ctx.db
+                            .query("crown_cutting_register")
+                            .withIndex("by_reference", (q) => q.eq("reference_number", args.reference_number))
+                            .first();
+                    }
+                    if (!existingCrown && args.phone_number) {
+                        existingCrown = await ctx.db
+                            .query("crown_cutting_register")
+                            .withIndex("by_phone", (q) => q.eq("phone_number", args.phone_number))
+                            .first();
+                    }
+                }
+
+                if (existingCrown) {
+                    await ctx.db.patch(existingCrown._id, {
+                        crown_status: "Crown Fixed",
+                        status: "Crown Fixed",
+                        fixed_date: args.prescription_date,
+                        updated_at: now,
+                    });
+                } else {
+                    await ctx.db.insert("crown_cutting_register", {
+                        patient_name: args.patient_name,
+                        phone_number: args.phone_number,
+                        reference_number: args.reference_number,
+                        tooth_numbers: crownInfo.toothStr,
+                        crown_type: crownInfo.crownType,
+                        cutting_date: args.prescription_date,
+                        fixed_date: crownInfo.isFixed ? args.prescription_date : undefined,
+                        dentist_name: args.doctor_name || "Dr. Kautilya Swaroop",
+                        lab_name: "Dental Lab",
+                        treatment_reference: crownInfo.ref,
+                        crown_status: crownInfo.isFixed ? "Crown Fixed" : "Crown Cutting",
+                        status: crownInfo.isFixed ? "Crown Fixed" : "Crown Cutting",
+                        patient_cost: crownInfo.cost,
+                        prescription_id: newPrescriptionId,
+                        created_at: now,
+                        updated_at: now,
+                    });
+                }
             }
         } catch (err) {
             console.error("Auto crown record creation error:", err);
@@ -268,30 +307,60 @@ export const update = mutation({
                             phone_number: rx.phone_number,
                             reference_number: rx.reference_number,
                             tooth_numbers: crownInfo.toothStr || existingCrown.tooth_numbers,
-                            cutting_date: rx.prescription_date,
+                            cutting_date: existingCrown.cutting_date || rx.prescription_date,
                             dentist_name: rx.doctor_name || existingCrown.dentist_name,
                             patient_cost: crownInfo.cost > 0 ? crownInfo.cost : existingCrown.patient_cost,
                             treatment_reference: crownInfo.ref,
+                            ...(crownInfo.isFixed ? {
+                                crown_status: "Crown Fixed",
+                                status: "Crown Fixed",
+                                fixed_date: rx.prescription_date,
+                            } : {}),
                             updated_at: now,
                         });
                     } else {
-                        await ctx.db.insert("crown_cutting_register", {
-                            patient_name: rx.patient_name,
-                            phone_number: rx.phone_number,
-                            reference_number: rx.reference_number,
-                            tooth_numbers: crownInfo.toothStr,
-                            crown_type: crownInfo.crownType,
-                            cutting_date: rx.prescription_date,
-                            dentist_name: rx.doctor_name || "Dr. Kautilya Swaroop",
-                            lab_name: "Dental Lab",
-                            treatment_reference: crownInfo.ref,
-                            crown_status: "Crown Cutting",
-                            status: "Crown Cutting",
-                            patient_cost: crownInfo.cost,
-                            prescription_id: id,
-                            created_at: now,
-                            updated_at: now,
-                        });
+                        // Check if patient already has crown cutting record by reference or phone
+                        let patientCrown = null;
+                        if (rx.reference_number) {
+                            patientCrown = await ctx.db
+                                .query("crown_cutting_register")
+                                .withIndex("by_reference", (q) => q.eq("reference_number", rx.reference_number))
+                                .first();
+                        }
+                        if (!patientCrown && rx.phone_number) {
+                            patientCrown = await ctx.db
+                                .query("crown_cutting_register")
+                                .withIndex("by_phone", (q) => q.eq("phone_number", rx.phone_number))
+                                .first();
+                        }
+
+                        if (patientCrown && crownInfo.isFixed) {
+                            await ctx.db.patch(patientCrown._id, {
+                                crown_status: "Crown Fixed",
+                                status: "Crown Fixed",
+                                fixed_date: rx.prescription_date,
+                                updated_at: now,
+                            });
+                        } else {
+                            await ctx.db.insert("crown_cutting_register", {
+                                patient_name: rx.patient_name,
+                                phone_number: rx.phone_number,
+                                reference_number: rx.reference_number,
+                                tooth_numbers: crownInfo.toothStr,
+                                crown_type: crownInfo.crownType,
+                                cutting_date: rx.prescription_date,
+                                fixed_date: crownInfo.isFixed ? rx.prescription_date : undefined,
+                                dentist_name: rx.doctor_name || "Dr. Kautilya Swaroop",
+                                lab_name: "Dental Lab",
+                                treatment_reference: crownInfo.ref,
+                                crown_status: crownInfo.isFixed ? "Crown Fixed" : "Crown Cutting",
+                                status: crownInfo.isFixed ? "Crown Fixed" : "Crown Cutting",
+                                patient_cost: crownInfo.cost,
+                                prescription_id: id,
+                                created_at: now,
+                                updated_at: now,
+                            });
+                        }
                     }
                 }
             } catch (err) {
@@ -368,11 +437,12 @@ export const syncAllPrescriptionsToCrownRegister = mutation({
                         tooth_numbers: crownInfo.toothStr,
                         crown_type: crownInfo.crownType,
                         cutting_date: rx.prescription_date,
+                        fixed_date: crownInfo.isFixed ? rx.prescription_date : undefined,
                         dentist_name: rx.doctor_name || "Dr. Kautilya Swaroop",
                         lab_name: "Dental Lab",
                         treatment_reference: crownInfo.ref,
-                        crown_status: "Crown Cutting",
-                        status: "Crown Cutting",
+                        crown_status: crownInfo.isFixed ? "Crown Fixed" : "Crown Cutting",
+                        status: crownInfo.isFixed ? "Crown Fixed" : "Crown Cutting",
                         patient_cost: crownInfo.cost,
                         prescription_id: rx._id,
                         created_at: now,
@@ -388,6 +458,11 @@ export const syncAllPrescriptionsToCrownRegister = mutation({
                         tooth_numbers: existing.tooth_numbers || crownInfo.toothStr,
                         patient_cost: (existing.patient_cost && existing.patient_cost > 0) ? existing.patient_cost : crownInfo.cost,
                         treatment_reference: existing.treatment_reference || crownInfo.ref,
+                        ...(crownInfo.isFixed ? {
+                            crown_status: "Crown Fixed",
+                            status: "Crown Fixed",
+                            fixed_date: rx.prescription_date,
+                        } : {}),
                         updated_at: now,
                     });
                 }
