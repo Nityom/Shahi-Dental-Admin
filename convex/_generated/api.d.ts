@@ -22,6 +22,7 @@ import type * as patients from "../patients.js";
 import type * as payment_transactions from "../payment_transactions.js";
 import type * as prescriptions from "../prescriptions.js";
 import type * as registers from "../registers.js";
+import type * as staff from "../staff.js";
 import type * as stockists from "../stockists.js";
 
 import type {
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   payment_transactions: typeof payment_transactions;
   prescriptions: typeof prescriptions;
   registers: typeof registers;
+  staff: typeof staff;
   stockists: typeof stockists;
 }>;
 

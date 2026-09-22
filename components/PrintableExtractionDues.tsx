@@ -64,6 +64,14 @@ export const PrintableExtractionDues: React.FC<PrintableExtractionDuesProps> = (
   paymentTransactions = [],
   clinicalNotes,
 }) => {
+  const getSignatureSrc = (sig?: string) => {
+    if (!sig) return '/sign.png';
+    if (sig.startsWith('data:') || sig.startsWith('http://') || sig.startsWith('https://')) {
+      return sig;
+    }
+    return `/${sig.replace(/^\//, '')}`;
+  };
+
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -370,7 +378,7 @@ export const PrintableExtractionDues: React.FC<PrintableExtractionDuesProps> = (
               <div className="inline-block text-center min-w-[140px]">
                 {signature && (
                   <img
-                    src={`/${signature}`}
+                    src={getSignatureSrc(signature)}
                     alt="Doctor Signature"
                     className="h-10 mx-auto object-contain mb-1"
                   />

@@ -65,11 +65,12 @@ export const deleteConsumable = async (id: string): Promise<void> => {
 export const getEnabledConsumablesForDeduction = async (): Promise<Array<{ id: string, name: string, quantity: number }>> => {
   const allConsumables = await getAllConsumables();
   return allConsumables
-    .filter(item => item.enabled !== false && item.id !== undefined)
+    .filter(item => item.enabled === true && item.id !== undefined)
     .map(item => ({
       id: item.id!,
       name: item.name,
       quantity: item.deduction_qty ?? 1
     }));
 };
+
 

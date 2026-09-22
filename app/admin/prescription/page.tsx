@@ -9,8 +9,9 @@ import { Patient } from '@/types/patient';
 import { ToothData as TeethChartToothData } from '@/components/TeethChart';
 import { getCurrentUser } from '@/services/adminuser';
 import { createBill, Bill, getBillByPrescriptionId, updateBill } from '@/services/bills';
-import { deductInventoryStock, recordInventorySale } from '@/services/inventory';
+import { deductInventoryStock } from '@/services/inventory';
 import { getEnabledConsumablesForDeduction } from '@/services/consumables';
+import { materialTransactionService } from '@/services/registers';
 import { doctorService } from '@/services/doctors';
 import { Doctor } from '@/types/doctor';
 import { ConvexHttpClient } from 'convex/browser';
@@ -868,34 +869,31 @@ const PrescriptionPage = () => {
               }
             });
 
-            // Record consumable usage to inventory_sales for reporting
+            // Log usage to material transactions for auditing (do NOT record as retail direct sales)
             try {
-              console.log('📊 Recording consumable usage to sales...');
               const today = new Date().toISOString().split('T')[0];
               const usagePromises = consumableItems.map(async (item) => {
                 const result = deductionResults.find(r => r.name === item.name && r.status === 'success');
                 if (result) {
                   try {
                     const itemRate = (result as any).rate || 0;
-                    await recordInventorySale({
-                      inventory_name: item.name,
+                    await materialTransactionService.record({
+                      material_name: item.name,
+                      subdivision: 'Consumable',
+                      transaction_type: 'USAGE',
                       quantity: item.quantity,
                       rate: itemRate,
-                      total_amount: itemRate * item.quantity,
-                      sale_date: today,
-                      notes: `Auto-deducted for prescription - ${formData.patientName}`,
+                      transaction_date: today,
+                      notes: `Used during visit for prescription - ${formData.patientName}`,
                     });
-                    console.log(`✅ Recorded sale for ${item.name}`);
                   } catch (error) {
-                    console.error(`❌ Failed to record sale for ${item.name}:`, error);
+                    console.warn(`Usage log skipped for ${item.name}:`, error);
                   }
                 }
               });
               await Promise.allSettled(usagePromises);
-              console.log('✅ Consumable usage recording completed');
             } catch (usageError) {
-              console.error('Error recording consumable usage:', usageError);
-              // Don't throw error - deduction is done, tracking is secondary
+              console.error('Error logging consumable usage:', usageError);
             }
 
             // Check if any items had warnings or errors
@@ -1135,9 +1133,10 @@ const PrescriptionPage = () => {
       alert('Please save the prescription first.');
       return;
     }
-    const sigFile = selectedDoctor === 'anjali' ? 'sign1.png' : 'sign.png';
-    const docName = selectedDoctor === 'anjali' ? 'Dr. Anjali Swaroop' : 'Dr. Kautilya Swaroop';
-    window.open(`/print-prescription?prescriptionId=${prescriptionId}&signature=${sigFile}&doctorName=${encodeURIComponent(docName)}`, '_blank');
+    const docObj = availableDoctors.find((d) => d.name.toLowerCase() === (selectedDoctorName || '').toLowerCase());
+    const docName = docObj?.name || selectedDoctorName || (selectedDoctor === 'anjali' ? 'Dr. Anjali Swaroop' : 'Dr. Kautilya Swaroop');
+    const sigFile = docObj?.signature_url || (docName.toLowerCase().includes('anjali') ? 'sign1.png' : 'sign.png');
+    window.open(`/print-prescription?prescriptionId=${prescriptionId}&signature=${encodeURIComponent(sigFile)}&doctorName=${encodeURIComponent(docName)}`, '_blank');
   };
 
   // Function to generate and print bill with payment details
@@ -1256,12 +1255,12 @@ const PrescriptionPage = () => {
       setShowPaymentModal(false);
 
       // Build signature params from selected doctor
-      const docObj = availableDoctors.find((d) => d.name === selectedDoctorName);
+      const docObj = availableDoctors.find((d) => d.name.toLowerCase() === (selectedDoctorName || '').toLowerCase());
       const docName = docObj?.name || selectedDoctorName || 'Dr. Kautilya Swaroop';
-      const sigFile = docObj?.signature_url ? docObj.signature_url.replace(/^\//, '') : (docName.includes('Anjali') ? 'sign1.png' : 'sign.png');
+      const sigFile = docObj?.signature_url || (docName.toLowerCase().includes('anjali') ? 'sign1.png' : 'sign.png');
 
       // Open new printable bill page (fresh fetch ensures updated balance)
-      window.open(`/print-bill?billId=${currentBill.id}&signature=${sigFile}&doctorName=${encodeURIComponent(docName)}`, '_blank');
+      window.open(`/print-bill?billId=${currentBill.id}&signature=${encodeURIComponent(sigFile)}&doctorName=${encodeURIComponent(docName)}`, '_blank');
     } catch (error) {
       console.error('Error updating bill:', error);
       alert('Failed to update bill payment details.');
@@ -2585,8 +2584,27 @@ const PrescriptionPage = () => {
                           onChange={() => {}}
                           className="h-4 w-4 text-blue-600 cursor-pointer"
                         />
-                        <p className="text-sm font-bold text-gray-900 leading-tight">{doc.name}</p>
+                        <div>
+                          <p className="text-sm font-bold text-gray-900 leading-tight">{doc.name}</p>
+                          <p className="text-[11px] text-gray-500 font-normal">
+                            {doc.doctor_type === 'MAIN' ? 'Main Doctor' : 'Assistant Doctor'}
+                          </p>
+                        </div>
                       </div>
+                      {doc.signature_url && (
+                        <div className="flex items-center pl-2">
+                          <img
+                            src={
+                              doc.signature_url.startsWith('http') || doc.signature_url.startsWith('data:')
+                                ? doc.signature_url
+                                : `/${doc.signature_url.replace(/^\//, '')}`
+                            }
+                            alt="Sign"
+                            className="h-6 max-w-[70px] object-contain opacity-75"
+                            title={`${doc.name} Signature`}
+                          />
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -2871,12 +2889,16 @@ const PrescriptionPage = () => {
                 <div className="mb-4">
                   <img
                     src={
-                      availableDoctors.find((d) => d.name === selectedDoctorName)?.signature_url ||
-                      (selectedDoctorName.toLowerCase().includes('anjali') ? '/sign1.png' : '/sign.png')
+                      (() => {
+                        const docObj = availableDoctors.find((d) => d.name.toLowerCase() === (selectedDoctorName || '').toLowerCase());
+                        const sig = docObj?.signature_url;
+                        if (!sig) return (selectedDoctorName || '').toLowerCase().includes('anjali') ? '/sign1.png' : '/sign.png';
+                        if (sig.startsWith('data:') || sig.startsWith('http://') || sig.startsWith('https://')) return sig;
+                        return `/${sig.replace(/^\//, '')}`;
+                      })()
                     }
                     alt="Doctor's Signature"
-                    className="inline-block"
-                    style={{ height: '60px', width: 'auto' }}
+                    className="inline-block max-h-14 w-auto object-contain"
                   />
                 </div>
                 <div className="font-semibold">

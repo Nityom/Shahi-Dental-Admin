@@ -163,3 +163,9 @@ export const recordInventorySale = async (sale: {
     sale_date: sale.sale_date,
   });
 };
+
+export const restoreAutoDeductedStock = async () => {
+  const anyApi: any = api;
+  return await convex.mutation(anyApi.inventory.restoreAutoDeductedStock, {});
+};
+

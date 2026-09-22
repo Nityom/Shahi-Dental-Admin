@@ -58,6 +58,14 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
   doctorName = 'Dr. Kautilya Swaroop',
   paymentTransactions = [],
 }) => {
+  const getSignatureSrc = (sig?: string) => {
+    if (!sig) return '/sign.png';
+    if (sig.startsWith('data:') || sig.startsWith('http://') || sig.startsWith('https://')) {
+      return sig;
+    }
+    return `/${sig.replace(/^\//, '')}`;
+  };
+
   const formatCurrency = (amount: number) => {
     return `₹ ${Math.round(amount).toLocaleString('en-IN')}`;
   };
@@ -220,7 +228,7 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
           <div className="text-center min-w-[180px]">
             <div className="mb-1 h-14 flex items-center justify-center">
               <img
-                src={`/${signature}`}
+                src={getSignatureSrc(signature)}
                 alt="Signature"
                 className="max-h-12 w-auto object-contain"
               />

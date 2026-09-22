@@ -372,7 +372,23 @@ export default defineSchema({
     .index("by_type", ["transaction_type"])
     .index("by_material", ["material_id"]),
 
+  staff_members: defineTable({
+    name: v.string(),
+    role: v.string(), // "Dental Assistant", "Receptionist", "Clinic Manager", "Cleaning Manager", "Clinic Staff", etc.
+    phone: v.optional(v.string()),
+    fixed_salary: v.number(), // Monthly fixed salary
+    advance_balance: v.optional(v.number()), // Outstanding advance balance
+    joining_date: v.optional(v.string()),
+    status: v.optional(v.union(v.literal("ACTIVE"), v.literal("INACTIVE"))),
+    notes: v.optional(v.string()),
+    created_at: v.optional(v.number()),
+    updated_at: v.optional(v.number()),
+  })
+    .index("by_name", ["name"])
+    .index("by_status", ["status"]),
+
   staff_payments: defineTable({
+    staff_id: v.optional(v.id("staff_members")),
     staff_name: v.string(),
     staff_role: v.string(), // "Dental Assistant", "Receptionist", "Associate Dentist", "Clinic Staff", etc.
     staff_phone: v.optional(v.string()),
@@ -387,6 +403,7 @@ export default defineSchema({
     ),
     base_salary: v.optional(v.number()),
     amount_paid: v.number(),
+    advance_deducted: v.optional(v.number()), // Advance adjusted in this payment
     previous_payments_total: v.optional(v.number()),
     pending_balance: v.optional(v.number()),
     payment_mode: v.union(v.literal("Cash"), v.literal("UPI"), v.literal("Bank Transfer"), v.literal("Cheque"), v.literal("Other")),

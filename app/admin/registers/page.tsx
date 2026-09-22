@@ -6,6 +6,7 @@ import {
   recallService,
   followupService,
   staffPaymentService,
+  staffMemberService,
 } from '@/services/registers';
 import { getPatients } from '@/services/patients';
 import {
@@ -13,6 +14,7 @@ import {
   PatientRecall,
   PatientFollowup,
   StaffPaymentRecord,
+  StaffMember,
 } from '@/types/registers';
 import { Patient } from '@/types/patient';
 import { useIsAdmin } from '@/hooks/use-is-admin';
@@ -28,6 +30,9 @@ import {
   Trash2,
   X,
   UserCheck,
+  Users,
+  Wallet,
+  CheckCircle2,
 } from 'lucide-react';
 
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -118,7 +123,26 @@ function RegistersContent() {
     next_followup_date: '',
   });
 
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState<boolean>(false);
+  const [isEditStaffMode, setIsEditStaffMode] = useState<boolean>(false);
+  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
+  const [staffForm, setStaffForm] = useState<{
+    name: string;
+    role: string;
+    phone: string;
+    fixed_salary: number;
+    notes: string;
+  }>({
+    name: '',
+    role: 'Dental Assistant',
+    phone: '',
+    fixed_salary: 15000,
+    notes: '',
+  });
+
   const [staffPaymentForm, setStaffPaymentForm] = useState<Omit<StaffPaymentRecord, '_id' | 'id' | 'created_at'>>({
+    staff_id: '',
     staff_name: '',
     staff_role: 'Dental Assistant',
     staff_phone: '',
@@ -127,6 +151,7 @@ function RegistersContent() {
     payment_type: 'Salary',
     base_salary: 0,
     amount_paid: 0,
+    advance_deducted: 0,
     previous_payments_total: 0,
     pending_balance: 0,
     payment_mode: 'Cash',
@@ -205,13 +230,17 @@ function RegistersContent() {
         const data = await followupService.list(filter);
         setFollowups(data);
       } else if (activeTab === 'STAFF_PAYMENTS') {
-        const data = await staffPaymentService.list({
-          staffName: selectedStaffName === 'ALL' ? undefined : selectedStaffName,
-          startDate: startDate || undefined,
-          endDate: endDate || undefined,
-          search: searchTerm || undefined,
-        });
-        setStaffPayments(data);
+        const [membersData, paymentsData] = await Promise.all([
+          staffMemberService.list({ search: searchTerm || undefined }),
+          staffPaymentService.list({
+            staffName: selectedStaffName === 'ALL' ? undefined : selectedStaffName,
+            startDate: startDate || undefined,
+            endDate: endDate || undefined,
+            search: searchTerm || undefined,
+          }),
+        ]);
+        setStaffMembers(membersData);
+        setStaffPayments(paymentsData);
 
         if (selectedStaffName !== 'ALL') {
           const summary = await staffPaymentService.getLedgerSummary(selectedStaffName);
@@ -231,16 +260,123 @@ function RegistersContent() {
     fetchData();
   }, [fetchData]);
 
-  // Unique staff names list
+  // Unique staff names list combining staff_members and payments
   const staffNamesList = useMemo(() => {
-    const names = new Set(staffPayments.map((p) => p.staff_name));
+    const names = new Set<string>();
+    staffMembers.forEach((s) => names.add(s.name));
+    staffPayments.forEach((p) => names.add(p.staff_name));
     return Array.from(names);
-  }, [staffPayments]);
+  }, [staffMembers, staffPayments]);
+
+  // Staff Totals KPI
+  const staffTotals = useMemo(() => {
+    const totalFixedSalary = staffMembers.reduce((sum, s) => sum + (s.fixed_salary || 0), 0);
+    const totalAdvanceBalance = staffMembers.reduce((sum, s) => sum + (s.advance_balance || 0), 0);
+    const totalPaidThisMonth = staffMembers.reduce((sum, s) => sum + (s.total_paid_this_month || 0), 0);
+    const totalPendingThisMonth = staffMembers.reduce((sum, s) => sum + (s.pending_salary_this_month || 0), 0);
+    return { totalFixedSalary, totalAdvanceBalance, totalPaidThisMonth, totalPendingThisMonth };
+  }, [staffMembers]);
 
   const openAddModal = () => {
     setIsEditMode(false);
     setEditingId(null);
     setPatientSearchQuery('');
+    if (activeTab === 'STAFF_PAYMENTS') {
+      const defaultStaff = staffMembers[0];
+      setStaffPaymentForm({
+        staff_id: defaultStaff ? (defaultStaff.id || (defaultStaff as any)._id) : '',
+        staff_name: defaultStaff ? defaultStaff.name : '',
+        staff_role: defaultStaff ? defaultStaff.role : 'Dental Assistant',
+        staff_phone: defaultStaff ? (defaultStaff.phone || '') : '',
+        salary_month: todayStr.slice(0, 7),
+        payment_date: todayStr,
+        payment_type: 'Salary',
+        base_salary: defaultStaff ? (defaultStaff.fixed_salary || 0) : 0,
+        amount_paid: defaultStaff ? (defaultStaff.pending_salary_this_month && defaultStaff.pending_salary_this_month > 0 ? defaultStaff.pending_salary_this_month : defaultStaff.fixed_salary || 0) : 0,
+        advance_deducted: 0,
+        previous_payments_total: 0,
+        pending_balance: 0,
+        payment_mode: 'Cash',
+        transaction_reference: '',
+        paid_by: 'Dr. Kautilya Swaroop',
+        notes: '',
+      });
+    }
+    setIsModalOpen(true);
+  };
+
+  const openAddStaffModal = () => {
+    setStaffForm({
+      name: '',
+      role: 'Dental Assistant',
+      phone: '',
+      fixed_salary: 15000,
+      notes: '',
+    });
+    setIsEditStaffMode(false);
+    setEditingStaffId(null);
+    setIsStaffModalOpen(true);
+  };
+
+  const openEditStaffModal = (staff: StaffMember) => {
+    setStaffForm({
+      name: staff.name,
+      role: staff.role,
+      phone: staff.phone || '',
+      fixed_salary: staff.fixed_salary || 0,
+      notes: staff.notes || '',
+    });
+    setIsEditStaffMode(true);
+    setEditingStaffId(staff.id || (staff as any)._id || null);
+    setIsStaffModalOpen(true);
+  };
+
+  const handleStaffSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (isEditStaffMode && editingStaffId) {
+        await staffMemberService.update(editingStaffId, staffForm);
+      } else {
+        await staffMemberService.create(staffForm);
+      }
+      setIsStaffModalOpen(false);
+      fetchData();
+    } catch (err: any) {
+      alert(`Error saving staff member: ${err.message || 'Failed'}`);
+    }
+  };
+
+  const handleDeleteStaff = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete staff member "${name}"?`)) return;
+    try {
+      await staffMemberService.delete(id);
+      fetchData();
+    } catch (err: any) {
+      alert(`Error deleting staff member: ${err.message || 'Failed'}`);
+    }
+  };
+
+  const openPayStaffModal = (staff: StaffMember, type: 'Salary' | 'Advance' = 'Salary') => {
+    setIsEditMode(false);
+    setEditingId(null);
+    setStaffPaymentForm({
+      staff_id: staff.id || (staff as any)._id,
+      staff_name: staff.name,
+      staff_role: staff.role,
+      staff_phone: staff.phone || '',
+      salary_month: todayStr.slice(0, 7),
+      payment_date: todayStr,
+      payment_type: type,
+      base_salary: staff.fixed_salary,
+      amount_paid: type === 'Salary' ? (staff.pending_salary_this_month && staff.pending_salary_this_month > 0 ? staff.pending_salary_this_month : staff.fixed_salary) : 0,
+      advance_deducted: 0,
+      previous_payments_total: 0,
+      pending_balance: 0,
+      payment_mode: 'Cash',
+      transaction_reference: '',
+      paid_by: 'Dr. Kautilya Swaroop',
+      notes: '',
+    });
     setIsModalOpen(true);
   };
 
@@ -258,7 +394,7 @@ function RegistersContent() {
         else await followupService.create(followupForm);
       } else if (activeTab === 'STAFF_PAYMENTS') {
         if (isEditMode && editingId) await staffPaymentService.update(editingId, staffPaymentForm);
-        else await staffPaymentService.create(staffPaymentForm);
+        else await staffMemberService.recordPayment(staffPaymentForm);
       }
 
       setIsModalOpen(false);
@@ -283,13 +419,32 @@ function RegistersContent() {
             </p>
           </div>
 
-          <button
-            onClick={openAddModal}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs md:text-sm font-semibold shadow-sm transition"
-          >
-            <Plus size={16} />
-            Add Entry
-          </button>
+          {activeTab === 'STAFF_PAYMENTS' ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={openAddStaffModal}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs md:text-sm font-semibold shadow-sm transition"
+              >
+                <Plus size={16} />
+                Add Staff Member
+              </button>
+              <button
+                onClick={openAddModal}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs md:text-sm font-semibold shadow-sm transition"
+              >
+                <IndianRupee size={16} />
+                Record Payment
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={openAddModal}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs md:text-sm font-semibold shadow-sm transition"
+            >
+              <Plus size={16} />
+              Add Entry
+            </button>
+          )}
         </div>
 
         {/* Tab Navigation */}
@@ -381,25 +536,218 @@ function RegistersContent() {
           </div>
         </div>
 
-        {/* Staff Ledger KPI Summary */}
-        {activeTab === 'STAFF_PAYMENTS' && staffLedgerSummary && (
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-            <div>
-              <span className="text-gray-500 font-semibold uppercase">Staff Member</span>
-              <div className="text-base font-bold text-blue-900">{staffLedgerSummary.staffName}</div>
+        {/* Staff Overview, Fixed Salaries & Advance Balances */}
+        {activeTab === 'STAFF_PAYMENTS' && (
+          <div className="space-y-4">
+            {/* 1. Overall Staff KPI Summary */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+              <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+                <div className="flex items-center justify-between text-gray-500 text-xs font-semibold uppercase">
+                  <span>Staff Members</span>
+                  <Users size={16} className="text-blue-600" />
+                </div>
+                <div className="text-2xl font-black text-gray-900 mt-1">{staffMembers.length}</div>
+                <p className="text-[11px] text-gray-500 mt-0.5">Active clinic personnel</p>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+                <div className="flex items-center justify-between text-gray-500 text-xs font-semibold uppercase">
+                  <span>Fixed Monthly Payroll</span>
+                  <IndianRupee size={16} className="text-indigo-600" />
+                </div>
+                <div className="text-2xl font-black text-indigo-900 mt-1">
+                  ₹{staffTotals.totalFixedSalary.toLocaleString('en-IN')}
+                </div>
+                <p className="text-[11px] text-gray-500 mt-0.5">Total base salary commitment</p>
+              </div>
+
+              <div className={`p-4 rounded-2xl border shadow-sm transition ${
+                staffTotals.totalAdvanceBalance > 0
+                  ? 'bg-amber-50/70 border-amber-200'
+                  : 'bg-white border-gray-200'
+              }`}>
+                <div className="flex items-center justify-between text-xs font-semibold uppercase">
+                  <span className={staffTotals.totalAdvanceBalance > 0 ? 'text-amber-800' : 'text-gray-500'}>
+                    Advance Balance
+                  </span>
+                  <Wallet size={16} className={staffTotals.totalAdvanceBalance > 0 ? 'text-amber-600' : 'text-gray-400'} />
+                </div>
+                <div className={`text-2xl font-black mt-1 ${
+                  staffTotals.totalAdvanceBalance > 0 ? 'text-amber-900' : 'text-gray-900'
+                }`}>
+                  ₹{staffTotals.totalAdvanceBalance.toLocaleString('en-IN')}
+                </div>
+                <p className={`text-[11px] mt-0.5 ${
+                  staffTotals.totalAdvanceBalance > 0 ? 'text-amber-700 font-medium' : 'text-gray-500'
+                }`}>
+                  {staffTotals.totalAdvanceBalance > 0 ? '⚠️ Total advance outstanding' : 'No advance outstanding'}
+                </p>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+                <div className="flex items-center justify-between text-gray-500 text-xs font-semibold uppercase">
+                  <span>Paid This Month</span>
+                  <CheckCircle2 size={16} className="text-emerald-600" />
+                </div>
+                <div className="text-2xl font-black text-emerald-700 mt-1">
+                  ₹{staffTotals.totalPaidThisMonth.toLocaleString('en-IN')}
+                </div>
+                <p className="text-[11px] text-gray-500 mt-0.5">
+                  Remaining: ₹{staffTotals.totalPendingThisMonth.toLocaleString('en-IN')}
+                </p>
+              </div>
             </div>
-            <div>
-              <span className="text-gray-500 font-semibold uppercase">Total Salary Paid</span>
-              <div className="text-base font-bold text-green-700">₹{staffLedgerSummary.totalSalaryPaid.toLocaleString('en-IN')}</div>
+
+            {/* 2. Staff Directory & Fixed Salaries Grid */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-sm space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-gray-100">
+                <div>
+                  <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                    <Users size={18} className="text-blue-600" />
+                    Staff Directory & Fixed Salaries
+                  </h2>
+                  <p className="text-xs text-gray-500">
+                    Clinic staff profiles with fixed monthly salaries and live advance balances.
+                  </p>
+                </div>
+                <button
+                  onClick={openAddStaffModal}
+                  className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold border border-emerald-200 transition"
+                >
+                  <Plus size={14} /> Add New Staff
+                </button>
+              </div>
+
+              {staffMembers.length === 0 ? (
+                <div className="py-8 text-center text-gray-500 text-xs">
+                  No staff members added yet. Click &quot;Add New Staff&quot; above to add staff and set their fixed salary.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 pt-1">
+                  {staffMembers.map((member) => {
+                    const hasAdvance = (member.advance_balance || 0) > 0;
+                    return (
+                      <div
+                        key={member.id || (member as any)._id}
+                        className="bg-gray-50/60 hover:bg-gray-50 border border-gray-200 rounded-xl p-3.5 flex flex-col justify-between space-y-3 transition"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm uppercase">
+                              {member.name.charAt(0)}
+                            </div>
+                            <div>
+                              <div className="font-bold text-gray-900 text-sm leading-tight">{member.name}</div>
+                              <span className="inline-block px-1.5 py-0.5 bg-gray-200 text-gray-700 text-[10px] font-medium rounded mt-0.5">
+                                {member.role}
+                              </span>
+                              {member.phone && (
+                                <div className="text-[11px] text-gray-500 mt-0.5">{member.phone}</div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => openEditStaffModal(member)}
+                              className="text-gray-400 hover:text-blue-600 p-1"
+                              title="Edit Staff Member & Fixed Salary"
+                            >
+                              <Edit size={14} />
+                            </button>
+                            {isAdmin && (
+                              <button
+                                onClick={() => handleDeleteStaff(member.id || (member as any)._id, member.name)}
+                                className="text-gray-400 hover:text-rose-600 p-1"
+                                title="Delete Staff Member"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Salary & Advance Metrics */}
+                        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-gray-200/80 text-xs">
+                          <div>
+                            <span className="text-[10px] uppercase font-semibold text-gray-500">Fixed Salary</span>
+                            <div className="font-bold text-gray-900 text-sm">
+                              ₹{(member.fixed_salary || 0).toLocaleString('en-IN')}
+                              <span className="text-[10px] text-gray-500 font-normal"> /mo</span>
+                            </div>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] uppercase font-semibold text-gray-500">Advance Balance</span>
+                            <div className={`font-bold text-sm flex items-center gap-1 ${
+                              hasAdvance ? 'text-amber-700' : 'text-gray-500 font-normal'
+                            }`}>
+                              ₹{(member.advance_balance || 0).toLocaleString('en-IN')}
+                              {hasAdvance && (
+                                <span className="px-1 py-0.5 bg-amber-100 text-amber-800 text-[9px] font-bold rounded">
+                                  Due
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] uppercase font-semibold text-gray-500">Paid This Month</span>
+                            <div className="font-medium text-emerald-700">
+                              ₹{(member.salary_paid_this_month || 0).toLocaleString('en-IN')}
+                            </div>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] uppercase font-semibold text-gray-500">Remaining</span>
+                            <div className="font-medium text-gray-700">
+                              ₹{(member.pending_salary_this_month || 0).toLocaleString('en-IN')}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Quick Action Buttons */}
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <button
+                            onClick={() => openPayStaffModal(member, 'Salary')}
+                            className="flex-1 py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1"
+                          >
+                            <IndianRupee size={12} /> Pay Salary
+                          </button>
+                          <button
+                            onClick={() => openPayStaffModal(member, 'Advance')}
+                            className="flex-1 py-1.5 px-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1"
+                          >
+                            <Wallet size={12} /> Give Advance
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-            <div>
-              <span className="text-gray-500 font-semibold uppercase">Total Advances</span>
-              <div className="text-base font-bold text-orange-600">₹{staffLedgerSummary.totalAdvancePaid.toLocaleString('en-IN')}</div>
-            </div>
-            <div>
-              <span className="text-gray-500 font-semibold uppercase">Net Transactions</span>
-              <div className="text-base font-bold text-gray-900">{staffLedgerSummary.totalPaymentsCount} records</div>
-            </div>
+
+            {/* Individual staff ledger summary if selected */}
+            {staffLedgerSummary && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                <div>
+                  <span className="text-gray-500 font-semibold uppercase">Selected Staff</span>
+                  <div className="text-base font-bold text-blue-900">{staffLedgerSummary.staffName}</div>
+                </div>
+                <div>
+                  <span className="text-gray-500 font-semibold uppercase">Total Salary Paid</span>
+                  <div className="text-base font-bold text-green-700">₹{staffLedgerSummary.totalSalaryPaid.toLocaleString('en-IN')}</div>
+                </div>
+                <div>
+                  <span className="text-gray-500 font-semibold uppercase">Total Advances Given</span>
+                  <div className="text-base font-bold text-orange-600">₹{staffLedgerSummary.totalAdvancePaid.toLocaleString('en-IN')}</div>
+                </div>
+                <div>
+                  <span className="text-gray-500 font-semibold uppercase">Total Payment Records</span>
+                  <div className="text-base font-bold text-gray-900">{staffLedgerSummary.totalPaymentsCount} records</div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -560,50 +908,70 @@ function RegistersContent() {
                   <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase font-semibold">
                     <tr>
                       <th className="py-2.5 px-3">Date</th>
-                      <th className="py-2.5 px-3">Staff Name & Role</th>
+                      <th className="py-2.5 px-3">Staff Details</th>
                       <th className="py-2.5 px-3">Month</th>
                       <th className="py-2.5 px-3">Payment Type</th>
                       <th className="py-2.5 px-3 text-right">Amount Paid</th>
+                      <th className="py-2.5 px-3 text-right">Advance Deducted</th>
                       <th className="py-2.5 px-3">Mode</th>
-                      <th className="py-2.5 px-3">Reference / Paid By</th>
+                      <th className="py-2.5 px-3">Paid By / Ref</th>
                       <th className="py-2.5 px-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {staffPayments.length === 0 ? (
-                      <tr><td colSpan={8} className="py-12 text-center text-gray-500">No staff payment records found.</td></tr>
+                      <tr><td colSpan={9} className="py-12 text-center text-gray-500">No staff payment records found.</td></tr>
                     ) : (
-                      staffPayments.map((sp) => (
-                        <tr key={sp.id} className="hover:bg-gray-50/80">
-                          <td className="py-3 px-3 font-semibold text-gray-900 whitespace-nowrap">{sp.payment_date}</td>
-                          <td className="py-3 px-3">
-                            <div className="font-bold text-gray-900">{sp.staff_name}</div>
-                            <div className="text-[11px] text-gray-500">{sp.staff_role}</div>
-                          </td>
-                          <td className="py-3 px-3 font-medium text-gray-700">{sp.salary_month}</td>
-                          <td className="py-3 px-3">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              sp.payment_type === 'Salary' ? 'bg-green-100 text-green-800' :
-                              sp.payment_type === 'Advance' ? 'bg-orange-100 text-orange-800' :
-                              sp.payment_type === 'Incentive / Bonus' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
-                            }`}>{sp.payment_type}</span>
-                          </td>
-                          <td className="py-3 px-3 text-right font-bold text-gray-900 text-sm">
-                            ₹{sp.amount_paid.toLocaleString('en-IN')}
-                          </td>
-                          <td className="py-3 px-3 font-medium text-gray-700">{sp.payment_mode}</td>
-                          <td className="py-3 px-3 text-gray-600">
-                            <div>{sp.transaction_reference || '-'}</div>
-                            <div className="text-[10px] text-gray-400">By: {sp.paid_by || 'Clinic'}</div>
-                          </td>
-                          <td className="py-3 px-3 text-right">
-                            <div className="flex justify-end gap-1.5">
-                              <button onClick={() => { setStaffPaymentForm(sp); setEditingId(sp.id || null); setIsEditMode(true); setIsModalOpen(true); }} className="text-blue-600 hover:text-blue-800 p-1"><Edit size={14} /></button>
-                              {isAdmin && <button onClick={async () => { if (confirm('Delete?')) { await staffPaymentService.delete(sp.id!); fetchData(); } }} className="text-red-600 hover:text-red-800 p-1"><Trash2 size={14} /></button>}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
+                      staffPayments.map((sp) => {
+                        const matchedStaff = staffMembers.find((m) => m.name.toLowerCase() === sp.staff_name.toLowerCase());
+                        return (
+                          <tr key={sp.id} className="hover:bg-gray-50/80">
+                            <td className="py-3 px-3 font-semibold text-gray-900 whitespace-nowrap">{sp.payment_date}</td>
+                            <td className="py-3 px-3">
+                              <div className="font-bold text-gray-900">{sp.staff_name}</div>
+                              <div className="text-[11px] text-gray-500 flex items-center gap-1.5 mt-0.5">
+                                <span>{sp.staff_role}</span>
+                                {matchedStaff && (
+                                  <span className="text-[10px] text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded font-medium">
+                                    Fixed: ₹{matchedStaff.fixed_salary.toLocaleString('en-IN')}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 font-medium text-gray-700">{sp.salary_month}</td>
+                            <td className="py-3 px-3">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                sp.payment_type === 'Salary' ? 'bg-emerald-100 text-emerald-800' :
+                                sp.payment_type === 'Advance' ? 'bg-amber-100 text-amber-800' :
+                                sp.payment_type === 'Incentive / Bonus' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
+                              }`}>{sp.payment_type}</span>
+                            </td>
+                            <td className="py-3 px-3 text-right font-bold text-gray-900 text-sm">
+                              ₹{sp.amount_paid.toLocaleString('en-IN')}
+                            </td>
+                            <td className="py-3 px-3 text-right font-semibold">
+                              {(sp.advance_deducted && sp.advance_deducted > 0) ? (
+                                <span className="text-amber-700 font-bold bg-amber-50 px-1.5 py-0.5 rounded text-[11px]">
+                                  -₹{sp.advance_deducted.toLocaleString('en-IN')}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 font-medium text-gray-700">{sp.payment_mode}</td>
+                            <td className="py-3 px-3 text-gray-600">
+                              <div>{sp.transaction_reference || sp.notes || '-'}</div>
+                              <div className="text-[10px] text-gray-400">By: {sp.paid_by || 'Clinic'}</div>
+                            </td>
+                            <td className="py-3 px-3 text-right">
+                              <div className="flex justify-end gap-1.5">
+                                <button onClick={() => { setStaffPaymentForm(sp); setEditingId(sp.id || null); setIsEditMode(true); setIsModalOpen(true); }} className="text-blue-600 hover:text-blue-800 p-1"><Edit size={14} /></button>
+                                {isAdmin && <button onClick={async () => { if (confirm('Delete this payment record?')) { await staffPaymentService.delete(sp.id!); fetchData(); } }} className="text-red-600 hover:text-red-800 p-1"><Trash2 size={14} /></button>}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
@@ -776,44 +1144,209 @@ function RegistersContent() {
               {/* STAFF PAYMENT FORM FIELDS */}
               {activeTab === 'STAFF_PAYMENTS' && (
                 <>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block font-semibold text-gray-700">Select Staff Member *</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsModalOpen(false);
+                          openAddStaffModal();
+                        }}
+                        className="text-blue-600 hover:text-blue-800 text-[11px] font-medium"
+                      >
+                        + New Staff
+                      </button>
+                    </div>
+                    {staffMembers.length > 0 ? (
+                      <select
+                        value={staffPaymentForm.staff_name}
+                        onChange={(e) => {
+                          const selected = staffMembers.find((m) => m.name === e.target.value);
+                          if (selected) {
+                            setStaffPaymentForm({
+                              ...staffPaymentForm,
+                              staff_id: selected.id || (selected as any)._id,
+                              staff_name: selected.name,
+                              staff_role: selected.role,
+                              staff_phone: selected.phone || '',
+                              base_salary: selected.fixed_salary || 0,
+                              amount_paid: staffPaymentForm.payment_type === 'Salary'
+                                ? (selected.pending_salary_this_month && selected.pending_salary_this_month > 0
+                                    ? selected.pending_salary_this_month
+                                    : selected.fixed_salary || 0)
+                                : staffPaymentForm.amount_paid,
+                            });
+                          } else {
+                            setStaffPaymentForm({ ...staffPaymentForm, staff_name: e.target.value });
+                          }
+                        }}
+                        required
+                        className="w-full px-3 py-1.5 border rounded-lg bg-white font-medium"
+                      >
+                        <option value="">-- Choose Staff Member --</option>
+                        {staffMembers.map((m) => (
+                          <option key={m.id || (m as any)._id} value={m.name}>
+                            {m.name} ({m.role}) — Fixed: ₹{(m.fixed_salary || 0).toLocaleString('en-IN')}/mo
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={staffPaymentForm.staff_name}
+                        onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, staff_name: e.target.value })}
+                        required
+                        placeholder="Staff Member Name"
+                        className="w-full px-3 py-1.5 border rounded-lg font-bold"
+                      />
+                    )}
+                  </div>
+
+                  {/* Staff Info Banner (Fixed Salary & Advance Balance) */}
+                  {(() => {
+                    const currentStaff = staffMembers.find(
+                      (m) => m.name.toLowerCase() === (staffPaymentForm.staff_name || '').toLowerCase()
+                    );
+                    if (!currentStaff) return null;
+                    const hasAdv = (currentStaff.advance_balance || 0) > 0;
+                    return (
+                      <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-[10px] uppercase font-semibold text-gray-500">Fixed Monthly Salary</span>
+                          <div className="font-bold text-gray-900 text-sm">
+                            ₹{(currentStaff.fixed_salary || 0).toLocaleString('en-IN')}
+                            <span className="text-[10px] text-gray-500 font-normal"> /mo</span>
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-[10px] uppercase font-semibold text-gray-500">Advance Balance</span>
+                          <div className={`font-bold text-sm flex items-center gap-1 ${hasAdv ? 'text-amber-700' : 'text-gray-600 font-medium'}`}>
+                            ₹{(currentStaff.advance_balance || 0).toLocaleString('en-IN')}
+                            {hasAdv && (
+                              <span className="text-[9px] bg-amber-200 text-amber-900 px-1 py-0.2 rounded font-bold">
+                                Outstanding
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Staff Member Name *</label>
-                      <input type="text" value={staffPaymentForm.staff_name} onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, staff_name: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg font-bold" />
+                      <label className="block font-semibold text-gray-700 mb-1">When I Paid (Date) *</label>
+                      <input
+                        type="date"
+                        value={staffPaymentForm.payment_date}
+                        onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, payment_date: e.target.value })}
+                        required
+                        className="w-full px-3 py-1.5 border rounded-lg font-medium"
+                      />
                     </div>
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Staff Role *</label>
-                      <input type="text" value={staffPaymentForm.staff_role} onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, staff_role: e.target.value })} required placeholder="Dental Assistant, Receptionist" className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
                     <div>
                       <label className="block font-semibold text-gray-700 mb-1">Salary Month *</label>
-                      <input type="text" value={staffPaymentForm.salary_month} onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, salary_month: e.target.value })} placeholder="2026-08" required className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Payment Date *</label>
-                      <input type="date" value={staffPaymentForm.payment_date} onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, payment_date: e.target.value })} required className="w-full px-3 py-1.5 border rounded-lg" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Payment Type</label>
-                      <select value={staffPaymentForm.payment_type} onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, payment_type: e.target.value as any })} className="w-full px-3 py-1.5 border rounded-lg bg-white">
-                        <option value="Salary">Salary</option>
-                        <option value="Advance">Advance</option>
-                        <option value="Incentive / Bonus">Incentive / Bonus</option>
-                        <option value="Reimbursement">Reimbursement</option>
-                        <option value="Deduction">Deduction</option>
-                      </select>
+                      <input
+                        type="month"
+                        value={staffPaymentForm.salary_month}
+                        onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, salary_month: e.target.value })}
+                        required
+                        className="w-full px-3 py-1.5 border rounded-lg font-medium"
+                      />
                     </div>
                   </div>
+
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Amount Paid (₹) *</label>
-                      <input type="number" value={staffPaymentForm.amount_paid} onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, amount_paid: Number(e.target.value) })} required className="w-full px-3 py-1.5 border rounded-lg font-bold text-green-700" />
+                      <label className="block font-semibold text-gray-700 mb-1">Payment Type *</label>
+                      <select
+                        value={staffPaymentForm.payment_type}
+                        onChange={(e) => {
+                          const ptype = e.target.value as any;
+                          const currentStaff = staffMembers.find(
+                            (m) => m.name.toLowerCase() === (staffPaymentForm.staff_name || '').toLowerCase()
+                          );
+                          let newAmount = staffPaymentForm.amount_paid;
+                          if (ptype === 'Salary' && currentStaff) {
+                            newAmount = currentStaff.pending_salary_this_month && currentStaff.pending_salary_this_month > 0
+                              ? currentStaff.pending_salary_this_month
+                              : currentStaff.fixed_salary || 0;
+                          }
+                          setStaffPaymentForm({ ...staffPaymentForm, payment_type: ptype, amount_paid: newAmount });
+                        }}
+                        className="w-full px-3 py-1.5 border rounded-lg bg-white font-medium"
+                      >
+                        <option value="Salary">Salary (Fixed)</option>
+                        <option value="Advance">Advance (Pre-payment)</option>
+                        <option value="Incentive / Bonus">Incentive / Bonus</option>
+                        <option value="Reimbursement">Reimbursement</option>
+                        <option value="Deduction">Deduction / Repayment</option>
+                      </select>
                     </div>
                     <div>
+                      <label className="block font-semibold text-gray-700 mb-1">How Much I Paid (₹) *</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={staffPaymentForm.amount_paid === 0 ? '' : staffPaymentForm.amount_paid}
+                          onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, amount_paid: Number(e.target.value) })}
+                          required
+                          placeholder="Amount paid"
+                          className="w-full pl-7 pr-3 py-1.5 border rounded-lg font-bold text-gray-900 text-sm focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Advance deduction if staff has existing advance */}
+                  {(() => {
+                    const currentStaff = staffMembers.find(
+                      (m) => m.name.toLowerCase() === (staffPaymentForm.staff_name || '').toLowerCase()
+                    );
+                    if (currentStaff && (currentStaff.advance_balance || 0) > 0 && staffPaymentForm.payment_type === 'Salary') {
+                      return (
+                        <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1">
+                          <div className="flex items-center justify-between">
+                            <label className="block font-semibold text-amber-900 text-xs">
+                              Deduct from Advance Balance (Optional)
+                            </label>
+                            <span className="text-[10px] text-amber-700 font-medium">
+                              Current Balance: ₹{(currentStaff.advance_balance || 0).toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">₹</span>
+                            <input
+                              type="number"
+                              min="0"
+                              max={currentStaff.advance_balance || 0}
+                              value={staffPaymentForm.advance_deducted === 0 ? '' : staffPaymentForm.advance_deducted}
+                              onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, advance_deducted: Number(e.target.value) })}
+                              placeholder="0"
+                              className="w-full pl-7 pr-3 py-1.5 border border-amber-300 rounded-lg text-xs font-semibold text-amber-900 bg-white"
+                            />
+                          </div>
+                          <p className="text-[10px] text-amber-700">
+                            Entering an amount here will automatically reduce the staff member&apos;s advance balance.
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
                       <label className="block font-semibold text-gray-700 mb-1">Payment Mode</label>
-                      <select value={staffPaymentForm.payment_mode} onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, payment_mode: e.target.value as any })} className="w-full px-3 py-1.5 border rounded-lg bg-white">
+                      <select
+                        value={staffPaymentForm.payment_mode}
+                        onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, payment_mode: e.target.value as any })}
+                        className="w-full px-3 py-1.5 border rounded-lg bg-white"
+                      >
                         <option value="Cash">Cash</option>
                         <option value="UPI">UPI</option>
                         <option value="Bank Transfer">Bank Transfer</option>
@@ -821,6 +1354,27 @@ function RegistersContent() {
                         <option value="Other">Other</option>
                       </select>
                     </div>
+                    <div>
+                      <label className="block font-semibold text-gray-700 mb-1">Paid By</label>
+                      <input
+                        type="text"
+                        value={staffPaymentForm.paid_by || ''}
+                        onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, paid_by: e.target.value })}
+                        placeholder="Dr. Kautilya Swaroop"
+                        className="w-full px-3 py-1.5 border rounded-lg"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Notes / Transaction Reference</label>
+                    <input
+                      type="text"
+                      value={staffPaymentForm.transaction_reference || staffPaymentForm.notes || ''}
+                      onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, transaction_reference: e.target.value, notes: e.target.value })}
+                      placeholder="e.g. Full salary for September, or Google Pay UPI ID"
+                      className="w-full px-3 py-1.5 border rounded-lg"
+                    />
                   </div>
                 </>
               )}
@@ -831,6 +1385,111 @@ function RegistersContent() {
                 </button>
                 <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl">
                   {isEditMode ? 'Update' : 'Save'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Staff Member Add / Edit Modal */}
+      {isStaffModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+              <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                <Users size={18} className="text-emerald-600" />
+                {isEditStaffMode ? 'Edit Staff Member' : 'Add New Staff Member'}
+              </h3>
+              <button onClick={() => setIsStaffModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleStaffSubmit} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Full Name *</label>
+                <input
+                  type="text"
+                  value={staffForm.name}
+                  onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}
+                  required
+                  placeholder="e.g. Shivani, Priyanshu"
+                  className="w-full px-3 py-2 border rounded-lg text-sm font-semibold focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Role / Designation *</label>
+                  <input
+                    type="text"
+                    value={staffForm.role}
+                    onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })}
+                    required
+                    placeholder="Dental Assistant, Receptionist, Boy"
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Phone Number</label>
+                  <input
+                    type="text"
+                    value={staffForm.phone}
+                    onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })}
+                    placeholder="10-digit mobile"
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">
+                  Fixed Monthly Salary (₹) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={staffForm.fixed_salary === 0 ? '' : staffForm.fixed_salary}
+                    onChange={(e) => setStaffForm({ ...staffForm, fixed_salary: Number(e.target.value) })}
+                    required
+                    placeholder="e.g. 15000"
+                    className="w-full pl-8 pr-3 py-2 border rounded-lg text-base font-bold text-gray-900 focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">/ month</span>
+                </div>
+                <p className="text-[11px] text-gray-500 mt-1">
+                  This base salary is recorded for monthly payroll calculations.
+                </p>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Notes / Remarks</label>
+                <textarea
+                  rows={2}
+                  value={staffForm.notes}
+                  onChange={(e) => setStaffForm({ ...staffForm, notes: e.target.value })}
+                  placeholder="Joining date, working hours, bank details..."
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setIsStaffModalOpen(false)}
+                  className="px-4 py-2 border rounded-xl hover:bg-gray-100 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-xs"
+                >
+                  {isEditStaffMode ? 'Update Staff Member' : 'Save Staff Member'}
                 </button>
               </div>
             </form>

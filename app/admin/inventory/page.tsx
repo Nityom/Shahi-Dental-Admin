@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { addInventory, getAllInventory, deleteInventory, updateInventory, Inventory, InventorySubdivision } from '@/services/inventory';
+import { addInventory, getAllInventory, deleteInventory, updateInventory, restoreAutoDeductedStock, Inventory, InventorySubdivision } from '@/services/inventory';
 import { materialTransactionService } from '@/services/registers';
 import { MaterialTransaction } from '@/types/registers';
 import { PlusCircle, X, Trash2, Search, ArrowUp, ArrowDown, Package, Pill, RefreshCw, Edit, ArrowDownLeft, ArrowUpRight, History, Layers, ExternalLink } from 'lucide-react';
@@ -91,6 +91,24 @@ export default function AddInventoryPage() {
   const [todaySales, setTodaySales] = useState<any[]>([]);
   const [todayTotal, setTodayTotal] = useState<number>(0);
   const [isLoadingSales, setIsLoadingSales] = useState<boolean>(false);
+  const [isRestoring, setIsRestoring] = useState<boolean>(false);
+
+  const handleRestoreStock = async () => {
+    if (!window.confirm("Restore consumable material quantities that were erroneously auto-deducted by prescriptions? This will add back the stock and clear fake auto-deduction sales.")) {
+      return;
+    }
+    setIsRestoring(true);
+    try {
+      const res = await restoreAutoDeductedStock();
+      alert(`Stock restored successfully! ${res.restoredItems?.length || 0} materials updated, ${res.deletedSalesCount || 0} fake sales cleared.`);
+      await fetchInventorys();
+      await fetchTodaySales();
+    } catch (err: any) {
+      alert("Failed to restore stock: " + (err.message || err));
+    } finally {
+      setIsRestoring(false);
+    }
+  };
 
   const fetchInventorys = useCallback(async () => {
     setIsLoadingInventorys(true);
@@ -447,6 +465,17 @@ export default function AddInventoryPage() {
             <p className="text-gray-600 mt-1">
               Organize clinic inventory across subdivisions with complete stock & usage tracking
             </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRestoreStock}
+              disabled={isRestoring}
+              className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-xl border border-emerald-200 transition shadow-sm"
+              title="Restore consumable stock that was auto-deducted on prescriptions and clean up fake direct sales"
+            >
+              <RefreshCw size={14} className={isRestoring ? 'animate-spin' : ''} />
+              Restore Deducted Stock
+            </button>
           </div>
         </header>
 

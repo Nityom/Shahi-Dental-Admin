@@ -4,38 +4,55 @@ import { v } from "convex/values";
 /**
  * Helper to check if a text contains RCT or Crown keywords
  */
-export function isRctOrCrownTreatment(text: string): boolean {
+/**
+ * Helper to check if a text contains Crown Cutting keywords
+ * User requirement: Only take crown cutting on "Crown cutting done" or "Cap cutting done"
+ * (Must NOT trigger on generic "RCT started", "Root canal", "BMP", "Obturation", etc.)
+ */
+export function isCrownCuttingTreatment(text: string): boolean {
     if (!text) return false;
     const s = text.toLowerCase();
     return (
-        s.includes("rct") ||
-        s.includes("r.c.t") ||
-        s.includes("root canal") ||
-        s.includes("crown") ||
-        s.includes("cap") ||
-        s.includes("fixed") ||
-        s.includes("cementation") ||
-        s.includes("cemented") ||
-        s.includes("fitting") ||
-        s.includes("endodontic") ||
-        s.includes("endo") ||
-        s.includes("pulpectomy") ||
-        s.includes("pulpotomy") ||
-        s.includes("bmp") ||
-        s.includes("obturation") ||
-        s.includes("access opening") ||
-        s.includes("zirconia") ||
-        s.includes("pfm") ||
-        s.includes("emax") ||
-        s.includes("e-max") ||
-        s.includes("cutting") ||
-        s.includes("bridge") ||
-        s.includes("ceramic") ||
-        s.includes("metal") ||
-        s.includes("facing") ||
-        s.includes("post & core") ||
-        s.includes("post and core")
+        s.includes("crown cutting done") ||
+        s.includes("cap cutting done") ||
+        s.includes("crown cutting") ||
+        s.includes("cap cutting") ||
+        s.includes("crown cut") ||
+        s.includes("cap cut") ||
+        s.includes("crown preparation") ||
+        s.includes("cap preparation") ||
+        s.includes("crown prep") ||
+        s.includes("cap prep")
     );
+}
+
+/**
+ * Helper to check if a text contains Crown Fixed / Cemented keywords
+ */
+export function isCrownFixedTreatment(text: string): boolean {
+    if (!text) return false;
+    const s = text.toLowerCase();
+    return (
+        s.includes("crown fixed") ||
+        s.includes("crown fix") ||
+        s.includes("crown cemented") ||
+        s.includes("crown cementation") ||
+        s.includes("crown fitting") ||
+        s.includes("crown fitted") ||
+        s.includes("cap fixed") ||
+        s.includes("cap fix") ||
+        s.includes("cap cemented") ||
+        s.includes("cap cementation") ||
+        s.includes("cap fitting") ||
+        s.includes("cap fitted")
+    );
+}
+
+/**
+ * Backwards compatibility helper
+ */
+export function isRctOrCrownTreatment(text: string): boolean {
+    return isCrownCuttingTreatment(text) || isCrownFixedTreatment(text);
 }
 
 /**
@@ -82,11 +99,13 @@ export function extractTeeth(selectedTeeth: any, treatmentDesc?: string, diagnos
     scanForNumbers(diagnosis);
     scanForNumbers(chiefComplaint);
 
-    return teethFound.length > 0 ? teethFound.join(", ") : "16";
+    return teethFound.length > 0 ? teethFound.join(", ") : "-";
 }
 
 /**
- * Helper to process a prescription and return crown details if applicable
+ * Helper to process a prescription and return crown details if applicable.
+ * Triggers ONLY if treatment explicitly specifies "crown cutting done", "cap cutting done",
+ * or crown fixing/cementation. Plain RCT / RCT started will NOT trigger a crown cutting entry.
  */
 function extractCrownInfoFromPrescription(rx: any): { isCrown: boolean; isFixed: boolean; toothStr: string; cost: number; ref: string; crownType: string } {
     let treatments: any[] = [];
@@ -95,56 +114,48 @@ function extractCrownInfoFromPrescription(rx: any): { isCrown: boolean; isFixed:
     }
     if (!Array.isArray(treatments)) treatments = [];
 
-    let planItems: any[] = [];
-    if (rx.treatment_plan) {
-        planItems = typeof rx.treatment_plan === "string" ? JSON.parse(rx.treatment_plan) : rx.treatment_plan;
-    }
-    if (!Array.isArray(planItems)) planItems = [];
+    // Find any explicit Crown Cutting item in treatment_done
+    const crownCuttingDone = treatments.filter((t: any) => isCrownCuttingTreatment((t.description || t.name || "").toString()));
+    // Find any explicit Crown Fixed item in treatment_done
+    const crownFixedDone = treatments.filter((t: any) => isCrownFixedTreatment((t.description || t.name || "").toString()));
 
-    // Find any RCT or Crown item in treatment_done
-    const rctOrCrownDone = treatments.filter((t: any) => isRctOrCrownTreatment((t.description || t.name || "").toString()));
-    // Find any RCT or Crown item in treatment_plan
-    const rctOrCrownPlan = planItems.filter((t: any) => isRctOrCrownTreatment(typeof t === "string" ? t : (t.name || t.description || "").toString()));
+    const diagCutting = isCrownCuttingTreatment(rx.diagnosis || "");
+    const diagFixed = isCrownFixedTreatment(rx.diagnosis || "");
+    const ccCutting = isCrownCuttingTreatment(rx.chief_complaint || "");
+    const ccFixed = isCrownFixedTreatment(rx.chief_complaint || "");
 
-    const diagMatch = isRctOrCrownTreatment(rx.diagnosis || "");
-    const ccMatch = isRctOrCrownTreatment(rx.chief_complaint || "");
+    const hasCutting = crownCuttingDone.length > 0 || diagCutting || ccCutting;
+    const hasFixed = crownFixedDone.length > 0 || diagFixed || ccFixed;
 
-    const isCrown = rctOrCrownDone.length > 0 || rctOrCrownPlan.length > 0 || diagMatch || ccMatch;
-    if (!isCrown) {
+    // Plain "RCT started", "Root canal", "BMP", etc. MUST NOT be treated as a crown
+    if (!hasCutting && !hasFixed) {
         return { isCrown: false, isFixed: false, toothStr: "", cost: 0, ref: "", crownType: "Zirconia" };
     }
 
-    // Check if specifically Crown Fixed / Cemented
-    const isFixed = treatments.some((t: any) => {
-        const desc = (t.description || t.name || "").toString().toLowerCase();
-        return (desc.includes("crown") && (desc.includes("fix") || desc.includes("cement") || desc.includes("fitting"))) || desc.includes("crown fixed") || desc.includes("crown cementation");
-    }) || (rx.diagnosis && rx.diagnosis.toLowerCase().includes("crown fixed"));
+    const isFixed = hasFixed;
 
     // Determine primary description
     let primaryDesc = "";
-    if (rctOrCrownDone.length > 0) {
-        primaryDesc = (rctOrCrownDone[0].description || rctOrCrownDone[0].name || "RCT");
-    } else if (rctOrCrownPlan.length > 0) {
-        const item = rctOrCrownPlan[0];
-        primaryDesc = typeof item === "string" ? item : (item.name || item.description || "RCT");
+    if (crownFixedDone.length > 0) {
+        primaryDesc = (crownFixedDone[0].description || crownFixedDone[0].name || "Crown Fixed");
+    } else if (crownCuttingDone.length > 0) {
+        primaryDesc = (crownCuttingDone[0].description || crownCuttingDone[0].name || "Crown Cutting Done");
+    } else if (diagFixed) {
+        primaryDesc = rx.diagnosis || "Crown Fixed";
+    } else if (diagCutting) {
+        primaryDesc = rx.diagnosis || "Crown Cutting Done";
     } else {
-        primaryDesc = rx.diagnosis || rx.chief_complaint || "RCT / Root Canal";
+        primaryDesc = "Crown Cutting Done";
     }
 
     const toothStr = extractTeeth(rx.selected_teeth, primaryDesc, rx.diagnosis, rx.chief_complaint);
 
-    // Sum all matching RCT / Crown treatment amounts
+    // Sum matching crown treatment amounts
     let cost = 0;
-    for (const t of rctOrCrownDone) {
+    const matchingTreatments = [...crownCuttingDone, ...crownFixedDone];
+    for (const t of matchingTreatments) {
         const itemTotal = Number(t.total ?? (Number(t.quantity || 1) * Number(t.unit_price || t.price || 0))) || 0;
         cost += itemTotal;
-    }
-    if (cost === 0) {
-        for (const p of rctOrCrownPlan) {
-            if (typeof p === "object") {
-                cost += Number(p.cost || p.total || p.price) || 0;
-            }
-        }
     }
     // If still 0 and only 1 treatment done exists, take that
     if (cost === 0 && treatments.length === 1 && treatments[0].total) {
@@ -159,8 +170,10 @@ function extractCrownInfoFromPrescription(rx: any): { isCrown: boolean; isFixed:
     else if (lowerDesc.includes("metal")) crownType = "Metal";
 
     let cleanRef = primaryDesc.trim();
-    if (!cleanRef.toLowerCase().includes("rct") && !cleanRef.toLowerCase().includes("crown") && !cleanRef.toLowerCase().includes("root canal")) {
-        cleanRef = `RCT / ${cleanRef}`;
+    if (isFixed && !cleanRef.toLowerCase().includes("fixed") && !cleanRef.toLowerCase().includes("cement")) {
+        cleanRef = `Crown Fixed / ${cleanRef}`;
+    } else if (!isFixed && !cleanRef.toLowerCase().includes("cutting")) {
+        cleanRef = `Crown Cutting / ${cleanRef}`;
     }
 
     return {
@@ -472,3 +485,47 @@ export const syncAllPrescriptionsToCrownRegister = mutation({
         return { success: true, syncedCount };
     },
 });
+
+/**
+ * Mutation to clean up erroneous crown cutting records that were created for plain RCT / Root canal prescriptions
+ */
+export const cleanErronousCrownCuttingRecords = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const records = await ctx.db.query("crown_cutting_register").collect();
+        let deletedCount = 0;
+
+        for (const record of records) {
+            // If the record has lab work details already filled in (e.g. lab_name is changed, or crown received/fixed manually), keep it
+            const hasCustomLab = record.lab_name && record.lab_name !== "Dental Lab" && record.lab_name.trim() !== "";
+            const hasLabNotes = !!record.notes;
+            const isManualStatus = record.status === "Crown Received" || record.crown_status === "Crown Received" || record.status === "Crown Fixed" || record.crown_status === "Crown Fixed";
+
+            if (hasCustomLab || hasLabNotes || isManualStatus) {
+                continue;
+            }
+
+            if (record.prescription_id) {
+                const rx = await ctx.db.get(record.prescription_id as any);
+                if (rx) {
+                    const crownInfo = extractCrownInfoFromPrescription(rx);
+                    // If the prescription does NOT have explicit Crown Cutting or Crown Fixed, delete the erroneous record
+                    if (!crownInfo.isCrown) {
+                        await ctx.db.delete(record._id);
+                        deletedCount++;
+                    }
+                }
+            } else {
+                // If treatment_reference is explicitly "Root Canal" or "RCT started" with no prescription
+                const ref = (record.treatment_reference || "").toLowerCase();
+                if (ref.includes("root canal") || ref.includes("rct started") || ref === "rct") {
+                    await ctx.db.delete(record._id);
+                    deletedCount++;
+                }
+            }
+        }
+
+        return { success: true, deletedCount };
+    },
+});
+

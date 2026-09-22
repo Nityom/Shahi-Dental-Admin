@@ -155,9 +155,33 @@ export interface MaterialTransaction {
 export type StaffPaymentType = 'Salary' | 'Advance' | 'Incentive / Bonus' | 'Reimbursement' | 'Deduction';
 export type StaffPaymentMode = 'Cash' | 'UPI' | 'Bank Transfer' | 'Cheque' | 'Other';
 
+export interface StaffMember {
+  _id?: string;
+  id?: string;
+  name: string;
+  role: string;
+  phone?: string;
+  fixed_salary: number;
+  advance_balance?: number;
+  total_advances_given?: number;
+  total_advances_settled?: number;
+  salary_paid_this_month?: number;
+  advance_paid_this_month?: number;
+  advance_deducted_this_month?: number;
+  total_paid_this_month?: number;
+  pending_salary_this_month?: number;
+  payments_count?: number;
+  joining_date?: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+  notes?: string;
+  created_at?: number;
+  updated_at?: number;
+}
+
 export interface StaffPaymentRecord {
   _id?: string;
   id?: string;
+  staff_id?: string;
   staff_name: string;
   staff_role: string;
   staff_phone?: string;
@@ -166,6 +190,7 @@ export interface StaffPaymentRecord {
   payment_type: StaffPaymentType;
   base_salary?: number;
   amount_paid: number;
+  advance_deducted?: number;
   previous_payments_total?: number;
   pending_balance?: number;
   payment_mode: StaffPaymentMode;

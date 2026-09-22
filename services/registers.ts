@@ -7,6 +7,7 @@ import {
   PatientFollowup,
   CrownCuttingRecord,
   CrownReceivedRecord,
+  StaffMember,
   StaffPaymentRecord,
   MaterialTransaction,
 } from "@/types/registers";
@@ -124,6 +125,15 @@ export const crownCuttingService = {
       return { success: false, syncedCount: 0 };
     }
   },
+  cleanErronousRecords: async () => {
+    try {
+      const anyApi: any = api;
+      return await convex.mutation(anyApi.prescriptions.cleanErronousCrownCuttingRecords, {});
+    } catch (err) {
+      console.error("Failed to clean erroneous crown records:", err);
+      return { success: false, deletedCount: 0 };
+    }
+  },
 };
 
 /* =========================================================================
@@ -156,8 +166,59 @@ export const crownReceivedService = {
 };
 
 /* =========================================================================
-   6. STAFF PAYMENT HISTORY / LEDGER SERVICES
+   6. STAFF MEMBERS & PAYMENT LEDGER SERVICES
    ========================================================================= */
+
+export const staffMemberService = {
+  list: async (filters?: { month?: string; search?: string }) => {
+    const anyApi: any = api;
+    const data = await convex.query(anyApi.staff.list, filters || {});
+    return data as StaffMember[];
+  },
+  getById: async (id: string) => {
+    const anyApi: any = api;
+    return await convex.query(anyApi.staff.getById, { id: id as any });
+  },
+  create: async (data: { name: string; role: string; phone?: string; fixed_salary: number; joining_date?: string; notes?: string }) => {
+    const anyApi: any = api;
+    return await convex.mutation(anyApi.staff.create, data);
+  },
+  update: async (id: string, updates: Partial<StaffMember>) => {
+    const anyApi: any = api;
+    const {
+      _id,
+      id: rawId,
+      created_at,
+      updated_at,
+      advance_balance,
+      total_advances_given,
+      total_advances_settled,
+      salary_paid_this_month,
+      advance_paid_this_month,
+      advance_deducted_this_month,
+      total_paid_this_month,
+      pending_salary_this_month,
+      payments_count,
+      ...cleanUpdates
+    } = updates;
+    return await convex.mutation(anyApi.staff.update, {
+      id: id as any,
+      ...cleanUpdates,
+    });
+  },
+  delete: async (id: string) => {
+    const anyApi: any = api;
+    return await convex.mutation(anyApi.staff.remove, { id: id as any });
+  },
+  recordPayment: async (data: any) => {
+    const anyApi: any = api;
+    return await convex.mutation(anyApi.staff.recordPayment, data);
+  },
+  migrateExistingStaff: async () => {
+    const anyApi: any = api;
+    return await convex.mutation(anyApi.staff.migrateExistingStaff, {});
+  },
+};
 
 export const staffPaymentService = {
   create: async (data: Omit<StaffPaymentRecord, '_id' | 'id' | 'created_at'>) => {

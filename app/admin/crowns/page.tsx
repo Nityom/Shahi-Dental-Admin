@@ -268,12 +268,32 @@ export default function CrownManagementPage() {
                 </span>
               </div>
               <p className="text-xs md:text-sm text-gray-500 mt-0.5">
-                Automatically maintained from RCT and Crown treatments. Track statuses (Cutting, Received, Fixed, No Crown) and revenue.
+                Automatically maintained when "Crown cutting done", "Cap cutting done", or Crown Fixed is recorded.
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={async () => {
+                if (!window.confirm("Clean up crown cutting records that were auto-created for generic 'RCT started' / 'Root canal' prescriptions?")) return;
+                try {
+                  setLoading(true);
+                  const res = await crownCuttingService.cleanErronousRecords();
+                  alert(`Cleaned up ${res.deletedCount || 0} non-crown records!`);
+                  await fetchCrowns();
+                } catch (err: any) {
+                  alert("Error: " + err.message);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              className="p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition text-xs font-semibold flex items-center gap-1.5"
+              title="Clean up erroneous records created from plain RCT prescriptions"
+            >
+              <Trash2 size={14} className="text-rose-500" />
+              Clean RCT Records
+            </button>
             <button
               onClick={() => fetchCrowns()}
               className="p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition"

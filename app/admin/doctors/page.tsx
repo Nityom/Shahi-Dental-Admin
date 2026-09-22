@@ -27,7 +27,44 @@ import {
   ChevronRight,
   Filter,
   RefreshCw,
+  Upload,
+  Image as ImageIcon,
 } from "lucide-react";
+
+// Helper to compress/scale signature images down to max 400x160 for crisp, lightweight storage
+const compressSignatureImage = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxW = 400;
+        const maxH = 160;
+        let width = img.width;
+        let height = img.height;
+        if (width > maxW || height > maxH) {
+          const ratio = Math.min(maxW / width, maxH / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(e.target?.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = reject;
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
 
 export default function DoctorManagementPage() {
   const router = useRouter();
@@ -64,6 +101,7 @@ export default function DoctorManagementPage() {
   const [isDoctorModalOpen, setIsDoctorModalOpen] = useState<boolean>(false);
   const [isEditDoctor, setIsEditDoctor] = useState<boolean>(false);
   const [editingDoctorId, setEditingDoctorId] = useState<string | null>(null);
+  const [signatureUploading, setSignatureUploading] = useState<boolean>(false);
 
   const [doctorForm, setDoctorForm] = useState<{
     name: string;
@@ -74,6 +112,7 @@ export default function DoctorManagementPage() {
     status: 'ACTIVE' | 'INACTIVE';
     joining_date: string;
     notes: string;
+    signature_url: string;
   }>({
     name: '',
     doctor_type: 'ASSISTANT',
@@ -83,6 +122,7 @@ export default function DoctorManagementPage() {
     status: 'ACTIVE',
     joining_date: new Date().toISOString().split('T')[0],
     notes: '',
+    signature_url: '',
   });
 
   // Payout Record Modal State
@@ -185,6 +225,27 @@ export default function DoctorManagementPage() {
     }
   }, [activeTab, fetchDashboardData, fetchPayouts]);
 
+  // Handle Doctor Signature Image Upload
+  const handleSignatureFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file (PNG, JPG, WEBP, or SVG).');
+      return;
+    }
+    setSignatureUploading(true);
+    try {
+      const compressedDataUrl = await compressSignatureImage(file);
+      setDoctorForm((prev) => ({ ...prev, signature_url: compressedDataUrl }));
+    } catch (err) {
+      console.error('Error processing signature image:', err);
+      alert('Failed to process signature image.');
+    } finally {
+      setSignatureUploading(false);
+    }
+  };
+
   // Handle Doctor Add / Edit Save
   const handleSaveDoctor = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -204,6 +265,7 @@ export default function DoctorManagementPage() {
           status: doctorForm.status,
           joining_date: doctorForm.joining_date || undefined,
           notes: doctorForm.notes.trim() || undefined,
+          signature_url: doctorForm.signature_url?.trim() || undefined,
         });
         alert("Doctor updated successfully");
       } else {
@@ -216,6 +278,7 @@ export default function DoctorManagementPage() {
           status: doctorForm.status,
           joining_date: doctorForm.joining_date || undefined,
           notes: doctorForm.notes.trim() || undefined,
+          signature_url: doctorForm.signature_url?.trim() || undefined,
         });
         alert("Doctor added successfully");
       }
@@ -241,6 +304,7 @@ export default function DoctorManagementPage() {
       status: doc.status,
       joining_date: doc.joining_date || new Date().toISOString().split('T')[0],
       notes: doc.notes || '',
+      signature_url: doc.signature_url || '',
     });
     setIsDoctorModalOpen(true);
   };
@@ -250,11 +314,27 @@ export default function DoctorManagementPage() {
     try {
       await doctorService.delete(docId);
       alert("Doctor removed successfully");
+      if (selectedDoctorId === docId) {
+        setSelectedDoctorId('ALL');
+      }
       fetchDoctors();
       if (activeTab === 'ASSISTANT_DASHBOARD') fetchDashboardData();
     } catch (err) {
       console.error("Failed to delete doctor:", err);
       alert("Failed to delete doctor.");
+    }
+  };
+
+  const handleDeletePayout = async (payoutId: string, doctorName: string, month: string) => {
+    if (!confirm(`Are you sure you want to delete payout record for ${doctorName} (${month})? This cannot be undone.`)) return;
+    try {
+      await doctorService.deletePayout(payoutId);
+      alert("Payout record deleted successfully");
+      fetchPayouts();
+      if (activeTab === 'ASSISTANT_DASHBOARD') fetchDashboardData();
+    } catch (err) {
+      console.error("Failed to delete payout record:", err);
+      alert("Failed to delete payout record.");
     }
   };
 
@@ -270,6 +350,7 @@ export default function DoctorManagementPage() {
       status: 'ACTIVE',
       joining_date: new Date().toISOString().split('T')[0],
       notes: '',
+      signature_url: '',
     });
     setIsDoctorModalOpen(true);
   };
@@ -414,11 +495,10 @@ export default function DoctorManagementPage() {
       <div className="flex border-b border-gray-200 bg-white px-6 rounded-xl shadow-sm">
         <button
           onClick={() => setActiveTab('ASSISTANT_DASHBOARD')}
-          className={`py-4 px-5 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all ${
-            activeTab === 'ASSISTANT_DASHBOARD'
+          className={`py-4 px-5 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all ${activeTab === 'ASSISTANT_DASHBOARD'
               ? 'border-blue-600 text-blue-600'
               : 'border-transparent text-gray-500 hover:text-gray-900'
-          }`}
+            }`}
         >
           <TrendingUp size={18} />
           <span>Monthly Revenue & Payouts</span>
@@ -426,11 +506,10 @@ export default function DoctorManagementPage() {
 
         <button
           onClick={() => setActiveTab('DIRECTORY')}
-          className={`py-4 px-5 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all ${
-            activeTab === 'DIRECTORY'
+          className={`py-4 px-5 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all ${activeTab === 'DIRECTORY'
               ? 'border-blue-600 text-blue-600'
               : 'border-transparent text-gray-500 hover:text-gray-900'
-          }`}
+            }`}
         >
           <Users size={18} />
           <span>Doctor Directory ({doctors.length})</span>
@@ -438,11 +517,10 @@ export default function DoctorManagementPage() {
 
         <button
           onClick={() => setActiveTab('PAYOUT_LEDGER')}
-          className={`py-4 px-5 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all ${
-            activeTab === 'PAYOUT_LEDGER'
+          className={`py-4 px-5 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all ${activeTab === 'PAYOUT_LEDGER'
               ? 'border-blue-600 text-blue-600'
               : 'border-transparent text-gray-500 hover:text-gray-900'
-          }`}
+            }`}
         >
           <CreditCard size={18} />
           <span>Payout History Ledger</span>
@@ -495,13 +573,28 @@ export default function DoctorManagementPage() {
               </div>
             </div>
 
-            <button
-              onClick={() => fetchDashboardData()}
-              className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 px-3 py-2 rounded-lg font-medium transition-all"
-            >
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-              <span>Refresh Revenue</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {selectedDoctorId !== 'ALL' && individualDoctorRevenue && (
+                <button
+                  onClick={() => {
+                    const docId = individualDoctorRevenue.doctorId || selectedDoctorId;
+                    handleDeleteDoctor(docId, individualDoctorRevenue.doctorName);
+                  }}
+                  className="flex items-center gap-1.5 text-xs text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg font-medium transition-all"
+                  title="Delete this Doctor"
+                >
+                  <Trash2 size={14} />
+                  <span>Delete Doctor</span>
+                </button>
+              )}
+              <button
+                onClick={() => fetchDashboardData()}
+                className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 px-3 py-2 rounded-lg font-medium transition-all"
+              >
+                <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                <span>Refresh Revenue</span>
+              </button>
+            </div>
           </div>
 
           {/* Individual Doctor Deep-Dive View */}
@@ -807,13 +900,12 @@ export default function DoctorManagementPage() {
                             </td>
                             <td className="px-4 py-4 text-center">
                               <span
-                                className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                                  doc.payoutStatus === 'PAID'
+                                className={`text-xs font-bold px-2.5 py-1 rounded-full ${doc.payoutStatus === 'PAID'
                                     ? 'bg-emerald-100 text-emerald-700'
                                     : doc.payoutStatus === 'PARTIAL'
-                                    ? 'bg-amber-100 text-amber-700'
-                                    : 'bg-gray-100 text-gray-600'
-                                }`}
+                                      ? 'bg-amber-100 text-amber-700'
+                                      : 'bg-gray-100 text-gray-600'
+                                  }`}
                               >
                                 {doc.payoutStatus}
                               </span>
@@ -831,6 +923,13 @@ export default function DoctorManagementPage() {
                                   className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 rounded-lg font-semibold transition-all shadow-sm"
                                 >
                                   Payout
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteDoctor(doc.doctorId, doc.doctorName)}
+                                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                  title={`Delete ${doc.doctorName}`}
+                                >
+                                  <Trash2 size={16} />
                                 </button>
                               </div>
                             </td>
@@ -882,6 +981,7 @@ export default function DoctorManagementPage() {
                     <th className="px-4 py-3.5 text-center">Commission %</th>
                     <th className="px-4 py-3.5">Phone / Contact</th>
                     <th className="px-4 py-3.5">Joining Date</th>
+                    <th className="px-4 py-3.5 text-center">Signature</th>
                     <th className="px-4 py-3.5 text-center">Status</th>
                     <th className="px-5 py-3.5 text-right">Actions</th>
                   </tr>
@@ -892,11 +992,10 @@ export default function DoctorManagementPage() {
                       <td className="px-5 py-4 font-bold text-gray-900">
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs ${
-                              doc.doctor_type === 'MAIN'
+                            className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs ${doc.doctor_type === 'MAIN'
                                 ? 'bg-amber-100 text-amber-800'
                                 : 'bg-blue-100 text-blue-800'
-                            }`}
+                              }`}
                           >
                             {doc.name.substring(0, 2).toUpperCase()}
                           </div>
@@ -908,11 +1007,10 @@ export default function DoctorManagementPage() {
                       </td>
                       <td className="px-4 py-4">
                         <span
-                          className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                            doc.doctor_type === 'MAIN'
+                          className={`text-xs font-bold px-2.5 py-1 rounded-full ${doc.doctor_type === 'MAIN'
                               ? 'bg-amber-50 text-amber-700 border border-amber-200'
                               : 'bg-blue-50 text-blue-700 border border-blue-200'
-                          }`}
+                            }`}
                         >
                           {doc.doctor_type === 'MAIN' ? 'Main Doctor' : 'Assistant Doctor'}
                         </span>
@@ -932,12 +1030,30 @@ export default function DoctorManagementPage() {
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-700">{doc.joining_date || "-"}</td>
                       <td className="px-4 py-4 text-center">
+                        {doc.signature_url ? (
+                          <div className="inline-flex flex-col items-center">
+                            <img
+                              src={
+                                doc.signature_url.startsWith('http') || doc.signature_url.startsWith('data:')
+                                  ? doc.signature_url
+                                  : `/${doc.signature_url.replace(/^\//, '')}`
+                              }
+                              alt={`${doc.name} Signature`}
+                              className="h-8 max-w-[84px] object-contain border border-gray-200 rounded px-1.5 py-0.5 bg-white shadow-xs"
+                              title="Signature used on prescriptions and bills"
+                            />
+                            <span className="text-[10px] text-emerald-600 font-semibold mt-0.5">Configured</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">No signature</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 text-center">
                         <span
-                          className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                            doc.status === 'ACTIVE'
+                          className={`text-xs font-bold px-2.5 py-1 rounded-full ${doc.status === 'ACTIVE'
                               ? 'bg-emerald-100 text-emerald-700'
                               : 'bg-gray-100 text-gray-600'
-                          }`}
+                            }`}
                         >
                           {doc.status}
                         </span>
@@ -951,15 +1067,13 @@ export default function DoctorManagementPage() {
                           >
                             <Edit size={16} />
                           </button>
-                          {doc.doctor_type === 'ASSISTANT' && (
-                            <button
-                              onClick={() => handleDeleteDoctor(doc.id || doc._id || '', doc.name)}
-                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                              title="Delete Doctor"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          )}
+                          <button
+                            onClick={() => handleDeleteDoctor(doc.id || doc._id || '', doc.name)}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            title="Delete Doctor"
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1003,6 +1117,7 @@ export default function DoctorManagementPage() {
                       <th className="px-4 py-3">Mode</th>
                       <th className="px-4 py-3">Txn Reference</th>
                       <th className="px-4 py-3 text-center">Status</th>
+                      <th className="px-5 py-3 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -1028,6 +1143,15 @@ export default function DoctorManagementPage() {
                           <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700">
                             {p.payment_status}
                           </span>
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <button
+                            onClick={() => handleDeletePayout(p.id || p._id || '', p.doctor_name, p.month)}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            title="Delete Payout Record"
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -1159,20 +1283,117 @@ export default function DoctorManagementPage() {
                 />
               </div>
 
-              <div className="pt-4 flex items-center justify-end gap-3 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => setIsDoctorModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-sm shadow-sm transition-all"
-                >
-                  {isEditDoctor ? 'Update Doctor' : 'Save Doctor'}
-                </button>
+              {/* Doctor Signature Image Upload & Preview */}
+              <div className="pt-1">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-gray-700">
+                    Doctor Signature Image
+                  </label>
+                  <span className="text-[11px] text-blue-600 font-medium">Prints on Prescriptions & Bills</span>
+                </div>
+
+                {doctorForm.signature_url ? (
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-600">Configured Signature Preview:</span>
+                      <button
+                        type="button"
+                        onClick={() => setDoctorForm((prev) => ({ ...prev, signature_url: '' }))}
+                        className="text-xs text-red-600 hover:text-red-700 hover:underline flex items-center gap-1 font-semibold"
+                      >
+                        <Trash2 size={13} />
+                        <span>Remove Signature</span>
+                      </button>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-dashed border-gray-300 flex flex-col items-center justify-center min-h-[90px] shadow-2xs">
+                      <img
+                        src={
+                          doctorForm.signature_url.startsWith('http') || doctorForm.signature_url.startsWith('data:')
+                            ? doctorForm.signature_url
+                            : `/${doctorForm.signature_url.replace(/^\//, '')}`
+                        }
+                        alt="Signature Preview"
+                        className="max-h-16 w-auto object-contain"
+                      />
+                      <div className="w-44 border-t border-gray-400 mt-2 pt-1 text-center">
+                        <span className="text-[10px] text-gray-500 font-bold tracking-wider uppercase block">
+                          Authorized Signature & Seal
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-0.5">
+                      <label className="text-xs bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 px-3 py-1.5 rounded-lg cursor-pointer font-medium transition-all inline-flex items-center gap-1.5 shadow-2xs">
+                        <Upload size={14} className="text-blue-600" />
+                        <span>Upload Different Image</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleSignatureFileChange}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 hover:border-blue-500 hover:bg-blue-50/40 rounded-xl p-4 cursor-pointer transition-all bg-gray-50/50 group">
+                      <div className="p-2.5 bg-blue-100/70 text-blue-600 rounded-full mb-1.5 group-hover:scale-105 transition-transform">
+                        <Upload size={20} />
+                      </div>
+                      <span className="text-xs font-bold text-gray-800">
+                        {signatureUploading ? 'Processing signature...' : 'Click to Upload Signature Image'}
+                      </span>
+                      <span className="text-[11px] text-gray-500 mt-0.5">
+                        PNG, JPG, or WEBP (transparent or white background recommended)
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={signatureUploading}
+                        onChange={handleSignatureFileChange}
+                        className="hidden"
+                      />
+                    </label>
+
+                    {/* Quick Presets */}
+
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-4 flex items-center justify-between border-t border-gray-100">
+                {isEditDoctor && editingDoctorId ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDoctorModalOpen(false);
+                      handleDeleteDoctor(editingDoctorId, doctorForm.name);
+                    }}
+                    className="px-3.5 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl transition-all flex items-center gap-1.5"
+                  >
+                    <Trash2 size={16} />
+                    <span>Delete Doctor</span>
+                  </button>
+                ) : (
+                  <div />
+                )}
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsDoctorModalOpen(false)}
+                    className="px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-sm shadow-sm transition-all"
+                  >
+                    {isEditDoctor ? 'Update Doctor' : 'Save Doctor'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

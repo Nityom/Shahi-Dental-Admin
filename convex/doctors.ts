@@ -152,10 +152,38 @@ export const update = mutation({
 });
 
 export const remove = mutation({
-  args: { id: v.id("doctors") },
+  args: { id: v.string() },
   handler: async (ctx, args) => {
-    await ctx.db.delete(args.id);
-    return true;
+    const normalizedId = ctx.db.normalizeId("doctors", args.id);
+    if (normalizedId) {
+      const payouts = await ctx.db
+        .query("doctor_payouts")
+        .withIndex("by_doctor", (q) => q.eq("doctor_id", normalizedId))
+        .collect();
+      for (const p of payouts) {
+        await ctx.db.delete(p._id);
+      }
+      await ctx.db.delete(normalizedId);
+      return true;
+    }
+
+    const allDocs = await ctx.db.query("doctors").collect();
+    if (allDocs.length === 0 && args.id.startsWith("default_")) {
+      const idx = parseInt(args.id.replace("default_", ""), 10);
+      const now = Date.now();
+      for (let i = 0; i < DEFAULT_MAIN_DOCTORS.length; i++) {
+        if (i !== idx) {
+          await ctx.db.insert("doctors", {
+            ...DEFAULT_MAIN_DOCTORS[i],
+            created_at: now,
+            updated_at: now,
+          });
+        }
+      }
+      return true;
+    }
+
+    return false;
   },
 });
 
@@ -571,5 +599,17 @@ export const listDoctorPayouts = query({
     }
 
     return payouts;
+  },
+});
+
+export const deleteDoctorPayout = mutation({
+  args: { id: v.string() },
+  handler: async (ctx, args) => {
+    const normalizedId = ctx.db.normalizeId("doctor_payouts", args.id);
+    if (normalizedId) {
+      await ctx.db.delete(normalizedId);
+      return true;
+    }
+    return false;
   },
 });

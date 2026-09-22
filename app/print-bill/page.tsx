@@ -45,6 +45,8 @@ function PrintBillContent() {
   const signatureParam = searchParams.get('signature') || 'sign.png';
   const doctorNameParam = searchParams.get('doctorName') || 'Dr. Kautilya Swaroop';
   const [billData, setBillData] = useState<BillData | null>(null);
+  const [resolvedSignature, setResolvedSignature] = useState<string>(signatureParam);
+  const [resolvedDoctorName, setResolvedDoctorName] = useState<string>(doctorNameParam);
   const [paymentTransactions, setPaymentTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -112,6 +114,44 @@ function PrintBillContent() {
           balance,
         });
 
+        // Resolve doctor name & signature
+        const explicitSig = searchParams.get('signature');
+        const explicitDoc = searchParams.get('doctorName');
+        let docName = explicitDoc || doctorNameParam;
+        let sigUrl = explicitSig || signatureParam;
+
+        if (bill.prescription_id) {
+          try {
+            const rx = await convex.query(api.prescriptions.getById, { id: bill.prescription_id as any });
+            const rxDocName = rx?.doctor_name;
+            if (rxDocName) {
+              if (!explicitDoc) docName = rxDocName;
+              if (!explicitSig || explicitSig === 'sign.png') {
+                const allDocs = await convex.query(api.doctors.list, {});
+                const match = (allDocs || []).find((d: any) => d.name.toLowerCase() === rxDocName.toLowerCase());
+                if (match?.signature_url) {
+                  sigUrl = match.signature_url;
+                } else if (rxDocName.toLowerCase().includes('anjali')) {
+                  sigUrl = 'sign1.png';
+                }
+              }
+            }
+          } catch (e) {
+            console.error('Error resolving prescription doctor for bill:', e);
+          }
+        } else if (!explicitSig || explicitSig === 'sign.png') {
+          try {
+            const allDocs = await convex.query(api.doctors.list, {});
+            const match = (allDocs || []).find((d: any) => d.name.toLowerCase() === docName.toLowerCase());
+            if (match?.signature_url) {
+              sigUrl = match.signature_url;
+            }
+          } catch {}
+        }
+
+        setResolvedDoctorName(docName);
+        setResolvedSignature(sigUrl);
+
         // Fetch payment transactions for this bill
         try {
           const txns = await convex.query(api.payment_transactions.listByBill, { bill_id: billId as string });
@@ -132,7 +172,7 @@ function PrintBillContent() {
     };
 
     fetchBillData();
-  }, [billId]);
+  }, [billId, signatureParam, doctorNameParam, searchParams]);
 
   if (loading) {
     return (
@@ -156,7 +196,7 @@ function PrintBillContent() {
     );
   }
 
-  return <PrintableBill {...billData} signature={signatureParam} doctorName={doctorNameParam} paymentTransactions={paymentTransactions} />;
+  return <PrintableBill {...billData} signature={resolvedSignature} doctorName={resolvedDoctorName} paymentTransactions={paymentTransactions} />;
 }
 
 export default function PrintBillPage() {

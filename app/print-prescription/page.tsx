@@ -2,8 +2,8 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import Image from 'next/image';
 import { getPrescriptionById } from '@/services/prescription';
+import { doctorService } from '@/services/doctors';
 
 interface ToothData {
   id: number;
@@ -47,7 +47,16 @@ interface PrescriptionData {
   treatment_done?: TreatmentItem[];
   advice?: string;
   followup_date?: string;
+  doctor_name?: string;
 }
+
+const getSignatureSrc = (sig?: string) => {
+  if (!sig) return '/sign.png';
+  if (sig.startsWith('data:') || sig.startsWith('http://') || sig.startsWith('https://')) {
+    return sig;
+  }
+  return `/${sig.replace(/^\//, '')}`;
+};
 
 function PrintPrescriptionContent() {
   const searchParams = useSearchParams();
@@ -55,6 +64,8 @@ function PrintPrescriptionContent() {
   const signatureParam = searchParams.get('signature') || 'sign.png';
   const doctorNameParam = searchParams.get('doctorName') || 'Dr. Kautilya Swaroop';
   const [prescriptionData, setPrescriptionData] = useState<PrescriptionData | null>(null);
+  const [resolvedSignature, setResolvedSignature] = useState<string>(signatureParam);
+  const [resolvedDoctorName, setResolvedDoctorName] = useState<string>(doctorNameParam);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,6 +80,30 @@ function PrintPrescriptionContent() {
       try {
         const data = await getPrescriptionById(prescriptionId);
         setPrescriptionData(data as PrescriptionData);
+
+        const docName = searchParams.get('doctorName') || (data as any)?.doctor_name || doctorNameParam;
+        setResolvedDoctorName(docName);
+
+        // Resolve signature: if searchParams passed explicit non-default signature, use that.
+        // Otherwise look up doctor by name in doctorService
+        const paramSig = searchParams.get('signature');
+        if (paramSig && paramSig !== 'sign.png') {
+          setResolvedSignature(paramSig);
+        } else {
+          try {
+            const doctors = await doctorService.list();
+            const match = doctors.find((d) => d.name.toLowerCase() === docName.toLowerCase());
+            if (match?.signature_url) {
+              setResolvedSignature(match.signature_url);
+            } else if (docName.toLowerCase().includes('anjali')) {
+              setResolvedSignature('sign1.png');
+            } else {
+              setResolvedSignature('sign.png');
+            }
+          } catch {
+            setResolvedSignature(paramSig || (docName.toLowerCase().includes('anjali') ? 'sign1.png' : 'sign.png'));
+          }
+        }
       } catch (err) {
         console.error('Error fetching prescription:', err);
         setError(err instanceof Error ? err.message : 'Failed to load prescription data');
@@ -78,7 +113,7 @@ function PrintPrescriptionContent() {
     };
 
     fetchPrescriptionData();
-  }, [prescriptionId]);
+  }, [prescriptionId, doctorNameParam, searchParams]);
 
   // Auto-print when data is loaded
   useEffect(() => {
@@ -422,14 +457,14 @@ function PrintPrescriptionContent() {
             <div className="sig-line">&nbsp;</div>
           </div>
           <div className="sig-block" style={{ textAlign: 'center' }}>
-            <Image
-              src={`/${signatureParam}`}
-              alt="Doctor's Signature"
-              width={120}
-              height={60}
-              style={{ objectFit: 'contain', marginBottom: '4px' }}
-            />
-            <div className="sig-label">{doctorNameParam}</div>
+            {resolvedSignature && (
+              <img
+                src={getSignatureSrc(resolvedSignature)}
+                alt="Doctor's Signature"
+                style={{ maxHeight: '60px', maxWidth: '140px', objectFit: 'contain', marginBottom: '4px', display: 'inline-block' }}
+              />
+            )}
+            <div className="sig-label">{resolvedDoctorName}</div>
             <div className="sig-title">Consultant</div>
           </div>
         </div>

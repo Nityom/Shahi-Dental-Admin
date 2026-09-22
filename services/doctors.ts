@@ -89,4 +89,9 @@ export const doctorService = {
     });
     return (list || []).map((p: any) => ({ ...p, id: p._id })) as DoctorPayout[];
   },
+
+  deletePayout: async (id: string): Promise<boolean> => {
+    return await convex.mutation(anyApi.doctors.deleteDoctorPayout, { id });
+  },
 };
+
