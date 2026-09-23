@@ -22,7 +22,13 @@ export function isCrownCuttingTreatment(text: string): boolean {
         s.includes("crown preparation") ||
         s.includes("cap preparation") ||
         s.includes("crown prep") ||
-        s.includes("cap prep")
+        s.includes("cap prep") ||
+        s.includes("pfm crown") ||
+        s.includes("zirconia crown") ||
+        s.includes("dental crown") ||
+        s.includes("metal ceramic") ||
+        s.includes("metal free") ||
+        s.includes("metal-free")
     );
 }
 
@@ -129,7 +135,7 @@ function extractCrownInfoFromPrescription(rx: any): { isCrown: boolean; isFixed:
 
     // Plain "RCT started", "Root canal", "BMP", etc. MUST NOT be treated as a crown
     if (!hasCutting && !hasFixed) {
-        return { isCrown: false, isFixed: false, toothStr: "", cost: 0, ref: "", crownType: "Zirconia" };
+        return { isCrown: false, isFixed: false, toothStr: "", cost: 0, ref: "", crownType: "PFM (Metal Ceramic)" };
     }
 
     const isFixed = hasFixed;
@@ -157,17 +163,51 @@ function extractCrownInfoFromPrescription(rx: any): { isCrown: boolean; isFixed:
         const itemTotal = Number(t.total ?? (Number(t.quantity || 1) * Number(t.unit_price || t.price || 0))) || 0;
         cost += itemTotal;
     }
+    // If still 0, check all treatments for any crown / pfm / zirconia / ceramic / metal procedure cost
+    if (cost === 0) {
+        for (const t of treatments) {
+            const tDesc = (t.description || t.name || "").toLowerCase();
+            if (tDesc.includes("crown") || tDesc.includes("cap") || tDesc.includes("pfm") || tDesc.includes("zirconia") || tDesc.includes("ceramic")) {
+                const itemTotal = Number(t.total ?? (Number(t.quantity || 1) * Number(t.unit_price || t.price || 0))) || 0;
+                if (itemTotal > 0) {
+                    cost = itemTotal;
+                    break;
+                }
+            }
+        }
+    }
     // If still 0 and only 1 treatment done exists, take that
     if (cost === 0 && treatments.length === 1 && treatments[0].total) {
         cost = Number(treatments[0].total) || 0;
     }
 
-    let crownType = "Zirconia";
-    const lowerDesc = primaryDesc.toLowerCase();
-    if (lowerDesc.includes("pfm")) crownType = "PFM";
-    else if (lowerDesc.includes("emax") || lowerDesc.includes("e-max")) crownType = "E-Max";
-    else if (lowerDesc.includes("ceramic")) crownType = "Ceramic";
-    else if (lowerDesc.includes("metal")) crownType = "Metal";
+    let crownType = "";
+    const allSearchText = `${primaryDesc} ${rx.diagnosis || ""} ${rx.chief_complaint || ""} ${treatments.map((t: any) => t.description || t.name || "").join(" ")}`.toLowerCase();
+
+    // 1. First check explicit keywords in treatment description/notes
+    if (allSearchText.includes("metal free") || allSearchText.includes("metal-free") || allSearchText.includes("zirconia")) {
+        crownType = "Zirconia (Metal Free)";
+    } else if (allSearchText.includes("pfm") || allSearchText.includes("metal ceramic") || allSearchText.includes("metal-ceramic") || allSearchText.includes("ceramic") || allSearchText.includes("metal")) {
+        crownType = "PFM (Metal Ceramic)";
+    } else if (allSearchText.includes("emax") || allSearchText.includes("e-max")) {
+        crownType = "E-Max";
+    }
+
+    // 2. If not specified in text, auto-classify by rate/price:
+    // PFM rates: 2500, 3500, 5000 (<= 5500)
+    // Zirconia rates: 8000, 10000, 15000, 20000, 30000 (>= 6000)
+    if (!crownType && cost > 0) {
+        if (cost <= 5500) {
+            crownType = "PFM (Metal Ceramic)";
+        } else {
+            crownType = "Zirconia (Metal Free)";
+        }
+    }
+
+    // 3. Fallback default if cost is 0 and no keywords found
+    if (!crownType) {
+        crownType = "PFM (Metal Ceramic)";
+    }
 
     let cleanRef = primaryDesc.trim();
     if (isFixed && !cleanRef.toLowerCase().includes("fixed") && !cleanRef.toLowerCase().includes("cement")) {
@@ -463,13 +503,30 @@ export const syncAllPrescriptionsToCrownRegister = mutation({
                     });
                     syncedCount++;
                 } else {
-                    // Update patient_cost and info if missing or 0
+                    const currentCost = (existing.patient_cost && existing.patient_cost > 0) ? existing.patient_cost : crownInfo.cost;
+                    
+                    // Auto-correct crown_type if missing, or if previously defaulted to Zirconia with PFM price
+                    let updatedCrownType = existing.crown_type;
+                    const isGenericZirconia = !updatedCrownType || updatedCrownType === "Zirconia" || updatedCrownType.toLowerCase() === "zirconia";
+                    const isOldPfm = updatedCrownType === "PFM" || updatedCrownType?.toLowerCase() === "pfm";
+
+                    if (isGenericZirconia || isOldPfm) {
+                        if (currentCost > 0 && currentCost <= 5500) {
+                            updatedCrownType = "PFM (Metal Ceramic)";
+                        } else if (currentCost >= 6000) {
+                            updatedCrownType = "Zirconia (Metal Free)";
+                        } else if (crownInfo.crownType) {
+                            updatedCrownType = crownInfo.crownType;
+                        }
+                    }
+
                     await ctx.db.patch(existing._id, {
                         patient_name: rx.patient_name,
                         phone_number: rx.phone_number,
                         reference_number: rx.reference_number,
                         tooth_numbers: existing.tooth_numbers || crownInfo.toothStr,
-                        patient_cost: (existing.patient_cost && existing.patient_cost > 0) ? existing.patient_cost : crownInfo.cost,
+                        patient_cost: currentCost,
+                        crown_type: updatedCrownType || crownInfo.crownType,
                         treatment_reference: existing.treatment_reference || crownInfo.ref,
                         ...(crownInfo.isFixed ? {
                             crown_status: "Crown Fixed",
@@ -479,6 +536,23 @@ export const syncAllPrescriptionsToCrownRegister = mutation({
                         updated_at: now,
                     });
                 }
+            }
+        }
+
+        // Auto-reclassify any standalone records in crown_cutting_register where price matches PFM or Zirconia rates
+        const allCrowns = await ctx.db.query("crown_cutting_register").collect();
+        for (const c of allCrowns) {
+            const cost = c.patient_cost || 0;
+            const cType = c.crown_type || "";
+            const isGenericZirconia = !cType || cType === "Zirconia" || cType.toLowerCase() === "zirconia";
+            const isOldPfm = cType === "PFM" || cType.toLowerCase() === "pfm";
+
+            if (cost > 0 && cost <= 5500 && (isGenericZirconia || isOldPfm)) {
+                await ctx.db.patch(c._id, { crown_type: "PFM (Metal Ceramic)", updated_at: Date.now() });
+            } else if (cost >= 6000 && (isGenericZirconia || cType === "Zirconia")) {
+                await ctx.db.patch(c._id, { crown_type: "Zirconia (Metal Free)", updated_at: Date.now() });
+            } else if (isOldPfm) {
+                await ctx.db.patch(c._id, { crown_type: "PFM (Metal Ceramic)", updated_at: Date.now() });
             }
         }
 

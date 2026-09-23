@@ -24,6 +24,24 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+function normalizeCrownType(rawType?: string, cost?: number): string {
+  const t = (rawType || '').toLowerCase().trim();
+  if (t.includes('metal free') || t.includes('metal-free') || t.includes('zirconia')) {
+    return 'Zirconia (Metal Free)';
+  }
+  if (t.includes('pfm') || t.includes('metal ceramic') || t.includes('metal-ceramic') || t.includes('ceramic') || t.includes('metal')) {
+    return 'PFM (Metal Ceramic)';
+  }
+  if (t.includes('emax') || t.includes('e-max')) {
+    return 'E-Max';
+  }
+  if (cost && cost > 0) {
+    if (cost <= 5500) return 'PFM (Metal Ceramic)';
+    if (cost >= 6000) return 'Zirconia (Metal Free)';
+  }
+  return rawType && rawType !== 'Zirconia' ? rawType : (cost && cost >= 6000 ? 'Zirconia (Metal Free)' : 'PFM (Metal Ceramic)');
+}
+
 export default function CrownManagementPage() {
   const { isAdmin } = useIsAdmin();
   const [loading, setLoading] = useState<boolean>(true);
@@ -31,6 +49,7 @@ export default function CrownManagementPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [crownTypeFilter, setCrownTypeFilter] = useState<'ALL' | 'PFM' | 'ZIRCONIA'>('ALL');
   const [dateFilterType, setDateFilterType] = useState<'cutting_date' | 'fixed_date'>('cutting_date');
 
   // Date Range Presets - Default to ALL_TIME so all crown records are visible immediately
@@ -54,7 +73,7 @@ export default function CrownManagementPage() {
     phone_number: '',
     reference_number: '',
     tooth_numbers: '',
-    crown_type: 'Zirconia',
+    crown_type: 'PFM (Metal Ceramic)',
     shade: 'A2',
     cutting_date: todayStr,
     fixed_date: '',
@@ -62,7 +81,7 @@ export default function CrownManagementPage() {
     lab_name: 'DentCare Dental Lab',
     impression_type: 'Addition Silicone',
     expected_delivery_date: '',
-    patient_cost: 0,
+    patient_cost: 2500,
     treatment_reference: '',
     crown_status: 'Crown Cutting',
     status: 'Crown Cutting',
@@ -106,10 +125,16 @@ export default function CrownManagementPage() {
     let countReceived = 0;
     let countFixed = 0;
     let countNotRequired = 0;
+    let countPfm = 0;
+    let countZirconia = 0;
 
     crowns.forEach((c) => {
       const pCost = Number(c.patient_cost) || 0;
       totalRevenue += pCost;
+
+      const norm = normalizeCrownType(c.crown_type, pCost);
+      if (norm.includes('PFM') || norm.includes('Metal Ceramic')) countPfm++;
+      else if (norm.includes('Zirconia') || norm.includes('Metal Free')) countZirconia++;
 
       const st =
         (c.crown_status as string) ||
@@ -133,9 +158,21 @@ export default function CrownManagementPage() {
       countReceived,
       countFixed,
       countNotRequired,
+      countPfm,
+      countZirconia,
       totalRecords: crowns.length,
     };
   }, [crowns]);
+
+  const displayedCrowns = useMemo(() => {
+    return crowns.filter((c) => {
+      if (crownTypeFilter === 'ALL') return true;
+      const norm = normalizeCrownType(c.crown_type, c.patient_cost);
+      if (crownTypeFilter === 'PFM') return norm.includes('PFM') || norm.includes('Metal Ceramic');
+      if (crownTypeFilter === 'ZIRCONIA') return norm.includes('Zirconia') || norm.includes('Metal Free');
+      return true;
+    });
+  }, [crowns, crownTypeFilter]);
 
   // Handle Date Range Presets
   const applyDatePreset = (preset: 'ALL_TIME' | 'TODAY' | 'YESTERDAY' | 'LAST_7_DAYS' | 'THIS_MONTH' | 'CUSTOM') => {
@@ -201,7 +238,7 @@ export default function CrownManagementPage() {
       phone_number: '',
       reference_number: '',
       tooth_numbers: '',
-      crown_type: 'Zirconia',
+      crown_type: 'PFM (Metal Ceramic)',
       shade: 'A2',
       cutting_date: todayStr,
       fixed_date: '',
@@ -209,7 +246,7 @@ export default function CrownManagementPage() {
       lab_name: 'DentCare Dental Lab',
       impression_type: 'Addition Silicone',
       expected_delivery_date: '',
-      patient_cost: 0,
+      patient_cost: 2500,
       treatment_reference: '',
       crown_status: 'Crown Cutting',
       status: 'Crown Cutting',
@@ -455,6 +492,33 @@ export default function CrownManagementPage() {
               ))}
             </div>
 
+            {/* Crown Type Filter Chips */}
+            <div className="flex flex-wrap items-center gap-1.5 bg-gray-100 p-1 rounded-xl">
+              <span className="text-[11px] font-bold text-gray-500 px-2">Type:</span>
+              {[
+                { id: 'ALL', label: `All Types (${crowns.length})` },
+                { id: 'PFM', label: `PFM / Metal Ceramic (${metrics.countPfm})` },
+                { id: 'ZIRCONIA', label: `Zirconia / Metal Free (${metrics.countZirconia})` },
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setCrownTypeFilter(t.id as any)}
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                    crownTypeFilter === t.id
+                      ? (t.id === 'PFM'
+                          ? 'bg-amber-600 text-white shadow-xs'
+                          : t.id === 'ZIRCONIA'
+                          ? 'bg-purple-600 text-white shadow-xs'
+                          : 'bg-gray-900 text-white shadow-xs')
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/60'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
             {/* Date Presets */}
             <div className="flex flex-wrap items-center gap-1.5">
               {[
@@ -547,7 +611,7 @@ export default function CrownManagementPage() {
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="p-5 border-b border-gray-100 flex items-center justify-between">
             <h3 className="text-lg font-bold text-gray-900">
-              Crown Patient Records ({crowns.length})
+              Crown Patient Records ({displayedCrowns.length}{crownTypeFilter !== 'ALL' || statusFilter !== 'ALL' ? ` of ${crowns.length}` : ''})
             </h3>
             <span className="text-xs text-gray-400">
               Auto-Synchronized with Prescription Treatments
@@ -559,12 +623,12 @@ export default function CrownManagementPage() {
               <RefreshCw size={32} className="animate-spin mx-auto mb-2 text-blue-600" />
               <p className="font-medium">Loading crown patient records...</p>
             </div>
-          ) : crowns.length === 0 ? (
+          ) : displayedCrowns.length === 0 ? (
             <div className="p-16 text-center text-gray-400">
               <Crown size={40} className="mx-auto mb-2 opacity-40 text-amber-500" />
               <p className="font-bold text-gray-700 text-base">No crown patient records found.</p>
               <p className="text-xs mt-1 text-gray-400">
-                Prescriptions with RCT or Crown treatments automatically appear here.
+                {crownTypeFilter !== 'ALL' ? 'Try switching the crown type filter.' : 'Prescriptions with RCT or Crown treatments automatically appear here.'}
               </p>
             </div>
           ) : (
@@ -584,7 +648,7 @@ export default function CrownManagementPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {crowns.map((c) => {
+                  {displayedCrowns.map((c) => {
                     const currentStatus: CrownStatusCategory =
                       (c.crown_status as any) ||
                       (c.status === 'Crown Fixed'
@@ -655,9 +719,33 @@ export default function CrownManagementPage() {
                         <td className="py-3.5 px-4 text-right font-black text-blue-700 text-sm">
                           {pCost ? `₹${pCost.toLocaleString('en-IN')}` : '₹0'}
                         </td>
-                        <td className="py-3.5 px-4">
-                          <span className="font-bold text-gray-800">{c.crown_type || 'Zirconia'}</span>
-                          {c.shade && <span className="text-gray-500 ml-1">({c.shade})</span>}
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          {(() => {
+                            const raw = c.crown_type || '';
+                            const norm = normalizeCrownType(raw, pCost);
+                            if (norm.includes('PFM') || norm.includes('Metal Ceramic')) {
+                              return (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                  PFM <span className="text-[10px] font-medium text-amber-700">(Metal Ceramic)</span>
+                                </span>
+                              );
+                            }
+                            if (norm.includes('Zirconia') || norm.includes('Metal Free')) {
+                              return (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-purple-50 text-purple-900 border border-purple-200">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                                  Zirconia <span className="text-[10px] font-medium text-purple-700">(Metal Free)</span>
+                                </span>
+                              );
+                            }
+                            return (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-gray-100 text-gray-800 border border-gray-200">
+                                {raw || '—'}
+                              </span>
+                            );
+                          })()}
+                          {c.shade && <span className="text-gray-500 ml-1.5 text-xs font-medium">({c.shade})</span>}
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex justify-end gap-1.5 items-center">
@@ -677,7 +765,7 @@ export default function CrownManagementPage() {
                                   phone_number: c.phone_number,
                                   reference_number: c.reference_number || '',
                                   tooth_numbers: c.tooth_numbers,
-                                  crown_type: c.crown_type || 'Zirconia',
+                                  crown_type: normalizeCrownType(c.crown_type, c.patient_cost),
                                   shade: c.shade || '',
                                   cutting_date: c.cutting_date,
                                   fixed_date: c.fixed_date || '',
@@ -836,26 +924,90 @@ export default function CrownManagementPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-gray-700 mb-1">Treatment / RCT Ref</label>
                   <input
                     type="text"
                     value={form.treatment_reference || ''}
                     onChange={(e) => setForm({ ...form, treatment_reference: e.target.value })}
-                    placeholder="e.g. RCT wrt 46"
+                    placeholder="e.g. Crown cutting done / RCT wrt 46"
                     className="w-full px-3 py-1.5 border rounded-lg"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Crown Type / Material</label>
-                  <input
-                    type="text"
-                    value={form.crown_type || 'Zirconia'}
-                    onChange={(e) => setForm({ ...form, crown_type: e.target.value })}
-                    placeholder="Zirconia, PFM, E-Max"
-                    className="w-full px-3 py-1.5 border rounded-lg"
-                  />
+                  <label className="block font-semibold text-gray-700 mb-1">Crown Type / Material *</label>
+                  <div className="grid grid-cols-2 gap-1.5 mb-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newCost = [2500, 3500, 5000].includes(form.patient_cost || 0) ? form.patient_cost : 2500;
+                        setForm({
+                          ...form,
+                          crown_type: 'PFM (Metal Ceramic)',
+                          patient_cost: newCost,
+                        });
+                      }}
+                      className={`p-2 rounded-lg border text-left transition-all ${
+                        form.crown_type?.includes('PFM') || form.crown_type?.includes('Metal Ceramic')
+                          ? 'border-amber-500 bg-amber-50/80 text-amber-950 ring-2 ring-amber-400 font-bold'
+                          : 'border-gray-200 bg-white hover:border-amber-300 text-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-black text-amber-900">PFM</span>
+                        <span className="text-[10px] bg-amber-200/60 text-amber-800 px-1 py-0.2 rounded font-medium">Metal Ceramic</span>
+                      </div>
+                      <div className="text-[10px] text-gray-500 mt-0.5">₹2.5K • ₹3.5K • ₹5K</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newCost = [8000, 10000, 15000, 20000, 30000].includes(form.patient_cost || 0) ? form.patient_cost : 8000;
+                        setForm({
+                          ...form,
+                          crown_type: 'Zirconia (Metal Free)',
+                          patient_cost: newCost,
+                        });
+                      }}
+                      className={`p-2 rounded-lg border text-left transition-all ${
+                        form.crown_type?.includes('Zirconia') || form.crown_type?.includes('Metal Free')
+                          ? 'border-purple-500 bg-purple-50/80 text-purple-950 ring-2 ring-purple-400 font-bold'
+                          : 'border-gray-200 bg-white hover:border-purple-300 text-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-black text-purple-900">Zirconia</span>
+                        <span className="text-[10px] bg-purple-200/60 text-purple-800 px-1 py-0.2 rounded font-medium">Metal Free</span>
+                      </div>
+                      <div className="text-[10px] text-gray-500 mt-0.5">₹8K • ₹10K • ₹15K+</div>
+                    </button>
+                  </div>
+
+                  {/* Standard Rates Bar */}
+                  <div className="flex items-center gap-1.5 flex-wrap bg-gray-50 p-1.5 rounded-lg border border-gray-200">
+                    <span className="text-[10px] font-bold text-gray-500">Quick Rates:</span>
+                    {(form.crown_type?.includes('Zirconia') || form.crown_type?.includes('Metal Free')
+                      ? [8000, 10000, 15000, 20000, 30000]
+                      : [2500, 3500, 5000]
+                    ).map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setForm({ ...form, patient_cost: r })}
+                        className={`px-2 py-0.5 text-[11px] font-bold rounded transition-all ${
+                          form.patient_cost === r
+                            ? (form.crown_type?.includes('Zirconia') || form.crown_type?.includes('Metal Free')
+                                ? 'bg-purple-600 text-white'
+                                : 'bg-amber-600 text-white')
+                            : 'bg-white border border-gray-200 text-gray-700 hover:border-gray-400'
+                        }`}
+                      >
+                        ₹{r.toLocaleString('en-IN')}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -894,7 +1046,18 @@ export default function CrownManagementPage() {
                   <input
                     type="number"
                     value={form.patient_cost || 0}
-                    onChange={(e) => setForm({ ...form, patient_cost: Number(e.target.value) })}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      let newType = form.crown_type;
+                      if (val > 0) {
+                        if ([2500, 3500, 5000].includes(val) || val <= 5500) {
+                          newType = 'PFM (Metal Ceramic)';
+                        } else if ([8000, 10000, 15000, 20000, 30000].includes(val) || val >= 6000) {
+                          newType = 'Zirconia (Metal Free)';
+                        }
+                      }
+                      setForm({ ...form, patient_cost: val, crown_type: newType });
+                    }}
                     className="w-full px-3 py-1.5 border rounded-lg font-black text-green-700"
                   />
                 </div>
