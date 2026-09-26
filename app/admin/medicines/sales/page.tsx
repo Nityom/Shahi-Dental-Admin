@@ -31,11 +31,25 @@ interface PatientSalesReport {
   payment_status: string;
 }
 
+interface InventorySalesItem {
+  id: string;
+  name: string;
+  quantity: number;
+  rate: number;
+  total: number;
+  subdivision?: string;
+  unit?: string;
+  notes?: string;
+  source?: string;
+  sale_date: string;
+}
+
 interface InventorySalesReport {
   sale_date: string;
   total_transactions: number;
   total_quantity: number;
   total_amount: number;
+  items?: InventorySalesItem[];
 }
 
 interface InventorySalesResponse {
@@ -50,6 +64,7 @@ interface InventorySalesResponse {
     avg_daily_amount: number;
   };
   data: InventorySalesReport[];
+  allItems?: InventorySalesItem[];
 }
 
 interface ConsumableUsageReport {
@@ -83,12 +98,39 @@ interface ConsumableUsageResponse {
   data: ConsumableUsageReport[];
 }
 
+type ReportPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
+
+function getTodayIST(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+}
+
+function getDaysAgoIST(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
+}
+
+function getDateRangeForPeriod(period: 'daily' | 'weekly' | 'monthly' | 'yearly'): { start: string; end: string } {
+  const today = getTodayIST();
+  switch (period) {
+    case 'daily':
+      return { start: today, end: today };
+    case 'weekly':
+      return { start: getDaysAgoIST(6), end: today };
+    case 'monthly':
+      return { start: getDaysAgoIST(29), end: today };
+    case 'yearly':
+      return { start: getDaysAgoIST(364), end: today };
+  }
+}
+
 export default function SalesReportPage() {
   const router = useRouter();
   const { isAdmin, loading: isAdminLoading } = useIsAdmin();
   const [activeTab, setActiveTab] = useState<'medicine' | 'patient' | 'inventory' | 'diagnostics'>('medicine');
+  
   // Medicine Sales States
-  const [reportType, setReportType] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
+  const [reportType, setReportType] = useState<ReportPeriod>('monthly');
   const [groupBy, setGroupBy] = useState<'medicine' | 'company'>('medicine');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -97,7 +139,7 @@ export default function SalesReportPage() {
   const [error, setError] = useState('');
 
   // Patient Sales States
-  const [patientReportType, setPatientReportType] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
+  const [patientReportType, setPatientReportType] = useState<ReportPeriod>('monthly');
   const [patientSalesData, setPatientSalesData] = useState<PatientSalesReport[]>([]);
   const [isLoadingPatients, setIsLoadingPatients] = useState(false);
   const [patientError, setPatientError] = useState('');
@@ -105,15 +147,16 @@ export default function SalesReportPage() {
   const [patientEndDate, setPatientEndDate] = useState('');
 
   // Inventory Sales States
-  const [inventoryReportType, setInventoryReportType] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
+  const [inventoryReportType, setInventoryReportType] = useState<ReportPeriod>('monthly');
   const [inventorySalesData, setInventorySalesData] = useState<InventorySalesResponse | null>(null);
   const [isLoadingInventory, setIsLoadingInventory] = useState(false);
   const [inventoryError, setInventoryError] = useState('');
   const [inventoryStartDate, setInventoryStartDate] = useState('');
   const [inventoryEndDate, setInventoryEndDate] = useState('');
+  const [inventoryViewMode, setInventoryViewMode] = useState<'items' | 'daily'>('items');
 
   // Consumable Inventory States
-  const [consumableReportType, setConsumableReportType] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
+  const [consumableReportType, setConsumableReportType] = useState<ReportPeriod>('monthly');
   const [consumableGroupBy, setConsumableGroupBy] = useState<'daily' | 'consumable'>('daily');
   const [consumableUsageData, setConsumableUsageData] = useState<ConsumableUsageResponse | null>(null);
   const [isLoadingConsumables, setIsLoadingConsumables] = useState(false);
@@ -122,7 +165,7 @@ export default function SalesReportPage() {
   const [consumableEndDate, setConsumableEndDate] = useState('');
 
   // Diagnostic Tests States
-  const [diagnosticReportType, setDiagnosticReportType] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
+  const [diagnosticReportType, setDiagnosticReportType] = useState<ReportPeriod>('monthly');
   const [diagnosticStartDate, setDiagnosticStartDate] = useState('');
   const [diagnosticEndDate, setDiagnosticEndDate] = useState('');
   const [diagnosticTypeFilter, setDiagnosticTypeFilter] = useState<string>('ALL');
@@ -150,79 +193,66 @@ export default function SalesReportPage() {
   }, [isAdminLoading, isAdmin, router]);
 
   useEffect(() => {
-    // Set default dates (last 30 days)
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - 30);
-    
-    const dateStr = start.toISOString().split('T')[0];
-    const endDateStr = end.toISOString().split('T')[0];
-    
-    setStartDate(dateStr);
-    setEndDate(endDateStr);
-    setPatientStartDate(dateStr);
-    setPatientEndDate(endDateStr);
-    setInventoryStartDate(dateStr);
-    setInventoryEndDate(endDateStr);
-    setConsumableStartDate(dateStr);
-    setConsumableEndDate(endDateStr);
-    setDiagnosticStartDate(dateStr);
-    setDiagnosticEndDate(endDateStr);
+    // Set default dates (last 30 days) in IST
+    const { start, end } = getDateRangeForPeriod('monthly');
+    setStartDate(start);
+    setEndDate(end);
+    setPatientStartDate(start);
+    setPatientEndDate(end);
+    setInventoryStartDate(start);
+    setInventoryEndDate(end);
+    setConsumableStartDate(start);
+    setConsumableEndDate(end);
+    setDiagnosticStartDate(start);
+    setDiagnosticEndDate(end);
   }, []);
-
 
   // Update dates when report type changes
   useEffect(() => {
-    const today = new Date();
-    let start = new Date();
-    let end = today; // Always end at today to avoid future data
-
-    switch (reportType) {
-      case 'weekly':
-        // Last 7 days: today - 6 days to today
-        start = new Date(today);
-        start.setDate(today.getDate() - 6);
-        break;
-      case 'monthly':
-        // Last 30 days: same day last month to today
-        start = new Date(today);
-        start.setDate(today.getDate() - 30);
-        break;
-      case 'yearly':
-        // Last 365 days: same day last year to today
-        start = new Date(today);
-        start.setDate(today.getDate() - 365);
-        break;
-    }
-
-    setStartDate(start.toISOString().split('T')[0]);
-    setEndDate(end.toISOString().split('T')[0]);
+    if (reportType === 'custom') return;
+    const { start, end } = getDateRangeForPeriod(reportType);
+    setStartDate(start);
+    setEndDate(end);
   }, [reportType]);
 
   // Update patient dates when patient report type changes
   useEffect(() => {
-    const today = new Date();
-    let start = new Date();
-    let end = today;
-
-    switch (patientReportType) {
-      case 'weekly':
-        start = new Date(today);
-        start.setDate(today.getDate() - 6);
-        break;
-      case 'monthly':
-        start = new Date(today);
-        start.setDate(today.getDate() - 30);
-        break;
-      case 'yearly':
-        start = new Date(today);
-        start.setDate(today.getDate() - 365);
-        break;
-    }
-
-    setPatientStartDate(start.toISOString().split('T')[0]);
-    setPatientEndDate(end.toISOString().split('T')[0]);
+    if (patientReportType === 'custom') return;
+    const { start, end } = getDateRangeForPeriod(patientReportType);
+    setPatientStartDate(start);
+    setPatientEndDate(end);
   }, [patientReportType]);
+
+  // Update inventory dates when inventory report type changes
+  useEffect(() => {
+    if (inventoryReportType === 'custom') return;
+    const { start, end } = getDateRangeForPeriod(inventoryReportType);
+    setInventoryStartDate(start);
+    setInventoryEndDate(end);
+  }, [inventoryReportType]);
+
+  // Update diagnostic dates when diagnostic report type changes
+  useEffect(() => {
+    if (diagnosticReportType === 'custom') return;
+    const { start, end } = getDateRangeForPeriod(diagnosticReportType);
+    setDiagnosticStartDate(start);
+    setDiagnosticEndDate(end);
+  }, [diagnosticReportType]);
+
+  const handlePeriodChange = (
+    period: ReportPeriod,
+    setPeriod: (p: ReportPeriod) => void,
+    setStart: (s: string) => void,
+    setEnd: (e: string) => void
+  ) => {
+    setPeriod(period);
+    if (period !== 'custom') {
+      const { start, end } = getDateRangeForPeriod(period);
+      setStart(start);
+      setEnd(end);
+    }
+  };
+
 
   const fetchSalesReport = useCallback(async () => {
     setIsLoading(true);
@@ -279,11 +309,23 @@ export default function SalesReportPage() {
     setPatientError('');
     
     try {
-      const allBills = await convex.query(api.bills.list, {});
+      const allBills = await convex.query(api.bills.list, {
+        startDate: patientStartDate || undefined,
+        endDate: patientEndDate || undefined,
+      });
 
-      // Group by patient (reference_number) — bills have no bill_date field, show all
+      // Filter bills strictly by patientStartDate and patientEndDate
+      const filteredBills = (allBills as any[]).filter((bill) => {
+        const bDate = bill.bill_date || (bill._creationTime ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date(bill._creationTime)) : '');
+        if (!bDate) return true;
+        if (patientStartDate && bDate < patientStartDate) return false;
+        if (patientEndDate && bDate > patientEndDate) return false;
+        return true;
+      });
+
+      // Group by patient (reference_number)
       const grouped: Record<string, PatientSalesReport> = {};
-      for (const bill of (allBills as any[])) {
+      for (const bill of filteredBills) {
         const key = bill.reference_number || bill.patient_id;
         if (!grouped[key]) {
           grouped[key] = {
@@ -298,9 +340,9 @@ export default function SalesReportPage() {
           };
         }
         grouped[key].total_bills += 1;
-        grouped[key].total_amount += bill.total_amount;
-        grouped[key].paid_amount += bill.paid_amount;
-        grouped[key].balance_amount += bill.balance_amount;
+        grouped[key].total_amount += Number(bill.total_amount || 0);
+        grouped[key].paid_amount += Number(bill.paid_amount || 0);
+        grouped[key].balance_amount += Number(bill.balance_amount || 0);
       }
 
       const result = Object.values(grouped).map((p) => ({
@@ -335,16 +377,33 @@ export default function SalesReportPage() {
         end_date: inventoryEndDate,
       });
 
-      // Group sales by date
-      const groupedByDate: Record<string, { total_transactions: number; total_quantity: number; total_amount: number }> = {};
+      // Group sales by date and compile all item details
+      const allItems: InventorySalesItem[] = [];
+      const groupedByDate: Record<string, { total_transactions: number; total_quantity: number; total_amount: number; items: InventorySalesItem[] }> = {};
+      
       for (const sale of sales) {
         const date = sale.sale_date;
+        const item: InventorySalesItem = {
+          id: sale._id,
+          name: (sale as any).inventory_name || (sale as any).material_name || 'Material Item',
+          quantity: Number(sale.quantity || 0),
+          rate: Number(sale.rate || 0),
+          total: Number(sale.total_amount || 0),
+          subdivision: (sale as any).subdivision,
+          unit: (sale as any).unit || 'pcs',
+          notes: sale.notes,
+          source: (sale as any).source,
+          sale_date: date,
+        };
+        allItems.push(item);
+
         if (!groupedByDate[date]) {
-          groupedByDate[date] = { total_transactions: 0, total_quantity: 0, total_amount: 0 };
+          groupedByDate[date] = { total_transactions: 0, total_quantity: 0, total_amount: 0, items: [] };
         }
         groupedByDate[date].total_transactions += 1;
-        groupedByDate[date].total_quantity += sale.quantity;
-        groupedByDate[date].total_amount += sale.total_amount;
+        groupedByDate[date].total_quantity += item.quantity;
+        groupedByDate[date].total_amount += item.total;
+        groupedByDate[date].items.push(item);
       }
 
       const data: InventorySalesReport[] = Object.entries(groupedByDate)
@@ -367,6 +426,7 @@ export default function SalesReportPage() {
           avg_daily_amount: totalDays > 0 ? totalAmount / totalDays : 0,
         },
         data,
+        allItems: allItems.sort((a, b) => b.sale_date.localeCompare(a.sale_date)),
       });
     } catch (err) {
       console.error('Error fetching inventory sales report:', err);
@@ -383,38 +443,12 @@ export default function SalesReportPage() {
     }
   }, [inventoryStartDate, inventoryEndDate, activeTab, fetchInventorySalesReport]);
 
-  // Update inventory dates when inventory report type changes
-  useEffect(() => {
-    const today = new Date();
-    let start = new Date();
-    let end = today;
-
-    switch (inventoryReportType) {
-      case 'weekly':
-        start = new Date(today);
-        start.setDate(today.getDate() - 6);
-        break;
-      case 'monthly':
-        start = new Date(today);
-        start.setDate(today.getDate() - 29);
-        break;
-      case 'yearly':
-        start = new Date(today);
-        start.setDate(today.getDate() - 364);
-        break;
-    }
-
-    setInventoryStartDate(start.toISOString().split('T')[0]);
-    setInventoryEndDate(end.toISOString().split('T')[0]);
-  }, [inventoryReportType]);
-
   // Fetch Consumable Usage Report
   const fetchConsumableUsageReport = useCallback(async () => {
     setIsLoadingConsumables(true);
     setConsumableError('');
     
     try {
-      // Consumable usage tracking is not available in Convex yet
       setConsumableUsageData({
         success: true,
         report_type: consumableReportType,
@@ -440,55 +474,6 @@ export default function SalesReportPage() {
     }
   }, [consumableStartDate, consumableEndDate, activeTab, fetchConsumableUsageReport]);
 
-  // Update consumable dates when consumable report type changes
-  useEffect(() => {
-    const today = new Date();
-    let start = new Date();
-    let end = today;
-
-    switch (consumableReportType) {
-      case 'weekly':
-        start = new Date(today);
-        start.setDate(today.getDate() - 6);
-        break;
-      case 'monthly':
-        start = new Date(today);
-        start.setDate(today.getDate() - 29);
-        break;
-      case 'yearly':
-        start = new Date(today);
-        start.setDate(today.getDate() - 364);
-        break;
-    }
-
-    setConsumableStartDate(start.toISOString().split('T')[0]);
-    setConsumableEndDate(end.toISOString().split('T')[0]);
-  }, [consumableReportType]);
-
-  // Update diagnostic dates when diagnostic report type changes
-  useEffect(() => {
-    const today = new Date();
-    let start = new Date();
-    let end = today;
-
-    switch (diagnosticReportType) {
-      case 'weekly':
-        start = new Date(today);
-        start.setDate(today.getDate() - 6);
-        break;
-      case 'monthly':
-        start = new Date(today);
-        start.setDate(today.getDate() - 30);
-        break;
-      case 'yearly':
-        start = new Date(today);
-        start.setDate(today.getDate() - 365);
-        break;
-    }
-
-    setDiagnosticStartDate(start.toISOString().split('T')[0]);
-    setDiagnosticEndDate(end.toISOString().split('T')[0]);
-  }, [diagnosticReportType]);
 
   const fetchDiagnosticReport = useCallback(async () => {
     setIsLoadingDiagnostics(true);
@@ -626,71 +611,103 @@ export default function SalesReportPage() {
                     Report Period
                   </label>
                   <select
-                value={reportType}
-                onChange={(e) => setReportType(e.target.value as 'weekly' | 'monthly' | 'yearly')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-              </select>
-            </div>
+                    value={reportType}
+                    onChange={(e) => handlePeriodChange(e.target.value as ReportPeriod, setReportType, setStartDate, setEndDate)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="daily">Daily (Today)</option>
+                    <option value="weekly">Weekly (Last 7 Days)</option>
+                    <option value="monthly">Monthly (Last 30 Days)</option>
+                    <option value="yearly">Yearly (Last 365 Days)</option>
+                    {reportType === 'custom' && <option value="custom">Custom Range</option>}
+                  </select>
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Group By
-              </label>
-              <select
-                value={groupBy}
-                onChange={(e) => setGroupBy(e.target.value as 'medicine' | 'company')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="medicine">Medicine Name</option>
-                <option value="company">Company</option>
-              </select>
-            </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Group By
+                  </label>
+                  <select
+                    value={groupBy}
+                    onChange={(e) => setGroupBy(e.target.value as 'medicine' | 'company')}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="medicine">Medicine Name</option>
+                    <option value="company">Company</option>
+                  </select>
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Start Date
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                max={new Date().toISOString().split('T')[0]}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      setReportType('custom');
+                    }}
+                    max={getTodayIST()}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                End Date
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                max={new Date().toISOString().split('T')[0]}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </div>
-          
-          <p className="text-sm text-gray-600 mt-3">
-            <strong>Auto Date Ranges:</strong> Weekly (Last 7 days) • Monthly (Last 30 days) • Yearly (Last 365 days)
-          </p>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => {
+                      setEndDate(e.target.value);
+                      setReportType('custom');
+                    }}
+                    max={getTodayIST()}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-gray-100">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mr-1">Quick Select:</span>
+                {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((p) => {
+                  const labels = {
+                    daily: 'Daily (Today)',
+                    weekly: 'Weekly (7 Days)',
+                    monthly: 'Monthly (30 Days)',
+                    yearly: 'Yearly (365 Days)',
+                  };
+                  const active = reportType === p;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => handlePeriodChange(p, setReportType, setStartDate, setEndDate)}
+                      className={`px-3 py-1 text-xs rounded-full border transition font-medium cursor-pointer ${
+                        active
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
+                      }`}
+                    >
+                      {labels[p]}
+                    </button>
+                  );
+                })}
+              </div>
 
-          <div className="mt-4">
-            <button
-              onClick={fetchSalesReport}
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center"
-            >
-              <RefreshCw size={16} className="mr-2" />
-              Refresh Report
-            </button>
-          </div>
-        </div>
+              <div className="mt-4">
+                <button
+                  onClick={fetchSalesReport}
+                  disabled={isLoading}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center transition disabled:opacity-50 cursor-pointer"
+                >
+                  <RefreshCw size={16} className={`mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                  {isLoading ? 'Refreshing Report...' : 'Refresh Report'}
+                </button>
+              </div>
+            </div>
 
         {/* Summary Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 mb-6 overflow-hidden">
@@ -948,12 +965,14 @@ export default function SalesReportPage() {
                   </label>
                   <select
                     value={patientReportType}
-                    onChange={(e) => setPatientReportType(e.target.value as 'weekly' | 'monthly' | 'yearly')}
+                    onChange={(e) => handlePeriodChange(e.target.value as ReportPeriod, setPatientReportType, setPatientStartDate, setPatientEndDate)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
-                    <option value="yearly">Yearly</option>
+                    <option value="daily">Daily (Today)</option>
+                    <option value="weekly">Weekly (Last 7 Days)</option>
+                    <option value="monthly">Monthly (Last 30 Days)</option>
+                    <option value="yearly">Yearly (Last 365 Days)</option>
+                    {patientReportType === 'custom' && <option value="custom">Custom Range</option>}
                   </select>
                 </div>
 
@@ -964,8 +983,11 @@ export default function SalesReportPage() {
                   <input
                     type="date"
                     value={patientStartDate}
-                    onChange={(e) => setPatientStartDate(e.target.value)}
-                    max={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => {
+                      setPatientStartDate(e.target.value);
+                      setPatientReportType('custom');
+                    }}
+                    max={getTodayIST()}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
@@ -977,24 +999,51 @@ export default function SalesReportPage() {
                   <input
                     type="date"
                     value={patientEndDate}
-                    onChange={(e) => setPatientEndDate(e.target.value)}
-                    max={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => {
+                      setPatientEndDate(e.target.value);
+                      setPatientReportType('custom');
+                    }}
+                    max={getTodayIST()}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
               
-              <p className="text-sm text-gray-600 mt-3">
-                <strong>Auto Date Ranges:</strong> Weekly (Last 7 days) • Monthly (Last 30 days) • Yearly (Last 365 days)
-              </p>
+              <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-gray-100">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mr-1">Quick Select:</span>
+                {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((p) => {
+                  const labels = {
+                    daily: 'Daily (Today)',
+                    weekly: 'Weekly (7 Days)',
+                    monthly: 'Monthly (30 Days)',
+                    yearly: 'Yearly (365 Days)',
+                  };
+                  const active = patientReportType === p;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => handlePeriodChange(p, setPatientReportType, setPatientStartDate, setPatientEndDate)}
+                      className={`px-3 py-1 text-xs rounded-full border transition font-medium cursor-pointer ${
+                        active
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
+                      }`}
+                    >
+                      {labels[p]}
+                    </button>
+                  );
+                })}
+              </div>
 
               <div className="mt-4">
                 <button
                   onClick={fetchPatientSalesReport}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center"
+                  disabled={isLoadingPatients}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center transition disabled:opacity-50 cursor-pointer"
                 >
-                  <RefreshCw size={16} className="mr-2" />
-                  Refresh Report
+                  <RefreshCw size={16} className={`mr-2 ${isLoadingPatients ? 'animate-spin' : ''}`} />
+                  {isLoadingPatients ? 'Refreshing Report...' : 'Refresh Report'}
                 </button>
               </div>
             </div>
@@ -1153,12 +1202,14 @@ export default function SalesReportPage() {
                   </label>
                   <select
                     value={inventoryReportType}
-                    onChange={(e) => setInventoryReportType(e.target.value as 'weekly' | 'monthly' | 'yearly')}
+                    onChange={(e) => handlePeriodChange(e.target.value as ReportPeriod, setInventoryReportType, setInventoryStartDate, setInventoryEndDate)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
+                    <option value="daily">Daily (Today)</option>
                     <option value="weekly">Weekly (Last 7 Days)</option>
                     <option value="monthly">Monthly (Last 30 Days)</option>
                     <option value="yearly">Yearly (Last 365 Days)</option>
+                    {inventoryReportType === 'custom' && <option value="custom">Custom Range</option>}
                   </select>
                 </div>
 
@@ -1169,7 +1220,11 @@ export default function SalesReportPage() {
                   <input
                     type="date"
                     value={inventoryStartDate}
-                    onChange={(e) => setInventoryStartDate(e.target.value)}
+                    onChange={(e) => {
+                      setInventoryStartDate(e.target.value);
+                      setInventoryReportType('custom');
+                    }}
+                    max={getTodayIST()}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
@@ -1181,31 +1236,65 @@ export default function SalesReportPage() {
                   <input
                     type="date"
                     value={inventoryEndDate}
-                    onChange={(e) => setInventoryEndDate(e.target.value)}
+                    onChange={(e) => {
+                      setInventoryEndDate(e.target.value);
+                      setInventoryReportType('custom');
+                    }}
+                    max={getTodayIST()}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
 
-              <button
-                onClick={fetchInventorySalesReport}
-                className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
-              >
-                <RefreshCw className="mr-2" size={16} />
-                Refresh Report
-              </button>
+              <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-gray-100">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mr-1">Quick Select:</span>
+                {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((p) => {
+                  const labels = {
+                    daily: 'Daily (Today)',
+                    weekly: 'Weekly (7 Days)',
+                    monthly: 'Monthly (30 Days)',
+                    yearly: 'Yearly (365 Days)',
+                  };
+                  const active = inventoryReportType === p;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => handlePeriodChange(p, setInventoryReportType, setInventoryStartDate, setInventoryEndDate)}
+                      className={`px-3 py-1 text-xs rounded-full border transition font-medium cursor-pointer ${
+                        active
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
+                      }`}
+                    >
+                      {labels[p]}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-4">
+                <button
+                  onClick={fetchInventorySalesReport}
+                  disabled={isLoadingInventory}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center transition disabled:opacity-50 cursor-pointer"
+                >
+                  <RefreshCw size={16} className={`mr-2 ${isLoadingInventory ? 'animate-spin' : ''}`} />
+                  {isLoadingInventory ? 'Refreshing Report...' : 'Refresh Report'}
+                </button>
+              </div>
             </div>
 
             {/* Summary Cards */}
             {inventorySalesData && inventorySalesData.summary && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-blue-100 rounded-lg">
-                      <Package size={32} className="text-blue-600" />
+                      <Package size={28} className="text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600 mb-1">Total Items Sold</p>
+                      <p className="text-sm text-gray-600 mb-1">Total Items Sold / Used</p>
                       <p className="text-2xl font-bold text-gray-900">{inventorySalesData.summary.total_quantity || 0}</p>
                     </div>
                   </div>
@@ -1214,10 +1303,10 @@ export default function SalesReportPage() {
                 <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-purple-100 rounded-lg">
-                      <Calendar size={32} className="text-purple-600" />
+                      <Calendar size={28} className="text-purple-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600 mb-1">Days with Sales</p>
+                      <p className="text-sm text-gray-600 mb-1">Days with Activity</p>
                       <p className="text-2xl font-bold text-gray-900">{inventorySalesData.summary.total_days || 0}</p>
                     </div>
                   </div>
@@ -1225,12 +1314,24 @@ export default function SalesReportPage() {
 
                 <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
                   <div className="flex items-center gap-4">
-                    <div className="p-3 bg-orange-100 rounded-lg">
-                      <TrendingUp size={32} className="text-orange-600" />
+                    <div className="p-3 bg-emerald-100 rounded-lg">
+                      <IndianRupee size={28} className="text-emerald-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600 mb-1">Avg Daily Sales</p>
-                      <p className="text-2xl font-bold text-gray-900">₹{inventorySalesData.summary.avg_daily_amount?.toFixed(2) || '0.00'}</p>
+                      <p className="text-sm text-gray-600 mb-1">Total Value</p>
+                      <p className="text-2xl font-bold text-gray-900">₹{Number(inventorySalesData.summary.total_amount || 0).toFixed(2)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-orange-100 rounded-lg">
+                      <TrendingUp size={28} className="text-orange-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Avg Daily Value</p>
+                      <p className="text-2xl font-bold text-gray-900">₹{Number(inventorySalesData.summary.avg_daily_amount || 0).toFixed(2)}</p>
                     </div>
                   </div>
                 </div>
@@ -1239,21 +1340,49 @@ export default function SalesReportPage() {
 
             {/* Data Table */}
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-800">
-                  Daily Sales Report
-                </h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  {inventorySalesData?.start_date && inventorySalesData?.end_date 
-                    ? `${new Date(inventorySalesData.start_date).toLocaleDateString('en-IN')} - ${new Date(inventorySalesData.end_date).toLocaleDateString('en-IN')}`
-                    : 'Select a date range'}
-                </p>
+              <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-800">
+                    Inventory Sales & Outward Materials
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {inventorySalesData?.start_date && inventorySalesData?.end_date 
+                      ? `${inventorySalesData.start_date} to ${inventorySalesData.end_date}`
+                      : 'Select a date range'}
+                  </p>
+                </div>
+
+                {/* View Mode Toggle */}
+                <div className="inline-flex rounded-lg border border-gray-200 p-1 bg-gray-50 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setInventoryViewMode('items')}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
+                      inventoryViewMode === 'items'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Items Sold / Used ({inventorySalesData?.allItems?.length || 0})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInventoryViewMode('daily')}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
+                      inventoryViewMode === 'daily'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Daily Date Summary ({inventorySalesData?.data?.length || 0})
+                  </button>
+                </div>
               </div>
 
               {isLoadingInventory ? (
                 <div className="p-8 text-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-                  <p className="mt-4 text-gray-600">Loading inventory sales data...</p>
+                  <p className="mt-4 text-gray-600 font-medium">Loading inventory sales & usage data...</p>
                 </div>
               ) : inventoryError ? (
                 <div className="p-8 text-center text-red-600">
@@ -1269,10 +1398,11 @@ export default function SalesReportPage() {
               ) : !inventorySalesData || !Array.isArray(inventorySalesData.data) || inventorySalesData.data.length === 0 ? (
                 <div className="p-8 text-center text-gray-500">
                   <Package size={48} className="mx-auto mb-4 text-gray-300" />
-                  <p className="font-semibold mb-2">No inventory sales data found</p>
-                  <p className="text-sm">Record direct sales from Inventory Management to start tracking</p>
+                  <p className="font-semibold mb-2">No inventory sales or usage found in this period</p>
+                  <p className="text-sm">Try changing the date filter or selecting Daily / Monthly</p>
                 </div>
-              ) : (
+              ) : inventoryViewMode === 'items' ? (
+                /* Itemized Table */
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
@@ -1281,18 +1411,78 @@ export default function SalesReportPage() {
                           Date
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Transactions
+                          Item Name
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Subdivision / Type
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Quantity
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Rate (₹)
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Total Amount (₹)
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Notes / Treatment
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {(inventorySalesData.allItems || []).map((item, index) => (
+                        <tr key={item.id || index} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {item.sale_date || '-'}
+                          </td>
+                          <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                            {item.name}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-xs">
+                            <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-medium">
+                              {item.subdivision || (item.source === 'material_usage' ? 'Material Outward' : 'Direct Sale')}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {item.quantity} {item.unit || 'pcs'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            ₹{Number(item.rate || 0).toFixed(2)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-emerald-600">
+                            ₹{Number(item.total || 0).toFixed(2)}
+                          </td>
+                          <td className="px-6 py-4 text-xs text-gray-500 max-w-xs truncate">
+                            {item.notes || '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                /* Daily Summary Table */
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Date
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Transactions / Items
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Total Quantity
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Total Amount
+                          Total Amount (₹)
                         </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {Array.isArray(inventorySalesData.data) && inventorySalesData.data.map((row, index) => (
+                      {inventorySalesData.data.map((row, index) => (
                         <tr key={index} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             {row.sale_date ? new Date(row.sale_date).toLocaleDateString('en-IN', {
@@ -1307,7 +1497,7 @@ export default function SalesReportPage() {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {row.total_quantity || 0}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-semibold">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-600 font-semibold">
                             ₹{Number(row.total_amount || 0).toFixed(2)}
                           </td>
                         </tr>
@@ -1320,12 +1510,24 @@ export default function SalesReportPage() {
           </>
         )}
 
+
         {/* Diagnostic Tests & IOPAR Report */}
         {activeTab === 'diagnostics' && (
           <>
             {/* Filters */}
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">Diagnostic & Test Filters</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-800">Diagnostic & Test Filters</h2>
+                <button
+                  type="button"
+                  onClick={fetchDiagnosticReport}
+                  disabled={isLoadingDiagnostics}
+                  className="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center transition disabled:opacity-50 cursor-pointer"
+                >
+                  <RefreshCw size={14} className={`mr-1.5 ${isLoadingDiagnostics ? 'animate-spin' : ''}`} />
+                  {isLoadingDiagnostics ? 'Refreshing...' : 'Refresh Report'}
+                </button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1333,12 +1535,14 @@ export default function SalesReportPage() {
                   </label>
                   <select
                     value={diagnosticReportType}
-                    onChange={(e) => setDiagnosticReportType(e.target.value as any)}
+                    onChange={(e) => handlePeriodChange(e.target.value as ReportPeriod, setDiagnosticReportType, setDiagnosticStartDate, setDiagnosticEndDate)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
+                    <option value="daily">Daily (Today)</option>
                     <option value="weekly">Weekly (Last 7 Days)</option>
                     <option value="monthly">Monthly (Last 30 Days)</option>
                     <option value="yearly">Yearly (Last 365 Days)</option>
+                    {diagnosticReportType === 'custom' && <option value="custom">Custom Range</option>}
                   </select>
                 </div>
 
@@ -1349,7 +1553,11 @@ export default function SalesReportPage() {
                   <input
                     type="date"
                     value={diagnosticStartDate}
-                    onChange={(e) => setDiagnosticStartDate(e.target.value)}
+                    onChange={(e) => {
+                      setDiagnosticStartDate(e.target.value);
+                      setDiagnosticReportType('custom');
+                    }}
+                    max={getTodayIST()}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -1361,7 +1569,11 @@ export default function SalesReportPage() {
                   <input
                     type="date"
                     value={diagnosticEndDate}
-                    onChange={(e) => setDiagnosticEndDate(e.target.value)}
+                    onChange={(e) => {
+                      setDiagnosticEndDate(e.target.value);
+                      setDiagnosticReportType('custom');
+                    }}
+                    max={getTodayIST()}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -1382,6 +1594,33 @@ export default function SalesReportPage() {
                     <option value="OPG">OPG</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-gray-100">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mr-1">Quick Select:</span>
+                {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((p) => {
+                  const labels = {
+                    daily: 'Daily (Today)',
+                    weekly: 'Weekly (7 Days)',
+                    monthly: 'Monthly (30 Days)',
+                    yearly: 'Yearly (365 Days)',
+                  };
+                  const active = diagnosticReportType === p;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => handlePeriodChange(p, setDiagnosticReportType, setDiagnosticStartDate, setDiagnosticEndDate)}
+                      className={`px-3 py-1 text-xs rounded-full border transition font-medium cursor-pointer ${
+                        active
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
+                      }`}
+                    >
+                      {labels[p]}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Search Bar */}

@@ -122,11 +122,14 @@ export const update = mutation({
 });
 
 export const list = query({
-    args: {},
-    handler: async (ctx) => {
+    args: {
+        startDate: v.optional(v.string()),
+        endDate: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
         const bills = await ctx.db.query("bills").order("desc").collect();
 
-        // Populate patient names
+        // Populate patient names and bill_date
         const populatedBills = await Promise.all(
             bills.map(async (bill) => {
                 // Find patient
@@ -135,13 +138,29 @@ export const list = query({
                     .withIndex("by_reference", (q) => q.eq("reference_number", bill.reference_number))
                     .first();
 
+                const istDate = new Intl.DateTimeFormat("en-CA", {
+                    timeZone: "Asia/Kolkata",
+                }).format(new Date(bill._creationTime));
+
                 return {
                     ...bill,
+                    bill_date: (bill as any).bill_date || istDate,
+                    created_at: (bill as any).created_at || istDate,
                     patient_name: patient?.name,
                     phone_number: patient?.phone_number,
                 };
             })
         );
+
+        if (args.startDate || args.endDate) {
+            return populatedBills.filter((b) => {
+                const date = b.bill_date;
+                if (!date) return true;
+                if (args.startDate && date < args.startDate) return false;
+                if (args.endDate && date > args.endDate) return false;
+                return true;
+            });
+        }
 
         return populatedBills;
     },

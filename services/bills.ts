@@ -135,7 +135,7 @@ export const getPatientByReferenceNumber = async (referenceNumber: string) => {
 
 export const getAll = async () => {
   try {
-    const data = await convex.query(api.bills.list);
+    const data = await convex.query(api.bills.list, {});
     return data.map((b: any) => ({ ...b, id: b._id })) as any as Bill[];
   } catch (e) {
     console.error('Exception in getAll bills:', e);
