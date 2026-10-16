@@ -50,7 +50,6 @@ export default function AppointmentsPage() {
   const { isAdmin } = useIsAdmin();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [selectedDoctorFilter, setSelectedDoctorFilter] = useState<string>('ALL');
   
   // Calendar State
   const [currentMonthDate, setCurrentMonthDate] = useState(() => {
@@ -63,7 +62,7 @@ export default function AppointmentsPage() {
     name: '',
     phone: '',
     time: '11:00',
-    doctor_name: 'Dr. Vipeen Raut',
+    doctor_name: 'Dr. Kautilya Swaroop',
     duration_minutes: 30,
     dental_problem: '',
     notes: '',
@@ -83,12 +82,8 @@ export default function AppointmentsPage() {
           typeof a.date === 'string' && typeof a.time === 'string',
       )
       .filter(a => a.date === selectedDate)
-      .filter(a => {
-        if (selectedDoctorFilter === 'ALL') return true;
-        return (a.doctor_name || '').toLowerCase() === selectedDoctorFilter.toLowerCase();
-      })
       .sort((a, b) => a.time.localeCompare(b.time));
-  }, [allAppointments, selectedDate, selectedDoctorFilter]);
+  }, [allAppointments, selectedDate]);
 
   const appointmentsByDate = useMemo(() => {
     if (!allAppointments) return {};
@@ -127,7 +122,7 @@ export default function AppointmentsPage() {
         name: appt.name,
         phone: appt.phone,
         time: appt.time,
-        doctor_name: appt.doctor_name || 'Dr. Vipeen Raut',
+        doctor_name: appt.doctor_name || 'Dr. Kautilya Swaroop',
         duration_minutes: appt.duration_minutes || 30,
         dental_problem: appt.dental_problem || '',
         notes: appt.notes || '',
@@ -138,7 +133,7 @@ export default function AppointmentsPage() {
         name: '',
         phone: '',
         time: '11:00',
-        doctor_name: 'Dr. Vipeen Raut',
+        doctor_name: 'Dr. Kautilya Swaroop',
         duration_minutes: 30,
         dental_problem: '',
         notes: '',
@@ -311,46 +306,23 @@ export default function AppointmentsPage() {
                 </button>
               </div>
             ) : (
-              <div>
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-0.5">Schedule</p>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-base font-bold text-gray-900 leading-tight">{formatDateForDisplay(selectedDate)}</h3>
-                      {appointmentsForDate && appointmentsForDate.length > 0 && (
-                        <span className="text-xs font-bold bg-blue-600 text-white rounded-full px-2 py-0.5">{appointmentsForDate.length}</span>
-                      )}
-                    </div>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-0.5">Schedule</p>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-gray-900 leading-tight">{formatDateForDisplay(selectedDate)}</h3>
+                    {appointmentsForDate && appointmentsForDate.length > 0 && (
+                      <span className="text-xs font-bold bg-blue-600 text-white rounded-full px-2 py-0.5">{appointmentsForDate.length}</span>
+                    )}
                   </div>
-                  <button
-                    onClick={() => setIsSearchOpen(true)}
-                    className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition shrink-0 mt-1"
-                    title="Search appointments"
-                  >
-                    <Search className="w-4 h-4" />
-                  </button>
                 </div>
-
-                {/* Doctor Filter Tabs */}
-                <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto pb-0.5">
-                  {[
-                    { id: 'ALL', label: 'All' },
-                    { id: 'Dr. Vipeen Raut', label: 'Dr. Vipeen' },
-                    { id: 'Dr. Shillpa Raut', label: 'Dr. Shillpa' },
-                  ].map(d => (
-                    <button
-                      key={d.id}
-                      onClick={() => setSelectedDoctorFilter(d.id)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
-                        selectedDoctorFilter === d.id
-                          ? 'bg-blue-600 text-white shadow-xs'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      {d.label}
-                    </button>
-                  ))}
-                </div>
+                <button
+                  onClick={() => setIsSearchOpen(true)}
+                  className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition shrink-0 mt-1"
+                  title="Search appointments"
+                >
+                  <Search className="w-4 h-4" />
+                </button>
               </div>
             )}
           </div>
@@ -464,9 +436,9 @@ export default function AppointmentsPage() {
                       </div>
                     </div>
 
-                    {/* Patient info & Doctor */}
-                    <div className="flex items-start gap-3 px-4 pb-2">
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 ${color}`}>
+                    {/* Patient info */}
+                    <div className="flex items-center gap-3 px-4 pb-3">
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${color}`}>
                         {initials}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -474,32 +446,16 @@ export default function AppointmentsPage() {
                         <a href={`tel:${appt.phone}`} className="text-xs text-gray-500 hover:text-blue-600 transition flex items-center gap-1 mt-0.5">
                           <Phone className="w-3 h-3" />{appt.phone}
                         </a>
-                        {appt.doctor_name && (
-                          <span className={`inline-block mt-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                            appt.doctor_name.toLowerCase().includes('shillpa')
-                              ? 'bg-purple-100 text-purple-800 border border-purple-200'
-                              : 'bg-blue-100 text-blue-800 border border-blue-200'
-                          }`}>
-                            {appt.doctor_name}
-                          </span>
-                        )}
                       </div>
                     </div>
 
-                    {/* Problem / Condition tag & Notes */}
-                    {(appt.dental_problem || appt.notes) && (
-                      <div className="px-4 pb-3 flex flex-col gap-1.5 pt-1 border-t border-gray-50 mt-1">
-                        {appt.dental_problem && (
-                          <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-600 rounded-full px-2.5 py-1 w-fit">
-                            <Stethoscope className="w-3 h-3 shrink-0" />
-                            <span className="truncate max-w-[200px]">{appt.dental_problem}</span>
-                          </span>
-                        )}
-                        {appt.notes && (
-                          <p className="text-[11px] text-gray-500 italic truncate" title={appt.notes}>
-                            📝 {appt.notes}
-                          </p>
-                        )}
+                    {/* Dental problem tag */}
+                    {appt.dental_problem && (
+                      <div className="px-4 pb-3">
+                        <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-600 rounded-full px-2.5 py-1">
+                          <Stethoscope className="w-3 h-3 shrink-0" />
+                          <span className="truncate max-w-[180px]">{appt.dental_problem}</span>
+                        </span>
                       </div>
                     )}
                   </div>
@@ -538,25 +494,12 @@ export default function AppointmentsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Doctor</label>
-                  <select 
-                    value={formData.doctor_name} 
-                    onChange={e => setFormData({...formData, doctor_name: e.target.value})} 
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
-                  >
-                    <option value="Dr. Vipeen Raut">Dr. Vipeen Raut (Orthopaedic)</option>
-                    <option value="Dr. Shillpa Raut">Dr. Shillpa Raut (Gynecology)</option>
-                  </select>
+                  <input type="text" value={formData.doctor_name} onChange={e => setFormData({...formData, doctor_name: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Condition / Problem</label>
-                <input 
-                  type="text" 
-                  value={formData.dental_problem} 
-                  onChange={e => setFormData({...formData, dental_problem: e.target.value})} 
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition" 
-                  placeholder="e.g. Knee Pain, Back Pain, Pregnancy Care, Joint Replacement" 
-                />
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Dental Problem</label>
+                <input type="text" value={formData.dental_problem} onChange={e => setFormData({...formData, dental_problem: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition" placeholder="e.g. Checkup, Toothache, Root Canal" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Notes</label>

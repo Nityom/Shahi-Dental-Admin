@@ -13,7 +13,7 @@ function PrintDuesContent() {
   const searchParams = useSearchParams();
   const billId = searchParams.get('billId');
   const signatureParam = searchParams.get('signature') || 'sign.png';
-  const doctorNameParam = searchParams.get('doctorName') || 'Dr. Vipeen Raut';
+  const doctorNameParam = searchParams.get('doctorName') || 'Dr. Kautilya Swaroop';
 
   const [billData, setBillData] = useState<any>(null);
   const [paymentTransactions, setPaymentTransactions] = useState<any[]>([]);

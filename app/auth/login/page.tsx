@@ -142,7 +142,7 @@ export default function LoginForm() {
               </div>
               <div>
                 <h1 className="font-playfair text-white text-2xl font-bold leading-snug mb-2">
-                  Cortex Hospital
+                  Shahi Dental Clinic
                 </h1>
                 <p className="text-white/55 text-sm font-light leading-relaxed">
                   Secure administrative portal for managing your clinic's daily operations.
@@ -173,8 +173,8 @@ export default function LoginForm() {
               {/* Logo */}
               <div className="flex justify-center mb-7">
                 <Image
-                  src="/cortex_logo.png"
-                  alt="Cortex Hospital"
+                  src="/dental_logo.webp"
+                  alt="Shahi Dental Clinic"
                   width={120}
                   height={72}
                   className="object-contain"
@@ -365,13 +365,9 @@ export default function LoginForm() {
             </div>
 
             {/* Footer */}
-            <div className="flex justify-between items-center px-10 py-3 bg-gradient-to-r from-gray-50 to-blue-50/30 border-t border-gray-100 text-[11px] text-[#8ea7be]">
-              <span className="flex items-center gap-1.5 font-medium">
-                Powered by
-                <Image src="/Svasth_logo.png" alt="Svasth HMS" width={16} height={16} className="rounded-xs object-contain" />
-                <span className="font-semibold text-[#0077B6]">Svasth HMS</span>
-              </span>
-              <span>© 2026 Raut Nursing Home</span>
+            <div className="flex justify-between items-center px-10 py-3 bg-gradient-to-r from-gray-50 to-blue-50/30 border-t border-gray-100 text-[11px] text-[#afc5d9]">
+              <span>Developed by Nityom Tikhe</span>
+              <span>© 2026 Shahi Dental Clinic</span>
             </div>
           </div>
 

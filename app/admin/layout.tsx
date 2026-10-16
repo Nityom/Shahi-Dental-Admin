@@ -8,11 +8,9 @@ import { useRouter } from "next/navigation";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
-    // Auth commented out for now
-    const [isAuthenticated, setIsAuthenticated] = useState(true);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
-    /*
     useEffect(() => {
         const checkAuth = async () => {
             try {
@@ -61,7 +59,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
         );
     }
-    */
 
     return (
         <SidebarProvider>

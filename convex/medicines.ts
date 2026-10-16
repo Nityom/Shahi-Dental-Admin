@@ -4,17 +4,15 @@ import { v } from "convex/values";
 export const create = mutation({
     args: {
         name: v.string(),
-        composition: v.optional(v.string()),
         description: v.optional(v.string()),
-        quantity: v.optional(v.number()),
-        rate: v.optional(v.number()),
+        quantity: v.number(),
+        rate: v.number(),
         cost_price: v.optional(v.number()),
         selling_price: v.optional(v.number()),
         company: v.optional(v.string()),
         low_stock_threshold: v.optional(v.number()),
         strips: v.optional(v.number()),
         quantity_per_strip: v.optional(v.number()),
-        doctor_name: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         return await ctx.db.insert("medicines", args);
@@ -39,7 +37,6 @@ export const update = mutation({
     args: {
         id: v.id("medicines"),
         name: v.optional(v.string()),
-        composition: v.optional(v.string()),
         description: v.optional(v.string()),
         quantity: v.optional(v.number()),
         rate: v.optional(v.number()),
@@ -49,7 +46,6 @@ export const update = mutation({
         low_stock_threshold: v.optional(v.number()),
         strips: v.optional(v.number()),
         quantity_per_strip: v.optional(v.number()),
-        doctor_name: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const { id, ...updates } = args;
@@ -100,7 +96,7 @@ export const recordSale = mutation({
         // If medicine_id is provided, reduce inventory
         if (args.medicine_id) {
             const medicine = await ctx.db.get(args.medicine_id);
-            if (medicine && medicine.quantity !== undefined) {
+            if (medicine) {
                 const newQuantity = Math.max(0, medicine.quantity - args.quantity);
                 await ctx.db.patch(args.medicine_id, { quantity: newQuantity });
             }

@@ -389,7 +389,7 @@ export default function InvestigationsPage() {
                       {rec.reference_number || "-"}
                     </td>
                     <td className="px-4 py-4 font-medium text-gray-800">
-                      {rec.doctor_name || "Dr. Vipeen Raut"}
+                      {rec.doctor_name || "Dr. Kautilya Swaroop"}
                     </td>
                     <td className="px-4 py-4">
                       <span className="font-semibold text-gray-900 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100 text-xs">

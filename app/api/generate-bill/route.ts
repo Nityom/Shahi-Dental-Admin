@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
     // Create bill data object
     const billData: BillData = {
       clinic: {
-        name: 'Cortex Hospital',
+        name: 'Shahi Dental Clinic',
       },
       patient: {
         name: patientDetails.name,
@@ -288,7 +288,7 @@ function generatePDF(doc: jsPDF, billData: BillData): void {
   // Add clinic header
   doc.setTextColor(primaryColor);
   doc.setFontSize(18);
-  centerText('Cortex Hospital', yPos, 18);
+  centerText('Shahi Dental Clinic', yPos, 18);
   yPos += 7;
 
   doc.setTextColor('#666666');
@@ -297,11 +297,11 @@ function generatePDF(doc: jsPDF, billData: BillData): void {
 
 
   doc.setFontSize(8);
-  centerText('Beside Urich Mall, Aarti Square, Mohini Nagar, Nagpur Road, Wardha (M.S) - 442001', yPos, 8);
+  centerText('Juran Chhapra Main Rd, in front of Road Number 2, Juran Chapra, Brahmapura, Muzaffarpur, Bihar 842001', yPos, 8);
   yPos += 4;
-  centerText('Maharashtra, India - 442001', yPos, 8);
+  centerText('Bihar, India - 842001', yPos, 8);
   yPos += 4;
-  centerText('Phone: +91 9373280505 | +91 7184273030 | Email: drvipeenraut@cortexhospital.com', yPos, 8);
+  centerText('Phone: +91 9525050250\n | Email:  info@shahidentalclinic.com', yPos, 8);
   yPos += 8;
 
   // Add invoice header
@@ -679,7 +679,7 @@ function generatePDF(doc: jsPDF, billData: BillData): void {
   doc.setTextColor('#666666');
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  centerText('Thank you for choosing Cortex Hospital for your healthcare needs.', yPos, 9);
+  centerText('Thank you for choosing Shahi Dental Clinic for your dental care needs.', yPos, 9);
   yPos += 5;
   centerText('We wish you a speedy recovery and the best of health.', yPos, 9);
   yPos += 5;

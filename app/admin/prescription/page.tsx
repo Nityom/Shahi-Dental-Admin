@@ -4,8 +4,10 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { getAllMedicines, deductMedicineStock } from '@/services/medicine';
 import { Medicine } from '@/services/medicine';
 import { addPrescription, Prescription, getPrescriptionById, updatePrescription } from '@/services/prescription';
-import { getOrCreatePatient, getPatientByPhoneNumber, getPatientByReference, getNextPatientReference } from '@/services/patients';
+import { getOrCreatePatient, getPatientByPhoneNumber, getPatientByReference } from '@/services/patients';
 import { Patient } from '@/types/patient';
+import { ToothData as TeethChartToothData } from '@/components/TeethChart';
+import DentalArchOdontogram from '@/components/DentalArchOdontogram';
 import { getCurrentUser } from '@/services/adminuser';
 import { createBill, Bill, getBillByPrescriptionId, updateBill } from '@/services/bills';
 import { deductInventoryStock } from '@/services/inventory';
@@ -17,7 +19,6 @@ import { Doctor } from '@/types/doctor';
 import { ConvexHttpClient } from 'convex/browser';
 // @ts-ignore
 import { api } from '@/convex/_generated/api';
-import { generatePrescriptionPdfBlob } from '@/lib/generate-prescription-client';
 
 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
 if (!convexUrl) {
@@ -28,12 +29,8 @@ const convexClient = new ConvexHttpClient(convexUrl);
 interface MedicineEntry {
   name: string;
   dosage: string;
-  duration?: string;
-  quantity?: number; // Optional quantity
-  composition?: string;
-  timing?: string;
-  freq_duration?: string;
-  note?: string;
+  duration: string;
+  quantity?: number; // Quantity to dispense
 }
 
 // Define dental disease options
@@ -150,12 +147,6 @@ interface FormData {
   advice: string;
   followupDate: string;
   reference_number?: string;
-  bp?: string;
-  spo2?: string;
-  height?: string;
-  weight?: string;
-  pulse?: string;
-  temperature?: string;
 }
 
 interface TreatmentItem {
@@ -167,38 +158,10 @@ interface TreatmentItem {
   date?: string;
 }
 
-function getTimingFromDosage(dosage?: string): string {
-  if (!dosage) return '';
-  const trimmed = dosage.trim();
-  const parts = trimmed.split('-').map(p => p.trim());
-  if (parts.length === 3) {
-    const [m, a, n] = parts;
-    const segments: string[] = [];
-    if (m && m !== '0') {
-      segments.push(`${m} - नाश्ता नंतर`);
-    }
-    if (a && a !== '0') {
-      segments.push(`${a} - दुपारी जेवणानंतर`);
-    }
-    if (n && n !== '0') {
-      segments.push(`${n} - रात्री जेवणानंतर`);
-    }
-    if (segments.length > 0) {
-      return segments.join(', ');
-    }
-  }
-  if (trimmed.toLowerCase() === 'stat') {
-    return 'तातडीने (Stat)';
-  }
-  return '';
-}
-
 const PrescriptionPage = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [prescriptionId, setPrescriptionId] = useState<string | null>(null);
   const [patientReferenceNumber, setPatientReferenceNumber] = useState<string | undefined>(undefined);
-  const [opdVisitId, setOpdVisitId] = useState<string | null>(null);
-  const [opdVisit, setOpdVisit] = useState<any>(null);
 
   const [formData, setFormData] = useState<FormData>({
     patientName: '',
@@ -213,12 +176,6 @@ const PrescriptionPage = () => {
     treatmentPlan: [],
     advice: '',
     followupDate: '',
-    bp: '',
-    spo2: '',
-    height: '',
-    weight: '',
-    pulse: '',
-    temperature: '',
   });
 
   const [treatmentItems, setTreatmentItems] = useState<TreatmentItem[]>([]);
@@ -287,136 +244,14 @@ const PrescriptionPage = () => {
     discountPercent: 0,
   });
 
+  // Doctor / signature selector
   const [availableDoctors, setAvailableDoctors] = useState<Doctor[]>([]);
-  const [selectedDoctorName, setSelectedDoctorName] = useState<string>('Dr. Vipeen Raut');
+  const [selectedDoctorName, setSelectedDoctorName] = useState<string>('Dr. Kautilya Swaroop');
   const [selectedDoctor, setSelectedDoctor] = useState<'kautilya' | 'anjali'>('kautilya');
-  const [showAllMedicines, setShowAllMedicines] = useState<boolean>(false);
-  const [includeSignature, setIncludeSignature] = useState<boolean>(true);
 
-  // Switch and remember active doctor across tabs & sessions
-  const handleDoctorSelect = (docName: string) => {
-    setSelectedDoctorName(docName);
-    if (docName.toLowerCase().includes('shillpa') || docName.toLowerCase().includes('anjali')) {
-      setSelectedDoctor('anjali');
-    } else {
-      setSelectedDoctor('kautilya');
-    }
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('cortex_active_doctor', docName);
-      } catch (e) {
-        console.error('Failed to save active doctor to localStorage:', e);
-      }
-    }
-  };
-
-  // On mount: remember last active doctor and prefill from OPD queue / URL params
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    // 1. Remember last active doctor
-    try {
-      const savedDoc = localStorage.getItem('cortex_active_doctor');
-      if (savedDoc) {
-        setSelectedDoctorName(savedDoc);
-        if (savedDoc.toLowerCase().includes('shillpa') || savedDoc.toLowerCase().includes('anjali')) {
-          setSelectedDoctor('anjali');
-        } else {
-          setSelectedDoctor('kautilya');
-        }
-      }
-    } catch (e) {
-      console.error('Error reading active doctor:', e);
-    }
-
-    // 2. Read query params if arriving from OPD Management or Patient list
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const qDoc = params.get('doctorName') || params.get('doctor');
-      if (qDoc) {
-        setSelectedDoctorName(qDoc);
-        if (qDoc.toLowerCase().includes('shillpa') || qDoc.toLowerCase().includes('anjali')) {
-          setSelectedDoctor('anjali');
-        } else {
-          setSelectedDoctor('kautilya');
-        }
-        try {
-          localStorage.setItem('cortex_active_doctor', qDoc);
-        } catch (_) {}
-      }
-
-      const qName = params.get('patientName') || params.get('name');
-      const qPhone = params.get('phoneNumber') || params.get('phone');
-      const qAge = params.get('age');
-      const qSex = params.get('sex');
-      let qRef = params.get('reference_number') || params.get('uhid') || params.get('reference');
-      if (qRef) {
-        qRef = qRef.replace(/^CH/i, 'CRX');
-        if (qName?.toLowerCase() === 'testing' && (qRef === 'CRX0001' || qRef === 'CH0001')) {
-          qRef = 'CRX0002';
-        } else if (qRef === 'CRX0002' && qName?.toLowerCase() !== 'testing') {
-          // CRX0002 is already assigned to patient Testing. Any new patient must start at CRX0003
-          qRef = 'CRX0003';
-        }
-      }
-      const qBp = params.get('bp');
-      const qPulse = params.get('pulse');
-      const qSpo2 = params.get('spo2');
-      const qHeight = params.get('height');
-      const qWeight = params.get('weight');
-
-      if (qName || qPhone || qRef) {
-        setFormData(prev => ({
-          ...prev,
-          patientName: qName || prev.patientName,
-          phoneNumber: qPhone || prev.phoneNumber,
-          age: qAge || prev.age,
-          sex: qSex || prev.sex,
-          reference_number: qRef || (prev.reference_number ? prev.reference_number.replace(/^CH/i, 'CRX') : ''),
-          bp: qBp || prev.bp,
-          pulse: qPulse || prev.pulse,
-          spo2: qSpo2 || prev.spo2,
-          height: qHeight || prev.height,
-          weight: qWeight || prev.weight,
-        }));
-        if (qRef) {
-          setPatientReferenceNumber(qRef);
-        } else if (qPhone) {
-          getPatientByPhoneNumber(qPhone).then(async (pt) => {
-            if (pt) {
-              let ref = (pt.reference_number || '').replace(/^CH/i, 'CRX');
-              if (pt.name?.toLowerCase() === 'testing' && (ref === 'CRX0001' || !ref)) {
-                ref = 'CRX0002';
-              } else if (ref === 'CRX0002' && pt.name?.toLowerCase() !== 'testing') {
-                ref = 'CRX0003';
-              }
-              if (ref) {
-                setFormData(p => ({ ...p, reference_number: ref }));
-                setPatientReferenceNumber(ref);
-              }
-            } else {
-              const nextRef = await getNextPatientReference();
-              setFormData(p => ({ ...p, reference_number: nextRef }));
-              setPatientReferenceNumber(nextRef);
-            }
-          }).catch(console.error);
-        }
-      }
-    } catch (e) {
-      console.error('Error parsing URL query params in prescription page:', e);
-    }
-  }, []);
-
-  const filteredMedicineOptions = medicineOptions.filter((med) => {
-    if (showAllMedicines) return true;
-    const doc = med.doctor_name || 'Both Doctors';
-    if (doc === 'Both Doctors' || doc === 'All Doctors' || !doc) return true;
-    return doc.toLowerCase() === (selectedDoctorName || '').toLowerCase();
-  });
-
-  // Consultation charge (Managed in Billing module, not in clinical prescription)
-  const [applyConsultationCharge, setApplyConsultationCharge] = useState<boolean>(false);
-  const [consultationCharge, setConsultationCharge] = useState<number>(0);
+  // Consultation charge
+  const [applyConsultationCharge, setApplyConsultationCharge] = useState<boolean>(true);
+  const [consultationCharge, setConsultationCharge] = useState<number>(250);
   const [consultationDiscount, setConsultationDiscount] = useState<number>(0);
 
   // Treatment plan catalog search
@@ -450,8 +285,8 @@ const PrescriptionPage = () => {
           }
         } else {
           const defaults: Doctor[] = [
-            { name: 'Dr. Vipeen Raut', doctor_type: 'MAIN', status: 'ACTIVE', signature_url: '/sign.png' },
-            { name: 'Dr. Shillpa Raut', doctor_type: 'MAIN', status: 'ACTIVE', signature_url: '/sign1.png' },
+            { name: 'Dr. Kautilya Swaroop', doctor_type: 'MAIN', status: 'ACTIVE', signature_url: '/sign.png' },
+            { name: 'Dr. Anjali Swaroop', doctor_type: 'MAIN', status: 'ACTIVE', signature_url: '/sign1.png' },
           ];
           setAvailableDoctors(defaults);
         }
@@ -518,19 +353,15 @@ const PrescriptionPage = () => {
         const existingPatient = await getPatientByPhoneNumber(phoneNumber);
 
         if (existingPatient) {
-          let ref = (existingPatient.reference_number || '').replace(/^CH/i, 'CRX');
-          if (ref === 'CRX0002' && existingPatient.name?.toLowerCase() !== 'testing') {
-            ref = 'CRX0003';
-          }
           setFormData(prevData => ({
             ...prevData,
             patientName: existingPatient.name,
             age: existingPatient.age?.toString() || '',
             sex: existingPatient.sex || '',
             phoneNumber: existingPatient.phone_number,
-            reference_number: ref,
+            reference_number: existingPatient.reference_number,
           }));
-          setPatientReferenceNumber(ref);
+          setPatientReferenceNumber(existingPatient.reference_number);
 
           // Pre-fill clinical fields from the latest prescription
           try {
@@ -672,20 +503,12 @@ const PrescriptionPage = () => {
         [field]: value
       };
 
-      // Auto-populate composition when medicine name changes
-      if (field === 'name') {
-        const found = medicineOptions.find(m => m.name.toLowerCase() === String(value).toLowerCase());
-        if (found?.composition) {
-          updatedMedicines[index].composition = found.composition;
-        }
-      }
-
       // Auto-calculate quantity when dosage or duration changes
       if (field === 'dosage' || field === 'duration') {
         const medicine = updatedMedicines[index];
         const calculatedQty = calculateQuantity(
           field === 'dosage' ? String(value) : medicine.dosage,
-          field === 'duration' ? String(value) : (medicine.duration || '')
+          field === 'duration' ? String(value) : medicine.duration
         );
         if (calculatedQty > 0) {
           updatedMedicines[index].quantity = calculatedQty;
@@ -697,18 +520,7 @@ const PrescriptionPage = () => {
   };
 
   const addMedicine = () => {
-    setMedicines([
-      ...medicines,
-      {
-        name: '',
-        composition: '',
-        dosage: '1-0-1',
-        timing: '1 - नाश्ता नंतर, 1 - रात्री जेवणानंतर',
-        freq_duration: 'जेवणानंतर - दररोज - 5 दिवस',
-        duration: '5 days',
-        note: '',
-      }
-    ]);
+    setMedicines([...medicines, { name: '', dosage: '1-0-1', duration: '5 days', quantity: calculateQuantity('1-0-1', '5 days') || 10 }]);
   };
   const removeMedicine = (index: number) => {
     const updatedMedicines = [...medicines];
@@ -870,13 +682,7 @@ const PrescriptionPage = () => {
           treatmentPlan: Array.isArray(treatmentPlanRaw) ? normTreatmentPlan(treatmentPlanRaw) : [],
           advice: prescription.advice || '',
           followupDate: prescription.followup_date || '',
-          reference_number: prescription.reference_number || '',
-          bp: (prescription.vitals?.bp || (prescription.vitals?.bp_systolic && prescription.vitals?.bp_diastolic ? `${prescription.vitals.bp_systolic}/${prescription.vitals.bp_diastolic}` : '') || (prescription as any).bp || ''),
-          spo2: String(prescription.vitals?.spo2 || (prescription as any).spo2 || ''),
-          height: String(prescription.vitals?.height || (prescription as any).height || ''),
-          weight: String(prescription.vitals?.weight || (prescription as any).weight || ''),
-          pulse: String(prescription.vitals?.pulse || (prescription as any).pulse || ''),
-          temperature: String(prescription.vitals?.temperature || (prescription as any).temperature || ''),
+          reference_number: prescription.reference_number || ''
         });
 
         // Set reference number in separate state
@@ -974,17 +780,7 @@ const PrescriptionPage = () => {
         })),
         advice: formData.advice,
         followup_date: formData.followupDate || undefined,
-        doctor_name: selectedDoctorName || 'Dr. Vipeen Raut',
-        opd_visit_id: opdVisitId || undefined,
-        vitals: {
-          ...(opdVisit?.vitals || {}),
-          ...(formData.bp ? { bp: formData.bp, bp_systolic: formData.bp.split('/')[0]?.trim(), bp_diastolic: formData.bp.split('/')[1]?.trim() } : {}),
-          ...(formData.spo2 ? { spo2: formData.spo2 } : {}),
-          ...(formData.height ? { height: formData.height } : {}),
-          ...(formData.weight ? { weight: formData.weight } : {}),
-          ...(formData.pulse ? { pulse: formData.pulse } : {}),
-          ...(formData.temperature ? { temperature: formData.temperature } : {}),
-        },
+        doctor_name: selectedDoctorName || 'Dr. Kautilya Swaroop',
       };
 
       let savedPrescription;
@@ -1000,50 +796,6 @@ const PrescriptionPage = () => {
         }
       }
 
-      // If consultation is linked to an OPD visit, mark visit as Completed in Convex
-      if (opdVisitId) {
-        try {
-          if ((api as any).opd?.updateVisitStatus) {
-            await convexClient.mutation((api as any).opd.updateVisitStatus, {
-              id: opdVisitId as any,
-              status: 'Completed',
-              doctor_name: selectedDoctorName || 'Dr. Vipeen Raut',
-              notes: `Consultation completed & prescription recorded`,
-              staff_name: selectedDoctorName || 'Doctor',
-            });
-          }
-        } catch (opdStatusErr) {
-          console.warn('Could not update OPD visit to Completed in Convex:', opdStatusErr);
-        }
-      }
-
-      // Mark OPD queue item as Completed in local storage
-      try {
-        const qRaw = localStorage.getItem("cortex_opd_queue_v1");
-        if (qRaw) {
-          const q = JSON.parse(qRaw);
-          let matched = false;
-          const updatedQ = q.map((item: any) => {
-            const isMatch =
-              (opdVisitId && item.id === opdVisitId) ||
-              (patient?.reference_number && item.uhid === patient?.reference_number) ||
-              (formData.phoneNumber && item.phone === formData.phoneNumber);
-            if (isMatch) {
-              matched = true;
-              return { ...item, status: "Completed" };
-            }
-            return item;
-          });
-          if (matched) {
-            localStorage.setItem("cortex_opd_queue_v1", JSON.stringify(updatedQ));
-            window.dispatchEvent(new Event("storage"));
-            window.dispatchEvent(new CustomEvent("cortex_queue_updated"));
-          }
-        }
-      } catch (queueErr) {
-        console.warn("Could not update local OPD queue status to Completed:", queueErr);
-      }
-
       // Auto-record medicine sales when prescription is saved
       if (medicines.length > 0 && savedPrescription?.id && patient?.id) {
         try {
@@ -1054,27 +806,46 @@ const PrescriptionPage = () => {
               try {
                 // Find the medicine in medicineOptions to get the ID
 
-                const medicineDetail = medicineOptions.find(m => m.name.toLowerCase() === med.name.toLowerCase());
+                const medicineDetail = medicineOptions.find(m => m.name === med.name);
                 if (!medicineDetail || !medicineDetail.id) {
-                  console.log(`ℹ️ Medicine "${med.name}" not in inventory master or stock not tracked`);
+                  console.error(`❌ Medicine "${med.name}" not found in inventory - cannot record sale`);
+                  console.log('🔍 Available medicine names:', medicineOptions.map(m => m.name));
+                  alert(`Warning: Medicine "${med.name}" not found in inventory. Sale not recorded.`);
                   return;
                 }
 
-                // If stock is tracked, deduct
-                if (medicineDetail.quantity !== undefined && medicineDetail.quantity !== null && medicineDetail.quantity > 0) {
-                  const quantity = med.quantity && med.quantity > 0
-                    ? med.quantity
-                    : (() => {
-                      const quantityMatch = (med.dosage || '').toString().match(/[\d.]+/);
+
+                // Use the quantity field directly if available, otherwise parse from dosage
+                const quantity = med.quantity && med.quantity > 0
+                  ? med.quantity
+                  : (() => {
+                      const quantityMatch = med.dosage.toString().match(/[\d.]+/);
                       return quantityMatch ? parseFloat(quantityMatch[0]) : 1;
                     })();
 
-                  if (quantity > 0) {
-                    await deductMedicineStock([{ name: medicineDetail.name, quantity: quantity }]);
-                  }
+
+                if (quantity <= 0 || isNaN(quantity)) {
+                  console.error(`❌ Invalid quantity for ${med.name}: ${med.dosage}`);
+                  alert(`Warning: Invalid quantity for "${med.name}". Sale not recorded.`);
+                  return;
+                }
+
+
+                const results = await deductMedicineStock([{ name: medicineDetail.name, quantity: quantity }]);
+                const result = results[0];
+
+                if (result.status === 'success') {
+                  console.log(`✅ Sale recorded successfully for ${med.name}:`, result);
+                } else if (result.status === 'warning') {
+                  alert(`⚠️ Insufficient stock for "${med.name}": ${result.message}`);
+                } else {
+                  console.error(`❌ Failed to record sale for ${med.name}:`, result);
+                  alert(`❌ Failed to record sale for "${med.name}": ${result.message}`);
                 }
               } catch (error) {
-                console.warn(`Note: stock deduction skipped for ${med.name}:`, error);
+                console.error(`❌ Error recording sale for ${med.name}:`, error);
+                alert(`Error recording sale for "${med.name}": ${error instanceof Error ? error.message : 'Unknown error'}`);
+                // Continue with other medicines even if one fails
               }
             });
 
@@ -1346,8 +1117,23 @@ const PrescriptionPage = () => {
         })),
       };
 
-      // Generate PDF client-side
-      const blob = await generatePrescriptionPdfBlob(prescriptionData as any);
+      console.log('Sending prescription data to API:', prescriptionData);
+
+      const res = await fetch('/api/generate-prescription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(prescriptionData),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('API Error:', errorText);
+        throw new Error(`Failed to generate prescription: ${res.status} ${res.statusText}`);
+      }
+
+      const blob = await res.blob();
 
       // Clean up old URL if it exists
       if (pdfUrl) {
@@ -1403,9 +1189,9 @@ const PrescriptionPage = () => {
       return;
     }
     const docObj = availableDoctors.find((d) => d.name.toLowerCase() === (selectedDoctorName || '').toLowerCase());
-    const docName = docObj?.name || selectedDoctorName || (selectedDoctor === 'anjali' ? 'Dr. Shillpa Raut' : 'Dr. Vipeen Raut');
+    const docName = docObj?.name || selectedDoctorName || (selectedDoctor === 'anjali' ? 'Dr. Anjali Swaroop' : 'Dr. Kautilya Swaroop');
     const sigFile = docObj?.signature_url || (docName.toLowerCase().includes('anjali') ? 'sign1.png' : 'sign.png');
-    window.open(`/print-prescription?prescriptionId=${prescriptionId}&signature=${encodeURIComponent(sigFile)}&doctorName=${encodeURIComponent(docName)}&includeSignature=${includeSignature}`, '_blank');
+    window.open(`/print-prescription?prescriptionId=${prescriptionId}&signature=${encodeURIComponent(sigFile)}&doctorName=${encodeURIComponent(docName)}`, '_blank');
   };
 
   // Function to generate and print bill with payment details
@@ -1436,18 +1222,10 @@ const PrescriptionPage = () => {
           return;
         }
         try {
-          const consultationItem = applyConsultationCharge && consultationCharge > 0 ? [{
-            id: 1,
-            description: `Consultation Charge (${selectedDoctorName})`,
-            quantity: 1,
-            unit_price: consultationCharge,
-            total: Number((consultationCharge * (1 - (consultationDiscount || 0) / 100)).toFixed(2)),
-            item_type: 'procedure' as const,
-          }] : [];
           const planItems = formData.treatmentPlan
             .filter(tp => tp.cost > 0)
             .map((tp, i) => ({
-              id: consultationItem.length + i + 1,
+              id: i + 1,
               description: tp.name + (tp.notes ? ` (${tp.notes})` : ''),
               quantity: 1,
               unit_price: tp.cost,
@@ -1455,7 +1233,7 @@ const PrescriptionPage = () => {
               item_type: 'procedure' as const,
             }));
           const doneItems = treatmentItems.map((item, i) => ({
-            id: consultationItem.length + planItems.length + i + 1,
+            id: planItems.length + i + 1,
             description: item.description,
             quantity: item.quantity,
             unit_price: item.unitPrice,
@@ -1463,9 +1241,9 @@ const PrescriptionPage = () => {
             item_type: 'procedure' as const,
             date: item.date,
           }));
-          const allItems = [...consultationItem, ...planItems, ...doneItems];
+          const allItems = [...planItems, ...doneItems];
           if (allItems.length === 0) {
-            alert('Please enable consultation fee or add at least one treatment item before generating a bill.');
+            alert('Please add at least one item in Treatment Plan or Treatment Done before generating a bill.');
             return;
           }
           const total = allItems.reduce((s, i) => s + i.total, 0);
@@ -1533,7 +1311,7 @@ const PrescriptionPage = () => {
 
       // Build signature params from selected doctor
       const docObj = availableDoctors.find((d) => d.name.toLowerCase() === (selectedDoctorName || '').toLowerCase());
-      const docName = docObj?.name || selectedDoctorName || 'Dr. Vipeen Raut';
+      const docName = docObj?.name || selectedDoctorName || 'Dr. Kautilya Swaroop';
       const sigFile = docObj?.signature_url || (docName.toLowerCase().includes('anjali') ? 'sign1.png' : 'sign.png');
 
       // Open new printable bill page (fresh fetch ensures updated balance)
@@ -1544,30 +1322,14 @@ const PrescriptionPage = () => {
     }
   };
 
-  // Helper to build URL to Hospital Billing module pre-filled
-  const getBillingUrl = () => {
-    const params = new URLSearchParams({
-      tab: 'opd',
-      prescriptionId: prescriptionId || '',
-      patientName: formData.patientName || '',
-      phoneNumber: formData.phoneNumber || '',
-      uhid: formData.reference_number || patientReferenceNumber || '',
-      age: formData.age || '',
-      sex: formData.sex || '',
-      doctorName: selectedDoctorName || 'Dr. Vipeen Raut',
-      opdVisitId: opdVisitId || '',
-    });
-    return `/admin/billing?${params.toString()}`;
-  };
-
   // Modified useEffect to include pdfUrl in dependencies  // Only run this effect once on mount to prefill form data from URL params
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const isEdit = params.get('edit') === 'true';
-      const id = params.get('id') || params.get('prescriptionId');
+      const id = params.get('id');
 
-      if (id && id !== 'undefined' && id !== 'null') {
+      if (isEdit && id && id !== 'undefined' && id !== 'null') {
         setIsEditMode(true);
         setPrescriptionId(id);
         loadPrescriptionData(id);
@@ -1647,57 +1409,6 @@ const PrescriptionPage = () => {
             }
           })();
         }
-
-        // Check for OPD visit ID passed from OPD Queue
-        const opdParam = params.get('opdVisitId') || params.get('visitId');
-        if (opdParam) {
-          setOpdVisitId(opdParam);
-          (async () => {
-            try {
-              const opdApi = (api as any).opd;
-              const vData: any = opdApi?.getVisitById ? await convexClient.query(opdApi.getVisitById, { id: opdParam as any, visitId: opdParam }) : null;
-              if (vData) {
-                setOpdVisit(vData);
-                const vit = vData.vitals || {};
-                setFormData(prev => ({
-                  ...prev,
-                  patientName: vData.patient_name || prev.patientName,
-                  age: String(vData.age || prev.age),
-                  sex: vData.gender || prev.sex,
-                  phoneNumber: vData.phone_number || prev.phoneNumber,
-                  reference_number: vData.uhid || prev.reference_number,
-                  date: vData.visit_date || prev.date,
-                  cc: prev.cc || vData.notes || '',
-                  bp: (vit.bp || (vit.bp_systolic && vit.bp_diastolic ? `${vit.bp_systolic}/${vit.bp_diastolic}` : '') || prev.bp || ''),
-                  spo2: String(vit.spo2 || prev.spo2 || ''),
-                  height: String(vit.height || prev.height || ''),
-                  weight: String(vit.weight || prev.weight || ''),
-                  pulse: String(vit.pulse || prev.pulse || ''),
-                  temperature: String(vit.temperature || prev.temperature || ''),
-                }));
-                if (vData.uhid) {
-                  setPatientReferenceNumber(vData.uhid);
-                }
-                if (vData.doctor_name) {
-                  setSelectedDoctorName(vData.doctor_name);
-                }
-                if (vData.total_charges && vData.total_charges > 0) {
-                  setApplyConsultationCharge(false);
-                }
-                if ((vData.status === 'Registered' || vData.status === 'Waiting') && (api as any).opd?.updateVisitStatus) {
-                  await convexClient.mutation((api as any).opd.updateVisitStatus, {
-                    id: opdParam as any,
-                    status: 'In Consultation',
-                    doctor_name: vData.doctor_name,
-                    staff_name: vData.doctor_name || 'Consulting Doctor',
-                  });
-                }
-              }
-            } catch (err) {
-              console.warn('Error loading OPD visit in consultation:', err);
-            }
-          })();
-        }
       }
     }
   }, [loadPrescriptionData]); // Include loadPrescriptionData as a dependency
@@ -1721,183 +1432,12 @@ const PrescriptionPage = () => {
               <p className="text-sm text-gray-600">Logged in as: <span className="font-medium text-gray-900">{userEmail}</span></p>
             </div>
           )}
-          {/* Success Message & Next Steps Action Banner */}
+          {/* Success Message */}
           {saveSuccess && (
-            <div className="mb-6 p-4 bg-emerald-50 border-2 border-emerald-400 text-emerald-900 rounded-2xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-lg flex-shrink-0 shadow">
-                  ✓
-                </div>
-                <div>
-                  <h3 className="font-bold text-emerald-950 text-base">Prescription Saved Successfully!</h3>
-                  <p className="text-xs text-emerald-700">
-                    Clinical record recorded for <strong>{formData.patientName || 'Patient'}</strong> {formData.reference_number ? `(UHID: ${formData.reference_number})` : ''}.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={handlePrintablePrescription}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1.5"
-                >
-                  <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                  </svg>
-                  Print Prescription
-                </button>
-
-                <a
-                  href="/admin/opd"
-                  className="px-3.5 py-2 bg-slate-800 hover:bg-black text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1.5"
-                >
-                  <span>← OPD Queue</span>
-                </a>
-              </div>
+            <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+              <p className="font-medium">Prescription saved successfully to the database!</p>
             </div>
           )}
-
-          {/* OPD Consultation Context Banner */}
-          {opdVisit && (
-            <div className="mb-6 bg-gradient-to-r from-teal-900 via-teal-950 to-slate-900 text-white rounded-xl p-4 shadow-lg border border-teal-700/60">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-teal-800/80 pb-3 mb-3">
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="px-2.5 py-1 bg-teal-500/20 text-teal-300 font-mono font-bold text-xs rounded border border-teal-500/30">
-                    OPD TOKEN: {opdVisit.opd_number}
-                  </span>
-                  <span className="px-2 py-0.5 bg-white/10 text-slate-200 font-mono text-xs rounded">
-                    UHID: {opdVisit.uhid}
-                  </span>
-                  <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-200 font-semibold text-xs rounded">
-                    Visit #{opdVisit.visit_number}
-                  </span>
-                  <span className="text-teal-200 font-medium">
-                    {opdVisit.department}
-                  </span>
-                  <span className="text-slate-300">
-                    • Doctor: <strong className="text-white">{opdVisit.doctor_name}</strong>
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <a
-                    href={`/print-opd-card?visitId=${opdVisit._id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3 py-1.5 text-xs font-semibold bg-white/10 hover:bg-white/20 text-teal-200 rounded-lg flex items-center space-x-1 border border-teal-500/30 transition"
-                  >
-                    <span>Print OPD Card</span>
-                  </a>
-                  <a
-                    href="/admin/opd"
-                    className="px-3 py-1.5 text-xs font-semibold bg-teal-600 hover:bg-teal-500 text-white rounded-lg flex items-center space-x-1 shadow transition"
-                  >
-                    <span>← OPD Queue</span>
-                  </a>
-                </div>
-              </div>
-
-              {/* Vitals Summary Strip */}
-              {opdVisit.vitals && (
-                <div>
-                  <div className="text-[11px] uppercase tracking-wider font-bold text-teal-300 mb-2 flex items-center justify-between">
-                    <span>Recorded Patient Vitals & Clinical Baseline</span>
-                    {opdVisit.vitals.allergies && (
-                      <span className="text-red-300 font-bold normal-case bg-red-950/60 border border-red-800/80 px-2 py-0.5 rounded">
-                        ⚠️ ALLERGY: {opdVisit.vitals.allergies}
-                      </span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 text-xs">
-                    <div className="bg-white/10 rounded-lg p-2 border border-white/10 text-center">
-                      <div className="text-[10px] text-slate-300 uppercase font-semibold">Weight</div>
-                      <div className="font-black text-white text-sm">{opdVisit.vitals.weight ? `${opdVisit.vitals.weight} kg` : '—'}</div>
-                    </div>
-                    <div className="bg-white/10 rounded-lg p-2 border border-white/10 text-center">
-                      <div className="text-[10px] text-slate-300 uppercase font-semibold">Height</div>
-                      <div className="font-black text-white text-sm">{opdVisit.vitals.height ? `${opdVisit.vitals.height} cm` : '—'}</div>
-                    </div>
-                    <div className="bg-white/10 rounded-lg p-2 border border-white/10 text-center">
-                      <div className="text-[10px] text-slate-300 uppercase font-semibold">BMI</div>
-                      <div className="font-black text-teal-300 text-sm">{opdVisit.vitals.bmi || '—'}</div>
-                    </div>
-                    <div className="bg-white/10 rounded-lg p-2 border border-white/10 text-center">
-                      <div className="text-[10px] text-slate-300 uppercase font-semibold">BP (mmHg)</div>
-                      <div className="font-black text-white text-sm">
-                        {opdVisit.vitals.bp_systolic && opdVisit.vitals.bp_diastolic
-                          ? `${opdVisit.vitals.bp_systolic}/${opdVisit.vitals.bp_diastolic}`
-                          : '—'}
-                      </div>
-                    </div>
-                    <div className="bg-white/10 rounded-lg p-2 border border-white/10 text-center">
-                      <div className="text-[10px] text-slate-300 uppercase font-semibold">Pulse</div>
-                      <div className="font-black text-white text-sm">{opdVisit.vitals.pulse ? `${opdVisit.vitals.pulse} /min` : '—'}</div>
-                    </div>
-                    <div className="bg-white/10 rounded-lg p-2 border border-white/10 text-center">
-                      <div className="text-[10px] text-slate-300 uppercase font-semibold">Temp</div>
-                      <div className="font-black text-white text-sm">{opdVisit.vitals.temperature ? `${opdVisit.vitals.temperature} °F` : '—'}</div>
-                    </div>
-                    <div className="bg-white/10 rounded-lg p-2 border border-white/10 text-center">
-                      <div className="text-[10px] text-slate-300 uppercase font-semibold">SpO₂ / Sugar</div>
-                      <div className="font-black text-white text-sm">
-                        {opdVisit.vitals.spo2 ? `${opdVisit.vitals.spo2}%` : '—'}
-                        {opdVisit.vitals.blood_sugar ? ` | ${opdVisit.vitals.blood_sugar}` : ''}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Active Doctor Indicator & Quick Switcher (Light Theme) */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl shadow-sm p-4 sm:p-5 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center font-bold text-xl shadow-xs">
-                🩺
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold tracking-wider uppercase bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full border border-blue-200">
-                    Currently Attending & Signing Doctor
-                  </span>
-                  <span className="text-xs text-slate-400 font-medium">(Saved automatically)</span>
-                </div>
-                <div className="text-xl font-black tracking-tight text-slate-900 mt-1 flex flex-wrap items-center gap-2">
-                  <span>{selectedDoctorName}</span>
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 font-sans">
-                    {selectedDoctorName.toLowerCase().includes('shillpa') ? 'Obstetrics & Gynaecology' : 'Orthopaedics & Joint Replacement'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 self-start md:self-auto">
-              <span className="text-xs font-bold text-slate-500 pl-2">Switch Doctor:</span>
-              <button
-                type="button"
-                onClick={() => handleDoctorSelect('Dr. Vipeen Raut')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                  selectedDoctorName === 'Dr. Vipeen Raut'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white'
-                }`}
-              >
-                Dr. Vipeen Raut (Ortho)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDoctorSelect('Dr. Shillpa Raut')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                  selectedDoctorName === 'Dr. Shillpa Raut'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white'
-                }`}
-              >
-                Dr. Shillpa Raut (Gynae)
-              </button>
-            </div>
-          </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Patient Information Section */}                <div className="bg-blue-50 p-6 rounded-lg border border-blue-100">
@@ -1977,80 +1517,896 @@ const PrescriptionPage = () => {
                   />
                   <p className="text-xs text-gray-500 mt-1">Patient data will auto-fill if phone exists</p>
                 </div>
+              </div>
+            </div>
 
-                {/* Vital Signs (BP, SpO2, Height, Weight, Pulse) */}
-                <div className="col-span-1 md:col-span-2 pt-4 mt-2 border-t border-blue-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-bold text-blue-900">
-                      Vital Signs (BP, SpO₂, Height, Weight, Pulse)
+            {/* Medical Information Section */}
+            <div className="bg-green-50 p-6 rounded-lg border border-green-100">
+              <h3 className="text-xl font-semibold mb-4 text-green-800">Medical Information</h3>
+              <div className="grid grid-cols-1 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Chief Complaint (C/C)</label>
+                    <textarea
+                      name="cc"
+                      value={formData.cc}
+                      onChange={handleChange}
+                      onBlur={handleCCBlur}
+                      className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
+                      rows={3}
+                      placeholder="Patient's main complaint"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Medical/Dental History (M/H)</label>
+                    <textarea
+                      name="mh"
+                      value={formData.mh}
+                      onChange={handleChange}
+                      className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
+                      rows={3}
+                      placeholder="Relevant medical history"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Investigation <span className="text-gray-500 text-xs">(Optional)</span>
                     </label>
-                   
+                    <span className="text-[11px] text-blue-600 font-medium">Auto-extracted to OPG & IOPAR Register</span>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">BP (mmHg)</label>
-                      <input
-                        type="text"
-                        name="bp"
-                        value={formData.bp || ''}
-                        onChange={handleChange}
-                        className="block w-full p-2.5 text-sm bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 font-mono"
-                        placeholder="e.g. 120/80"
-                      />
+                  <textarea
+                    name="investigation"
+                    value={formData.investigation}
+                    onChange={handleChange}
+                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                    rows={2}
+                    placeholder="Any investigations or tests recommended (e.g., OPG, IOPAR wrt 16, CBCT, Blood tests)"
+                  />
+
+                  {/* Quick Preset Buttons for Advanced / External Investigations */}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                    <span className="text-xs font-semibold text-gray-500 mr-1">Quick Add:</span>
+                    {[
+                      { label: '+ OPG', text: 'OPG' },
+                      { label: '+ CBCT', text: 'CBCT' },
+                      { label: '+ Lateral Ceph', text: 'Lateral Ceph' },
+                      { label: '+ TMJ View', text: 'TMJ View' },
+                      { label: '+ Biopsy / Histopath', text: 'Biopsy / Histopath' },
+                    ].map((item) => (
+                      <button
+                        key={item.text}
+                        type="button"
+                        onClick={() => {
+                          const current = (formData.investigation || '').trim();
+                          if (!current) {
+                            setFormData((prev) => ({ ...prev, investigation: item.text }));
+                          } else if (!current.toLowerCase().includes(item.text.toLowerCase())) {
+                            setFormData((prev) => ({ ...prev, investigation: `${current}, ${item.text}` }));
+                          }
+                        }}
+                        className="px-2.5 py-1 text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition"
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Diagnostic Test Charges to Bill */}
+                  <div className="mt-3 p-3.5 bg-blue-50/60 rounded-xl border border-blue-100 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-blue-900">Add Tests & Investigations to Bill</span>
+                      <span className="text-[11px] text-blue-600 font-medium">Included in Final Bill & Diagnostics Report</span>
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">SpO₂ (%)</label>
-                      <input
-                        type="text"
-                        name="spo2"
-                        value={formData.spo2 || ''}
-                        onChange={handleChange}
-                        className="block w-full p-2.5 text-sm bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 font-mono"
-                        placeholder="e.g. 98"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Height (cm)</label>
-                      <input
-                        type="text"
-                        name="height"
-                        value={formData.height || ''}
-                        onChange={handleChange}
-                        className="block w-full p-2.5 text-sm bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 font-mono"
-                        placeholder="e.g. 172"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Weight (kg)</label>
-                      <input
-                        type="text"
-                        name="weight"
-                        value={formData.weight || ''}
-                        onChange={handleChange}
-                        className="block w-full p-2.5 text-sm bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 font-mono"
-                        placeholder="e.g. 68"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Pulse (/min)</label>
-                      <input
-                        type="text"
-                        name="pulse"
-                        value={formData.pulse || ''}
-                        onChange={handleChange}
-                        className="block w-full p-2.5 text-sm bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 font-mono"
-                        placeholder="e.g. 72"
-                      />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                      {/* 1. IOPAR (₹200) */}
+                      <div className="bg-white p-2.5 rounded-lg border border-blue-200 flex flex-col justify-between gap-2 shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-xs font-bold text-gray-900 block">IOPAR</span>
+                            <span className="text-[11px] font-semibold text-blue-700">₹200 / unit</span>
+                          </div>
+                          <input
+                            type="number"
+                            min="1"
+                            value={ioparCount}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              setIoparCount(isNaN(val) || val < 1 ? 1 : val);
+                            }}
+                            onBlur={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              if (isNaN(val) || val < 1) setIoparCount(1);
+                            }}
+                            className="w-14 p-1 text-center border border-gray-300 rounded text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const count = Math.max(1, ioparCount || 1);
+                            const existingIndex = treatmentItems.findIndex(i => i.description.toUpperCase() === 'IOPAR');
+                            if (existingIndex >= 0) {
+                              const newItems = [...treatmentItems];
+                              newItems[existingIndex] = {
+                                ...newItems[existingIndex],
+                                description: 'IOPAR',
+                                quantity: count,
+                                unitPrice: 200,
+                                total: count * 200,
+                              };
+                              setTreatmentItems(newItems);
+                            } else {
+                              setTreatmentItems([...treatmentItems, {
+                                id: treatmentItems.length + 1,
+                                description: 'IOPAR',
+                                quantity: count,
+                                unitPrice: 200,
+                                total: count * 200,
+                                date: new Date().toISOString().slice(0, 10),
+                              }]);
+                            }
+                            const current = (formData.investigation || '').trim();
+                            if (!current) setFormData(prev => ({ ...prev, investigation: 'IOPAR' }));
+                            else if (!current.toUpperCase().includes('IOPAR')) setFormData(prev => ({ ...prev, investigation: `${current}, IOPAR` }));
+                          }}
+                          className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1"
+                        >
+                          + Add IOPAR (₹{Math.max(1, ioparCount || 1) * 200})
+                        </button>
+                      </div>
+
+                      {/* 2. Dental X-Ray (₹200) */}
+                      <div className="bg-white p-2.5 rounded-lg border border-blue-200 flex flex-col justify-between gap-2 shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-xs font-bold text-gray-900 block">Dental X-Ray</span>
+                            <span className="text-[11px] font-semibold text-blue-700">₹200 / unit</span>
+                          </div>
+                          <input
+                            type="number"
+                            min="1"
+                            value={xrayCount}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              setXrayCount(isNaN(val) || val < 1 ? 1 : val);
+                            }}
+                            onBlur={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              if (isNaN(val) || val < 1) setXrayCount(1);
+                            }}
+                            className="w-14 p-1 text-center border border-gray-300 rounded text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const count = Math.max(1, xrayCount || 1);
+                            const existingIndex = treatmentItems.findIndex(i => i.description.toLowerCase().includes('x-ray') || i.description.toLowerCase().includes('xray'));
+                            if (existingIndex >= 0) {
+                              const newItems = [...treatmentItems];
+                              newItems[existingIndex] = {
+                                ...newItems[existingIndex],
+                                description: 'Dental X-Ray',
+                                quantity: count,
+                                unitPrice: 200,
+                                total: count * 200,
+                              };
+                              setTreatmentItems(newItems);
+                            } else {
+                              setTreatmentItems([...treatmentItems, {
+                                id: treatmentItems.length + 1,
+                                description: 'Dental X-Ray',
+                                quantity: count,
+                                unitPrice: 200,
+                                total: count * 200,
+                                date: new Date().toISOString().slice(0, 10),
+                              }]);
+                            }
+                            const current = (formData.investigation || '').trim();
+                            if (!current) setFormData(prev => ({ ...prev, investigation: 'Dental X-Ray' }));
+                            else if (!current.toLowerCase().includes('x-ray')) setFormData(prev => ({ ...prev, investigation: `${current}, Dental X-Ray` }));
+                          }}
+                          className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1"
+                        >
+                          + Add X-Ray (₹{Math.max(1, xrayCount || 1) * 200})
+                        </button>
+                      </div>
+
+                      {/* 3. Blood Test (₹50) */}
+                      <div className="bg-white p-2.5 rounded-lg border border-blue-200 flex flex-col justify-between gap-2 shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-xs font-bold text-gray-900 block">Blood Test (CBC/BT)</span>
+                            <span className="text-[11px] font-semibold text-blue-700">₹50 / test</span>
+                          </div>
+                          <input
+                            type="number"
+                            min="1"
+                            value={bloodCount}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              setBloodCount(isNaN(val) || val < 1 ? 1 : val);
+                            }}
+                            onBlur={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              if (isNaN(val) || val < 1) setBloodCount(1);
+                            }}
+                            className="w-14 p-1 text-center border border-gray-300 rounded text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const count = Math.max(1, bloodCount || 1);
+                            const existingIndex = treatmentItems.findIndex(i => i.description.toLowerCase().includes('blood test'));
+                            if (existingIndex >= 0) {
+                              const newItems = [...treatmentItems];
+                              newItems[existingIndex] = {
+                                ...newItems[existingIndex],
+                                description: 'Blood Test',
+                                quantity: count,
+                                unitPrice: 50,
+                                total: count * 50,
+                              };
+                              setTreatmentItems(newItems);
+                            } else {
+                              setTreatmentItems([...treatmentItems, {
+                                id: treatmentItems.length + 1,
+                                description: 'Blood Test',
+                                quantity: count,
+                                unitPrice: 50,
+                                total: count * 50,
+                                date: new Date().toISOString().slice(0, 10),
+                              }]);
+                            }
+                            const current = (formData.investigation || '').trim();
+                            if (!current) setFormData(prev => ({ ...prev, investigation: 'Blood Test' }));
+                            else if (!current.toLowerCase().includes('blood')) setFormData(prev => ({ ...prev, investigation: `${current}, Blood Test` }));
+                          }}
+                          className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1"
+                        >
+                          + Add Blood Test (₹{Math.max(1, bloodCount || 1) * 50})
+                        </button>
+                      </div>
+
+                      {/* 4. Sugar Test (₹50) */}
+                      <div className="bg-white p-2.5 rounded-lg border border-blue-200 flex flex-col justify-between gap-2 shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-xs font-bold text-gray-900 block">Sugar Test (RBS/FBS)</span>
+                            <span className="text-[11px] font-semibold text-blue-700">₹50 / test</span>
+                          </div>
+                          <input
+                            type="number"
+                            min="1"
+                            value={sugarCount}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              setSugarCount(isNaN(val) || val < 1 ? 1 : val);
+                            }}
+                            onBlur={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              if (isNaN(val) || val < 1) setSugarCount(1);
+                            }}
+                            className="w-14 p-1 text-center border border-gray-300 rounded text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const count = Math.max(1, sugarCount || 1);
+                            const existingIndex = treatmentItems.findIndex(i => i.description.toLowerCase().includes('sugar test'));
+                            if (existingIndex >= 0) {
+                              const newItems = [...treatmentItems];
+                              newItems[existingIndex] = {
+                                ...newItems[existingIndex],
+                                description: 'Sugar Test',
+                                quantity: count,
+                                unitPrice: 50,
+                                total: count * 50,
+                              };
+                              setTreatmentItems(newItems);
+                            } else {
+                              setTreatmentItems([...treatmentItems, {
+                                id: treatmentItems.length + 1,
+                                description: 'Sugar Test',
+                                quantity: count,
+                                unitPrice: 50,
+                                total: count * 50,
+                                date: new Date().toISOString().slice(0, 10),
+                              }]);
+                            }
+                            const current = (formData.investigation || '').trim();
+                            if (!current) setFormData(prev => ({ ...prev, investigation: 'Sugar Test' }));
+                            else if (!current.toLowerCase().includes('sugar')) setFormData(prev => ({ ...prev, investigation: `${current}, Sugar Test` }));
+                          }}
+                          className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1"
+                        >
+                          + Add Sugar Test (₹{Math.max(1, sugarCount || 1) * 50})
+                        </button>
+                      </div>
                     </div>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Oral Examination (D/E)</label>
+                  <textarea
+                    name="de"
+                    value={formData.de}
+                    onChange={handleChange}
+                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
+                    rows={3}
+                    placeholder="Oral examination findings"
+                  />
+                </div>
+
+            {/* Diagnosis Section with Interactive Anatomical Arch Odontogram */}
+            <div className="bg-slate-50 p-5 sm:p-6 rounded-2xl border border-slate-200 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <span className="p-1.5 bg-blue-100 text-blue-700 rounded-lg">🦷</span>
+                    Diagnosis &amp; Teeth Chart
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Click teeth directly on the dental arch below to assign conditions or treatments
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {/* View Mode Toggle */}
+                  <div className="flex bg-slate-200/80 p-1 rounded-xl text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setToothSelectionMode('ARCH')}
+                      className={`px-3 py-1.5 rounded-lg transition ${
+                        toothSelectionMode === 'ARCH'
+                          ? 'bg-white text-blue-700 shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      🦷 Anatomical Arch
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setToothSelectionMode('DROPDOWN')}
+                      className={`px-3 py-1.5 rounded-lg transition ${
+                        toothSelectionMode === 'DROPDOWN'
+                          ? 'bg-white text-blue-700 shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      📋 Dropdown List
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddDiseaseForm(prev => !prev);
+                      if (showAddDiseaseForm) {
+                        setNewDiseaseName('');
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-white text-slate-700 rounded-xl hover:bg-slate-100 transition border border-slate-300 text-xs font-semibold whitespace-nowrap"
+                  >
+                    {showAddDiseaseForm ? 'Close' : '+ Add New Disease'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Add New Disease Form (Conditional) */}
+              {showAddDiseaseForm && (
+                <div className="p-4 bg-white rounded-xl border border-blue-200 shadow-sm flex flex-col sm:flex-row gap-3 items-end">
+                  <div className="flex-1 w-full">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      New Dental Condition / Disease Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newDiseaseName}
+                      onChange={(e) => setNewDiseaseName(e.target.value)}
+                      placeholder="e.g. Periapical Abscess, Severe Attrition..."
+                      className="w-full p-2.5 border border-slate-300 rounded-lg text-sm"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddNewDisease}
+                    disabled={!newDiseaseName.trim()}
+                    className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 disabled:opacity-50 transition"
+                  >
+                    Save Disease
+                  </button>
+                </div>
+              )}
+
+              {/* Interactive Anatomical Arch View */}
+              {toothSelectionMode === 'ARCH' ? (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  {/* Left / Main Column: SVG Odontogram Model */}
+                  <div className="lg:col-span-7 flex justify-center">
+                    <DentalArchOdontogram
+                      selectedTeethNumbers={selectedTeethNumbers}
+                      onToggleTooth={(toothId) => {
+                        if (selectedTeethNumbers.includes(toothId)) {
+                          setSelectedTeethNumbers(selectedTeethNumbers.filter(id => id !== toothId));
+                        } else {
+                          setSelectedTeethNumbers([...selectedTeethNumbers, toothId]);
+                        }
+                      }}
+                      onSelectMultiple={(teethIds) => setSelectedTeethNumbers(teethIds)}
+                      onClearSelection={() => setSelectedTeethNumbers([])}
+                      diagnosedTeeth={selectedTeeth}
+                      onRemoveDiagnosedTooth={handleRemoveTooth}
+                    />
+                  </div>
+
+                  {/* Right Column: Disease Selector & Quick Pills */}
+                  <div className="lg:col-span-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <div>
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                        Step 1: Selected Teeth
+                      </span>
+                      {selectedTeethNumbers.length === 0 ? (
+                        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                          Click teeth on the arch model to the left, or proceed without specific teeth for general diagnosis.
+                        </div>
+                      ) : (
+                        <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 flex flex-wrap gap-1.5 items-center">
+                          <span className="text-xs font-bold text-blue-900 mr-1">Teeth:</span>
+                          {selectedTeethNumbers.map((id) => (
+                            <span
+                              key={id}
+                              className="px-2.5 py-1 rounded-md bg-blue-600 text-white text-xs font-bold shadow-sm"
+                            >
+                              {getToothDropdownFormat(id)}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">
+                        Step 2: Pick Condition / Disease
+                      </span>
+
+                      {/* Quick Common Disease Pills */}
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {[
+                          'Dental Caries',
+                          'Pulpitis',
+                          'Root Canal Infection',
+                          'Dental Abscess',
+                          'Tooth Fracture',
+                          'Gingivitis',
+                          'Periodontitis',
+                          'Tooth Discoloration'
+                        ].map((d) => {
+                          const isSelected = selectedDisease === d;
+                          return (
+                            <button
+                              key={d}
+                              type="button"
+                              onClick={() => setSelectedDisease(d)}
+                              className={`text-xs px-2.5 py-1.5 rounded-lg font-medium border transition ${
+                                isSelected
+                                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                              }`}
+                            >
+                              {d}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Full Dropdown for all other diseases */}
+                      <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                        Or select from all conditions:
+                      </label>
+                      <select
+                        value={selectedDisease}
+                        onChange={(e) => setSelectedDisease(e.target.value)}
+                        className="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-medium bg-white"
+                      >
+                        <option value="">Select Condition / Disease...</option>
+                        {dentalDiseases.map((disease) => (
+                          <option key={disease} value={disease}>
+                            {disease}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Step 3: Add Button */}
+                    <button
+                      type="button"
+                      onClick={handleAddTeeth}
+                      disabled={!selectedDisease}
+                      className="w-full p-3 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 shadow-md shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+                    >
+                      {selectedTeethNumbers?.length
+                        ? `✓ Add Diagnosis for ${selectedTeethNumbers.length} Selected Tooth/Teeth`
+                        : 'Add Diagnosis (General / Non-Tooth Specific)'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Classic Dropdown Mode */
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Multiple Teeth</label>
+                    <select
+                      multiple
+                      value={selectedTeethNumbers}
+                      onChange={(e) => {
+                        const selected = Array.from(e.target.selectedOptions).map(option => option.value);
+                        setSelectedTeethNumbers(selected);
+                      }}
+                      className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                      size={8}
+                    >
+                      {[1, 2, 3, 4].map(quadrant => (
+                        <optgroup key={quadrant} label={DENTAL_QUADRANTS.find(q => q.id === quadrant)?.name || `Quadrant ${quadrant}`}>
+                          {TEETH_BY_QUADRANT[quadrant as 1 | 2 | 3 | 4].map((tooth) => (
+                            <option key={`${quadrant}${tooth.number}`} value={`${quadrant}${tooth.number}`}>
+                              {`${quadrant}${tooth.number} - ${tooth.name}`}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-sm text-gray-500">Hold Ctrl/Cmd key to select multiple teeth</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Dental Disease</label>
+                    <select
+                      value={selectedDisease}
+                      onChange={(e) => setSelectedDisease(e.target.value)}
+                      className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                    >
+                      <option value="">Select Disease</option>
+                      {dentalDiseases.map((disease) => (
+                        <option key={disease} value={disease}>
+                          {disease}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Leave teeth unselected for treatments not specific to a tooth (e.g. Braces).
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={handleAddTeeth}
+                      disabled={!selectedDisease}
+                      className="mt-4 w-full p-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {selectedTeethNumbers?.length ? 'Add Selected Teeth' : 'Add Diagnosis (No Specific Tooth)'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Oral Examination Notes */}
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Examination Notes</label>
+                <textarea
+                  value={oralExamNotes}
+                  onChange={(e) => setOralExamNotes(e.target.value)}
+                  className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  rows={4}
+                  placeholder="Additional notes about the diagnosis..."
+                />
+              </div>
+
+              {/* Selected Teeth Summary */}
+              {selectedTeeth.length > 0 && (
+                <div className="mt-4 p-3 bg-white rounded-lg border border-indigo-200">
+                  <h4 className="font-medium text-indigo-800 mb-2">Selected Teeth Summary:</h4>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead>
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tooth Number</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quadrant</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Disease</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {selectedTeeth.map((tooth) => {
+                          const isGeneral = tooth.category === 'General' || String(tooth.id).startsWith('General');
+                          const displayId = isGeneral
+                            ? 'General'
+                            : getToothDropdownFormat(tooth.id);
+
+                          return (
+                            <tr key={String(tooth.id)}>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm font-semibold text-gray-900">{displayId}</td>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{tooth.category}</td>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                  {tooth.disease}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveTooth(tooth.id)}
+                                  className="text-red-600 hover:text-red-800 transition font-medium"
+                                >
+                                  Remove
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Preview of dental notation that will appear on prescription */}
+                  <div className="mt-3 p-2.5 bg-gray-50 rounded-lg border border-gray-200">
+                    <p className="text-sm text-gray-700">
+                      <span className="font-semibold text-gray-900">Dental Notation for Prescription:</span>{' '}
+                      {selectedTeeth.map((tooth, index) => {
+                        if (tooth.category === 'General' || String(tooth.id).startsWith('General')) {
+                          return `${index > 0 ? ', ' : ''}${tooth.disease}`;
+                        }
+                        const displayId = getToothDropdownFormat(tooth.id);
+                        return `${index > 0 ? ', ' : ''}#${displayId} (${tooth.disease})`;
+                      }).join('')}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Add New Dental Disease Form */}
+              {showAddDiseaseForm && (
+                <div className="mt-6 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+                  <h4 className="font-medium text-indigo-800 mb-3">Add New Disease to List:</h4>
+                  <div className="flex gap-2 mb-3">
+                    <input
+                      type="text"
+                      value={newDiseaseName}
+                      onChange={(e) => setNewDiseaseName(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          handleAddNewDisease();
+                        }
+                      }}
+                      placeholder="Enter disease name"
+                      className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddNewDisease}
+                      disabled={!newDiseaseName.trim()}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddDiseaseForm(false);
+                        setNewDiseaseName('');
+                      }}
+                      className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+
+                  {dentalDiseases.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {dentalDiseases.map((disease) => (
+                        <div key={disease} className="bg-white px-3 py-1 rounded-full border border-indigo-300 flex items-center gap-2 text-sm">
+                          <span>{disease}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDisease(disease)}
+                            className="text-red-600 hover:text-red-800 font-bold"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+                {/* Treatment Plan Section — catalog-based with cost + notes */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Treatment Plan <span className="text-gray-500 text-xs">(Optional)</span>
+                  </label>
+
+                  {/* Existing plan items */}
+                  {formData.treatmentPlan.length > 0 && (
+                    <div className="mb-3 space-y-2">
+                      {formData.treatmentPlan.map((item, index) => (
+                        <div key={index} className="flex items-start gap-2 p-3 bg-white border border-gray-200 rounded-lg">
+                          <span className="text-sm text-gray-500 mt-1 w-5 flex-shrink-0">{index + 1}.</span>
+                          <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
+                            <input
+                              type="text"
+                              value={item.name}
+                              onChange={(e) => {
+                                const newPlan = [...formData.treatmentPlan];
+                                newPlan[index] = { ...newPlan[index], name: e.target.value };
+                                setFormData({ ...formData, treatmentPlan: newPlan });
+                              }}
+                              className="p-2 border border-gray-300 rounded-lg text-sm"
+                              placeholder="Treatment name"
+                            />
+                            <div className="relative">
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
+                              <input
+                                type="number"
+                                value={item.cost || ''}
+                                onChange={(e) => {
+                                  const newPlan = [...formData.treatmentPlan];
+                                  newPlan[index] = { ...newPlan[index], cost: parseFloat(e.target.value) || 0 };
+                                  setFormData({ ...formData, treatmentPlan: newPlan });
+                                }}
+                                className="w-full pl-6 p-2 border border-gray-300 rounded-lg text-sm"
+                                placeholder="Cost"
+                                min="0"
+                              />
+                            </div>
+                            <input
+                              type="text"
+                              value={item.notes || ''}
+                              onChange={(e) => {
+                                const newPlan = [...formData.treatmentPlan];
+                                newPlan[index] = { ...newPlan[index], notes: e.target.value };
+                                setFormData({ ...formData, treatmentPlan: newPlan });
+                              }}
+                              className="p-2 border border-gray-300 rounded-lg text-sm"
+                              placeholder="Notes (optional)"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newPlan = formData.treatmentPlan.filter((_, i) => i !== index);
+                              setFormData({ ...formData, treatmentPlan: newPlan });
+                            }}
+                            className="text-red-500 hover:text-red-700 mt-1 text-lg leading-none flex-shrink-0"
+                            title="Remove"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Search / add new plan item */}
+                  <div className="relative">
+                    <div className="flex gap-2">
+                      <div className="flex-1 relative">
+                        <input
+                          type="text"
+                          value={tpSearchQuery}
+                          onChange={(e) => {
+                            setTpSearchQuery(e.target.value);
+                            setTpPendingName(e.target.value);
+                            setShowTpDropdown(true);
+                          }}
+                          onFocus={() => setShowTpDropdown(true)}
+                          onBlur={() => setTimeout(() => setShowTpDropdown(false), 150)}
+                          className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                          placeholder="Search or type treatment name..."
+                        />
+                        {showTpDropdown && tpSearchQuery.length > 0 && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                            {dentalProcedures
+                              .filter(p => p.name.toLowerCase().includes(tpSearchQuery.toLowerCase()))
+                              .map(proc => (
+                                <button
+                                  key={proc.id}
+                                  type="button"
+                                  onMouseDown={() => {
+                                    setTpPendingName(proc.name);
+                                    setTpPendingCost(proc.price);
+                                    setTpSearchQuery(proc.name);
+                                    setShowTpDropdown(false);
+                                  }}
+                                  className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm flex justify-between"
+                                >
+                                  <span>{proc.name}</span>
+                                  <span className="text-gray-500">₹{proc.price}</span>
+                                </button>
+                              ))}
+                            {dentalProcedures.filter(p => p.name.toLowerCase().includes(tpSearchQuery.toLowerCase())).length === 0 && (
+                              <div className="px-3 py-2 text-xs text-gray-500">No match — will add as custom</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="relative w-28">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
+                        <input
+                          type="number"
+                          value={tpPendingCost || ''}
+                          onChange={(e) => setTpPendingCost(parseFloat(e.target.value) || 0)}
+                          className="w-full pl-6 p-2 border border-gray-300 rounded-lg text-sm"
+                          placeholder="Cost"
+                          min="0"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        value={tpPendingNotes}
+                        onChange={(e) => setTpPendingNotes(e.target.value)}
+                        className="flex-1 p-2 border border-gray-300 rounded-lg text-sm"
+                        placeholder="Notes (optional)"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const name = tpPendingName.trim() || tpSearchQuery.trim();
+                          if (!name) return;
+                          const newItem: TreatmentPlanItem = { name, cost: tpPendingCost, notes: tpPendingNotes.trim() };
+                          setFormData({ ...formData, treatmentPlan: [...formData.treatmentPlan, newItem] });
+                          setTpSearchQuery('');
+                          setTpPendingName('');
+                          setTpPendingCost(0);
+                          setTpPendingNotes('');
+                        }}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm whitespace-nowrap"
+                      >
+                        + Add
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Quick-add frequent treatments */}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {dentalProcedures.slice(0, 6).map(proc => (
+                      <button
+                        key={proc.id}
+                        type="button"
+                        onClick={() => {
+                          const newItem: TreatmentPlanItem = { name: proc.name, cost: proc.price, notes: '' };
+                          setFormData({ ...formData, treatmentPlan: [...formData.treatmentPlan, newItem] });
+                        }}
+                        className="px-2 py-1 text-xs bg-green-50 border border-green-200 text-green-700 rounded-full hover:bg-green-100 transition"
+                        title={`₹${proc.price}`}
+                      >
+                        + {proc.name}
+                      </button>
+                    ))}
+                  </div>
+
+                  {formData.treatmentPlan.length > 0 && (
+                    <div className="mt-3 flex justify-end">
+                      <div className="px-4 py-2 bg-green-100 border border-green-300 rounded-lg text-sm font-semibold text-green-800">
+                        Estimated Cost: ₹{formData.treatmentPlan.reduce((sum, item) => sum + (Number(item.cost) || 0), 0).toLocaleString('en-IN')}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
 
-
-            {/* Treatment Done Section (Removed / commented out per user request) */}
-            {/*
+            {/* Treatment Done Section */}
             <div className="bg-teal-50 p-6 rounded-lg border border-teal-100">
               <div className="flex items-center justify-between mb-4 gap-3">
                 <h3 className="text-xl font-semibold text-teal-800">Treatment Done</h3>
@@ -2070,6 +2426,7 @@ const PrescriptionPage = () => {
               </div>
               <p className="text-sm text-gray-600 mb-4">Add treatments/services completed during this visit. Bills will be auto-generated from these items.</p>
 
+              {/* Add Treatment/Service */}
               <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200">
                 <h4 className="font-medium text-gray-700 mb-3">Add Service/Procedure</h4>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -2102,6 +2459,7 @@ const PrescriptionPage = () => {
                 </div>
               </div>
 
+              {/* Treatment Items Table */}
               {treatmentItems.length > 0 && (
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200 border">
@@ -2201,6 +2559,7 @@ const PrescriptionPage = () => {
                 </div>
               )}
 
+              {/* Add New Treatment to List Form */}
               {showAddTreatmentForm && (
                 <div className="mt-6 p-4 bg-teal-50 rounded-lg border border-teal-200">
                   <h4 className="font-medium text-teal-800 mb-3">Add New Treatment to List:</h4>
@@ -2264,297 +2623,120 @@ const PrescriptionPage = () => {
                 </div>
               )}
             </div>
-            */}
 
-            {/* Diagnosis Section — Placed Above Medicines */}
-            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <div>
-                  <label className="block text-base font-bold text-slate-900 flex items-center gap-2">
-                    <span className="p-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm">🩺</span>
-                    Diagnosis
-                  </label>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Enter clinical diagnosis or impression to be printed on the prescription
-                  </p>
-                </div>
-                {formData.de && (
+            {/* Medicines Section */}
+            <div className="bg-purple-50 p-6 rounded-lg border border-purple-100">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-xl font-semibold text-purple-800">Prescribed Medicines (Optional)</h3>
+                {medicines.length === 0 ? (
                   <button
                     type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, de: '' }))}
-                    className="text-xs text-red-600 hover:text-red-700 font-medium"
+                    onClick={() => setMedicines([{ name: '', dosage: '1-0-1', duration: '5 days', quantity: calculateQuantity('1-0-1', '5 days') || 10 }])}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition shadow-sm"
                   >
-                    Clear
+                    Add Medicine
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={addMedicine}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition shadow-sm"
+                  >
+                    Add Another Medicine
                   </button>
                 )}
               </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
-                  Diagnosis Findings / Conditions
-                </label>
-                <textarea
-                  name="de"
-                  value={formData.de}
-                  onChange={handleChange}
-                  className="block w-full p-3.5 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-900 bg-white transition"
-                  rows={3}
-                  placeholder="e.g. CLOSED FRACTURE RT GREAT TOE AND 2ND 3RD 4TH MT RT FOOT, CLOSED FRACTURE DISTAL TIBIA UNDISPLACED RT ANKLE, MULTIPLE ABRASIONS"
-                />
-              </div>
-
-              {/* Quick Suggestions for one-click insertion */}
-              <div className="pt-1">
-                <span className="text-xs font-medium text-slate-500 block mb-1.5">Quick Suggestions (click to insert):</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    'Closed Fracture',
-                    'Knee Osteoarthritis',
-                    'Lumbar Spondylosis',
-                    'Cervical Spondylosis',
-                    'ACL Tear',
-                    'Ankle Sprain',
-                    'Multiple Abrasions',
-                    'Soft Tissue Injury',
-                    'Antenatal Care (ANC)',
-                    'PCOD / PCOS',
-                    'Pelvic Inflammatory Disease',
-                    'Dysmenorrhea',
-                  ].map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => {
-                        const current = (formData.de || '').trim();
-                        if (!current) {
-                          setFormData(prev => ({ ...prev, de: preset.toUpperCase() }));
-                        } else if (!current.toLowerCase().includes(preset.toLowerCase())) {
-                          setFormData(prev => ({ ...prev, de: `${current}, ${preset.toUpperCase()}` }));
-                        }
-                      }}
-                      className="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-50 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 border border-slate-200 text-slate-700 transition"
-                    >
-                      + {preset}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Medicines Section */}
-            <div className="bg-purple-50 p-6 rounded-2xl border border-purple-200">
-              <div className="flex justify-between items-center mb-3">
-                <div>
-                  <h3 className="text-xl font-bold text-purple-900 flex items-center gap-2">
-                    <span>💊</span> Prescribed Medicines
-                  </h3>
-                  <p className="text-xs text-purple-700 mt-0.5">
-                    Select medicine to auto-populate composition. All details will print directly on the prescription.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={addMedicine}
-                  className="px-4 py-2 bg-purple-700 text-white rounded-lg hover:bg-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500 transition shadow-sm font-semibold text-sm flex items-center gap-1.5"
-                >
-                  <span>+</span> Add Medicine
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between mt-2 pt-2 border-t border-purple-200">
-                <div className="text-xs text-purple-800 font-semibold flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-purple-600"></span>
-                  <span>
-                    Medicines for: <strong className="text-purple-950">{selectedDoctorName}</strong> ({filteredMedicineOptions.length} available)
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowAllMedicines(!showAllMedicines)}
-                  className="text-xs text-purple-700 hover:text-purple-950 underline font-semibold transition"
-                >
-                  {showAllMedicines ? 'Filter for Selected Doctor' : 'Show All Medicines'}
-                </button>
-              </div>
+              <p className="text-sm text-purple-700 mb-4">
+                💡 Medicine sales are automatically recorded and inventory is updated when you save this prescription.
+              </p>
 
               {medicines.length > 0 && (
-                <div className="space-y-4 mt-4">
+                <div className="space-y-4">
                   {medicines.map((medicine, index) => (
-                    <div key={index} className="p-4 border border-purple-200 rounded-xl bg-white shadow-sm space-y-3">
-                      {/* Row 1: Medicine Name & Composition */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div key={index} className="flex items-center space-x-3 p-4 border rounded-lg bg-white shadow-sm">
+                      <div className="flex-grow grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
-                          <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-                            Medicine Name #{index + 1}
-                          </label>
-                          <div className="flex gap-2">
-                            <select
-                              value={medicine.name}
-                              onChange={(e) => handleMedicineChange(index, 'name', e.target.value)}
-                              className="w-full p-2.5 border border-gray-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition bg-white"
-                            >
-                              <option value="">-- Select from Registered Medicines --</option>
-                              {filteredMedicineOptions.map((med) => (
-                                <option key={med.id} value={med.name}>
-                                  {med.name} {med.doctor_name && med.doctor_name !== 'Both Doctors' ? `[${med.doctor_name}]` : ''} {med.company ? `(${med.company})` : ''}
-                                </option>
-                              ))}
-                            </select>
-                            <input
-                              type="text"
-                              value={medicine.name}
-                              onChange={(e) => handleMedicineChange(index, 'name', e.target.value)}
-                              placeholder="Or type custom name"
-                              className="w-1/2 p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
-                            />
-                          </div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Medicine</label>
+                          <select
+                            value={medicine.name}
+                            onChange={(e) => handleMedicineChange(index, 'name', e.target.value)}
+                            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
+                            required
+                          >
+                            <option value="">Select Medicine</option>
+                            {medicineOptions.map((med) => (
+                              <option key={med.id} value={med.name}>{med.name}</option>
+                            ))}
+                          </select>
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-                            Composition <span className="text-purple-600 font-normal lowercase">(printed on prescription)</span>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Quantity
+                            <span className="ml-1 text-xs text-gray-500">(Auto-calculated)</span>
                           </label>
                           <input
-                            type="text"
-                            value={medicine.composition || ''}
-                            onChange={(e) => handleMedicineChange(index, 'composition', e.target.value)}
-                            placeholder="e.g., ACECLOFENAC 100 MG + PARACETAMOL 325 MG"
-                            className="w-full p-2.5 border border-gray-300 rounded-lg text-sm font-mono text-gray-800 bg-purple-50/50 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Row 2: Dosage & Timing-Freq-Duration */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-                            Dosage (Center Column)
-                          </label>
-                          <input
-                            type="text"
-                            value={medicine.dosage || ''}
+                            type="number"
+                            value={medicine.quantity === 0 ? '' : (medicine.quantity ?? '')}
                             onChange={(e) => {
-                              const val = e.target.value;
-                              handleMedicineChange(index, 'dosage', val);
-                              const derived = getTimingFromDosage(val);
-                              if (derived) {
-                                handleMedicineChange(index, 'timing', derived);
+                              const raw = e.target.value;
+                              if (raw === '') {
+                                handleMedicineChange(index, 'quantity', 0);
+                                return;
+                              }
+                              const num = parseInt(raw, 10);
+                              if (!isNaN(num)) {
+                                handleMedicineChange(index, 'quantity', num);
                               }
                             }}
-                            placeholder="e.g. 1-0-1 or 0-1-0 or Stat"
-                            className="w-full p-2 border border-gray-300 rounded-lg text-sm font-bold text-center tracking-wider focus:ring-2 focus:ring-purple-500 transition"
+                            onBlur={() => {
+                              if (!medicine.quantity || medicine.quantity < 1) {
+                                handleMedicineChange(index, 'quantity', 1);
+                              }
+                            }}
+                            min="1"
+                            placeholder="Auto-calculated"
+                            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition bg-blue-50"
+                            title="Automatically calculated from dosage × duration. You can still edit manually if needed."
                           />
-                          <div className="flex flex-wrap gap-1.5 mt-1.5">
-                            {['1-0-1', '0-1-0', '1-1-1', '1-0-0', '0-0-1', 'Stat'].map((d) => (
-                              <button
-                                key={d}
-                                type="button"
-                                onClick={() => {
-                                  handleMedicineChange(index, 'dosage', d);
-                                  const derived = getTimingFromDosage(d);
-                                  if (derived) {
-                                    handleMedicineChange(index, 'timing', derived);
-                                  }
-                                }}
-                                className="px-2 py-0.5 text-xs bg-purple-100 hover:bg-purple-200 text-purple-800 rounded font-semibold transition"
-                              >
-                                {d}
-                              </button>
-                            ))}
-                          </div>
+                          {medicine.dosage && medicine.duration && (
+                            <p className="text-xs text-gray-600 mt-1">
+                              {parseDosage(medicine.dosage)} pills/day × {parseDuration(medicine.duration)} days
+                            </p>
+                          )}
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-                            Timing - Freq. - Duration (Right Column)
-                          </label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Dosage</label>
                           <input
                             type="text"
-                            value={medicine.freq_duration || ''}
-                            onChange={(e) => handleMedicineChange(index, 'freq_duration', e.target.value)}
-                            placeholder="e.g. जेवणानंतर - दररोज - 5 दिवस or Stat - पुढील तारखे पर्यंत"
-                            className="w-full p-2 border border-gray-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-purple-500 transition"
+                            value={medicine.dosage}
+                            onChange={(e) => handleMedicineChange(index, 'dosage', e.target.value)}
+                            placeholder="e.g., 1-0-1"
+                            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
+                            required
                           />
-                          <div className="flex flex-wrap gap-1.5 mt-1.5">
-                            {[
-                              'जेवणानंतर - दररोज - 5 दिवस',
-                              'जेवणाआधी - दररोज - 5 दिवस',
-                              'Stat - पुढील तारखे पर्यंत',
-                              'जेवणानंतर - दररोज - 3 दिवस',
-                              'जेवणानंतर - दररोज - 7 दिवस',
-                              'After Food - Daily - 5 Days',
-                            ].map((fd) => (
-                              <button
-                                key={fd}
-                                type="button"
-                                onClick={() => handleMedicineChange(index, 'freq_duration', fd)}
-                                className="px-2 py-0.5 text-xs bg-gray-100 hover:bg-purple-100 text-gray-800 rounded font-medium transition"
-                              >
-                                {fd}
-                              </button>
-                            ))}
-                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
+                          <input
+                            type="text"
+                            value={medicine.duration}
+                            onChange={(e) => handleMedicineChange(index, 'duration', e.target.value)}
+                            placeholder="e.g., 7 days"
+                            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
+                            required
+                          />
                         </div>
                       </div>
-
-                      {/* Row 3: Timing Details & Note & Remove */}
-                      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start pt-2 border-t border-gray-100">
-                        <div className="md:col-span-6">
-                          <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-                            Timing Details (Sub-line)
-                          </label>
-                          <input
-                            type="text"
-                            value={medicine.timing || ''}
-                            onChange={(e) => handleMedicineChange(index, 'timing', e.target.value)}
-                            placeholder="e.g. 1 - नाश्ता नंतर, 1 - रात्री जेवणानंतर"
-                            className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 transition"
-                          />
-                          <div className="flex flex-wrap gap-1 mt-1.5">
-                            {[
-                              '1 - नाश्ता नंतर, 1 - रात्री जेवणानंतर',
-                              '1 - नाश्ता नंतर, 1 - दुपारी जेवणानंतर, 1 - रात्री जेवणानंतर',
-                              '1 - नाश्ता नंतर',
-                              '1 - दुपारी जेवणानंतर',
-                              '1 - रात्री जेवणानंतर',
-                              'जेवणाआधी (Before Food)',
-                              'जेवणानंतर (After Food)',
-                            ].map((presetTiming) => (
-                              <button
-                                key={presetTiming}
-                                type="button"
-                                onClick={() => handleMedicineChange(index, 'timing', presetTiming)}
-                                className="px-2 py-0.5 text-[11px] bg-slate-100 hover:bg-purple-100 text-slate-700 hover:text-purple-800 rounded font-medium transition"
-                              >
-                                {presetTiming}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="md:col-span-4">
-                          <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-                            Note <span className="font-normal text-gray-400 lowercase">(optional)</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={medicine.note || ''}
-                            onChange={(e) => handleMedicineChange(index, 'note', e.target.value)}
-                            placeholder="e.g. ALREADY RECVD"
-                            className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 transition"
-                          />
-                        </div>
-
-                        <div className="md:col-span-2 text-right">
-                          <button
-                            type="button"
-                            onClick={() => removeMedicine(index)}
-                            className="w-full py-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-lg text-xs font-bold transition border border-red-200"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeMedicine(index)}
+                        className="mt-6 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition"
+                      >
+                        Remove
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -2604,27 +2786,31 @@ const PrescriptionPage = () => {
                     <div
                       key={doc.id || doc._id || doc.name}
                       onClick={() => {
-                        handleDoctorSelect(doc.name);
+                        setSelectedDoctorName(doc.name);
+                        if (doc.name.toLowerCase().includes('anjali')) {
+                          setSelectedDoctor('anjali');
+                        } else {
+                          setSelectedDoctor('kautilya');
+                        }
                       }}
-                      className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${isSelected
+                      className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                        isSelected
                           ? 'border-blue-600 bg-blue-50/70 shadow-sm ring-1 ring-blue-600'
                           : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
-                        }`}
+                      }`}
                     >
                       <div className="flex items-center gap-2.5">
                         <input
                           type="radio"
                           name="doctor_selection_radio"
                           checked={isSelected}
-                          onChange={() => { }}
+                          onChange={() => {}}
                           className="h-4 w-4 text-blue-600 cursor-pointer"
                         />
                         <div>
                           <p className="text-sm font-bold text-gray-900 leading-tight">{doc.name}</p>
-                          <p className="text-[11px] text-blue-700 font-semibold mt-0.5">
-                            {doc.name.toLowerCase().includes('shillpa')
-                              ? 'Gynecologist & Obstetrician'
-                              : 'Orthopaedic & Joint Replacement Surgeon'}
+                          <p className="text-[11px] text-gray-500 font-normal">
+                            {doc.doctor_type === 'MAIN' ? 'Main Doctor' : 'Assistant Doctor'}
                           </p>
                         </div>
                       </div>
@@ -2646,344 +2832,96 @@ const PrescriptionPage = () => {
                   );
                 })}
               </div>
-
-              {/* Doctor Signature Print Mode */}
-              <div className="mt-4 pt-3 border-t border-gray-200 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <span className="text-xs font-bold text-gray-700 block">Prescription Printout Signature Option:</span>
-                  <span className="text-[11px] text-gray-500">Choose whether to include the graphical signature image or only the doctor's name</span>
-                </div>
-                <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-gray-200">
-                  <button
-                    type="button"
-                    onClick={() => setIncludeSignature(true)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition flex items-center gap-1.5 ${
-                      includeSignature
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                    }`}
-                  >
-                    <span>✓ With Signature</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIncludeSignature(false)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition flex items-center gap-1.5 ${
-                      !includeSignature
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                    }`}
-                  >
-                    <span>Without Sign (Name Only)</span>
-                  </button>
-                </div>
-              </div>
             </div>
 
-
-            {/* Medical Information Section (Commented out per user request) */}
-            {/*
-            <div className="bg-green-50 p-6 rounded-lg border border-green-100 mb-6">
-              <h3 className="text-xl font-semibold mb-4 text-green-800">Medical Information</h3>
-              <div className="grid grid-cols-1 gap-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Chief Complaint (C/C)</label>
-                    <textarea
-                      name="cc"
-                      value={formData.cc}
-                      onChange={handleChange}
-                      onBlur={handleCCBlur}
-                      className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
-                      rows={3}
-                      placeholder="Patient's main complaint"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Medical/Dental History (M/H)</label>
-                    <textarea
-                      name="mh"
-                      value={formData.mh}
-                      onChange={handleChange}
-                      className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
-                      rows={3}
-                      placeholder="Relevant medical history"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Investigation <span className="text-gray-500 text-xs">(Optional)</span>
-                    </label>
-                    <span className="text-[11px] text-blue-600 font-medium">Auto-extracted to OPG & IOPAR Register</span>
-                  </div>
-                  <textarea
-                    name="investigation"
-                    value={formData.investigation}
-                    onChange={handleChange}
-                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                    rows={2}
-                    placeholder="Any investigations or tests recommended (e.g., OPG, IOPAR wrt 16, CBCT, Blood tests)"
-                  />
-
-                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                    <span className="text-xs font-semibold text-gray-500 mr-1">Quick Add:</span>
-                    {[
-                      { label: '+ OPG', text: 'OPG' },
-                      { label: '+ CBCT', text: 'CBCT' },
-                      { label: '+ Lateral Ceph', text: 'Lateral Ceph' },
-                      { label: '+ TMJ View', text: 'TMJ View' },
-                      { label: '+ Biopsy / Histopath', text: 'Biopsy / Histopath' },
-                    ].map((item) => (
-                      <button
-                        key={item.text}
-                        type="button"
-                        onClick={() => {
-                          const current = (formData.investigation || '').trim();
-                          if (!current) {
-                            setFormData((prev) => ({ ...prev, investigation: item.text }));
-                          } else if (!current.toLowerCase().includes(item.text.toLowerCase())) {
-                            setFormData((prev) => ({ ...prev, investigation: `${current}, ${item.text}` }));
-                          }
-                        }}
-                        className="px-2.5 py-1 text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition"
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+            {/* Consultation Charge */}
+            <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+              <div className="flex items-center gap-3 mb-3">
+                <input
+                  type="checkbox"
+                  id="applyConsultationCharge"
+                  checked={applyConsultationCharge}
+                  onChange={e => setApplyConsultationCharge(e.target.checked)}
+                  className="h-4 w-4 text-amber-600 cursor-pointer"
+                />
+                <label htmlFor="applyConsultationCharge" className="text-sm font-semibold text-amber-800 cursor-pointer">
+                  Apply Consultation Charge
+                </label>
               </div>
-            </div>
-            */}
-
-
-
-            {/* Treatment Plan Section (Commented out per user request) */}
-            {/*
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Treatment Plan <span className="text-gray-500 text-xs">(Optional)</span>
-              </label>
-
-              {formData.treatmentPlan.length > 0 && (
-                <div className="mb-3 space-y-2">
-                  {formData.treatmentPlan.map((item, index) => (
-                    <div key={index} className="flex items-start gap-2 p-3 bg-white border border-gray-200 rounded-lg">
-                      <span className="text-sm text-gray-500 mt-1 w-5 flex-shrink-0">{index + 1}.</span>
-                      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
-                        <input
-                          type="text"
-                          value={item.name}
-                          onChange={(e) => {
-                            const newPlan = [...formData.treatmentPlan];
-                            newPlan[index] = { ...newPlan[index], name: e.target.value };
-                            setFormData({ ...formData, treatmentPlan: newPlan });
-                          }}
-                          className="p-2 border border-gray-300 rounded-lg text-sm"
-                          placeholder="Treatment name"
-                        />
-                        <div className="relative">
-                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
-                          <input
-                            type="number"
-                            value={item.cost || ''}
-                            onChange={(e) => {
-                              const newPlan = [...formData.treatmentPlan];
-                              newPlan[index] = { ...newPlan[index], cost: parseFloat(e.target.value) || 0 };
-                              setFormData({ ...formData, treatmentPlan: newPlan });
-                            }}
-                            className="w-full pl-6 p-2 border border-gray-300 rounded-lg text-sm"
-                            placeholder="Cost"
-                            min="0"
-                          />
-                        </div>
-                        <input
-                          type="text"
-                          value={item.notes || ''}
-                          onChange={(e) => {
-                            const newPlan = [...formData.treatmentPlan];
-                            newPlan[index] = { ...newPlan[index], notes: e.target.value };
-                            setFormData({ ...formData, treatmentPlan: newPlan });
-                          }}
-                          className="p-2 border border-gray-300 rounded-lg text-sm"
-                          placeholder="Notes (optional)"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newPlan = formData.treatmentPlan.filter((_, i) => i !== index);
-                          setFormData({ ...formData, treatmentPlan: newPlan });
-                        }}
-                        className="text-red-500 hover:text-red-700 mt-1 text-lg leading-none flex-shrink-0"
-                        title="Remove"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="relative">
-                <div className="flex gap-2">
-                  <div className="flex-1 relative">
-                    <input
-                      type="text"
-                      value={tpSearchQuery}
-                      onChange={(e) => {
-                        setTpSearchQuery(e.target.value);
-                        setTpPendingName(e.target.value);
-                        setShowTpDropdown(true);
-                      }}
-                      onFocus={() => setShowTpDropdown(true)}
-                      onBlur={() => setTimeout(() => setShowTpDropdown(false), 150)}
-                      className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                      placeholder="Search or type treatment name..."
-                    />
-                    {showTpDropdown && tpSearchQuery.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                        {dentalProcedures
-                          .filter(p => p.name.toLowerCase().includes(tpSearchQuery.toLowerCase()))
-                          .map(proc => (
-                            <button
-                              key={proc.id}
-                              type="button"
-                              onMouseDown={() => {
-                                setTpPendingName(proc.name);
-                                setTpPendingCost(proc.price);
-                                setTpSearchQuery(proc.name);
-                                setShowTpDropdown(false);
-                              }}
-                              className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm flex justify-between"
-                            >
-                              <span>{proc.name}</span>
-                              <span className="text-gray-500">₹{proc.price}</span>
-                            </button>
-                          ))}
-                        {dentalProcedures.filter(p => p.name.toLowerCase().includes(tpSearchQuery.toLowerCase())).length === 0 && (
-                          <div className="px-3 py-2 text-xs text-gray-500">No match — will add as custom</div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className="relative w-28">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
+              {applyConsultationCharge && (
+                <div className="flex flex-wrap gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Charge (₹)</label>
                     <input
                       type="number"
-                      value={tpPendingCost || ''}
-                      onChange={(e) => setTpPendingCost(parseFloat(e.target.value) || 0)}
-                      className="w-full pl-6 p-2 border border-gray-300 rounded-lg text-sm"
-                      placeholder="Cost"
-                      min="0"
+                      min={0}
+                      value={consultationCharge}
+                      onChange={e => setConsultationCharge(Math.max(0, Number(e.target.value)))}
+                      className="w-28 border border-gray-300 rounded px-2 py-1 text-sm"
                     />
                   </div>
-                  <input
-                    type="text"
-                    value={tpPendingNotes}
-                    onChange={(e) => setTpPendingNotes(e.target.value)}
-                    className="flex-1 p-2 border border-gray-300 rounded-lg text-sm"
-                    placeholder="Notes (optional)"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const name = tpPendingName.trim() || tpSearchQuery.trim();
-                      if (!name) return;
-                      const newItem: TreatmentPlanItem = { name, cost: tpPendingCost, notes: tpPendingNotes.trim() };
-                      setFormData({ ...formData, treatmentPlan: [...formData.treatmentPlan, newItem] });
-                      setTpSearchQuery('');
-                      setTpPendingName('');
-                      setTpPendingCost(0);
-                      setTpPendingNotes('');
-                    }}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm whitespace-nowrap"
-                  >
-                    + Add
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                {dentalProcedures.slice(0, 6).map(proc => (
-                  <button
-                    key={proc.id}
-                    type="button"
-                    onClick={() => {
-                      const newItem: TreatmentPlanItem = { name: proc.name, cost: proc.price, notes: '' };
-                      setFormData({ ...formData, treatmentPlan: [...formData.treatmentPlan, newItem] });
-                    }}
-                    className="px-2 py-1 text-xs bg-green-50 border border-green-200 text-green-700 rounded-full hover:bg-green-100 transition"
-                    title={`₹${proc.price}`}
-                  >
-                    + {proc.name}
-                  </button>
-                ))}
-              </div>
-
-              {formData.treatmentPlan.length > 0 && (
-                <div className="mt-3 flex justify-end">
-                  <div className="px-4 py-2 bg-green-100 border border-green-300 rounded-lg text-sm font-semibold text-green-800">
-                    Estimated Cost: ₹{formData.treatmentPlan.reduce((sum, item) => sum + (Number(item.cost) || 0), 0).toLocaleString('en-IN')}
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Discount (%)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={consultationDiscount}
+                      onChange={e => setConsultationDiscount(Math.min(100, Math.max(0, Number(e.target.value))))}
+                      className="w-24 border border-gray-300 rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <span className="text-sm font-semibold text-amber-800">
+                      Net: ₹{(consultationCharge * (1 - consultationDiscount / 100)).toFixed(2)}
+                    </span>
                   </div>
                 </div>
               )}
             </div>
-            */}
-            <div className="flex flex-col items-center gap-3 mt-4">
-              <div className="flex flex-col sm:flex-row justify-center gap-4 w-full">
-                <button
-                  type="submit"
-                  className="px-8 py-3 bg-blue-600 text-white text-lg font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 focus:ring-offset-2 disabled:opacity-50 transition shadow-md"
-                  disabled={loading || saving}
-                >
-                  {loading ? 'Saving...' : saving ? 'Saving Prescription...' : isEditMode ? 'Update Prescription' : 'Save Prescription'}
-                </button>
 
-                <button
-                  type="button"
-                  onClick={handlePrintablePrescription}
-                  disabled={!prescriptionId}
-                  className="px-8 py-3 bg-purple-600 text-white text-lg font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-4 focus:ring-purple-300 focus:ring-offset-2 disabled:opacity-50 transition shadow-md flex items-center justify-center"
-                >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                  </svg>
-                  Print Prescription
-                </button>
-              </div>
+            <div className="flex flex-col md:flex-row justify-center gap-4 mt-4">
+              <button
+                type="submit"
+                className="px-8 py-3 bg-blue-600 text-white text-lg font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 focus:ring-offset-2 disabled:opacity-50 transition shadow-md"
+                disabled={loading || saving}
+              >
+                {loading ? 'Saving...' : saving ? 'Saving Prescription...' : isEditMode ? 'Update Prescription' : 'Save Prescription'}
+              </button>
 
-              {/* Signature Mode Quick Toggle */}
-              <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl text-xs shadow-2xs">
-                <span className="font-bold text-gray-700">Signature on Print:</span>
-                <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                  <input
-                    type="radio"
-                    name="include_signature_quick"
-                    checked={includeSignature}
-                    onChange={() => setIncludeSignature(true)}
-                    className="h-3.5 w-3.5 text-blue-600"
-                  />
-                  <span className={includeSignature ? "font-bold text-blue-700" : "text-gray-600"}>With Sign</span>
-                </label>
-                <span className="text-gray-300">|</span>
-                <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                  <input
-                    type="radio"
-                    name="include_signature_quick"
-                    checked={!includeSignature}
-                    onChange={() => setIncludeSignature(false)}
-                    className="h-3.5 w-3.5 text-blue-600"
-                  />
-                  <span className={!includeSignature ? "font-bold text-blue-700" : "text-gray-600"}>Without Sign (Name Only)</span>
-                </label>
-              </div>
+              <button
+                type="button"
+                onClick={handlePrintablePrescription}
+                disabled={!prescriptionId}
+                className="px-8 py-3 bg-purple-600 text-white text-lg font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-4 focus:ring-purple-300 focus:ring-offset-2 disabled:opacity-50 transition shadow-md flex items-center justify-center"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                Print Prescription
+              </button>
             </div>
           </form>
+          {/* Generate Bill Button - Moved outside form */}
+          <div className="mt-4 flex flex-col items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleBillForm}
+              className={`w-full md:w-auto px-8 py-3 text-white text-lg font-medium rounded-lg focus:outline-none focus:ring-4 focus:ring-offset-2 transition shadow-md flex items-center justify-center gap-2 ${prescriptionId
+                ? 'bg-orange-600 hover:bg-orange-700 focus:ring-orange-300'
+                : 'bg-gray-400 cursor-not-allowed'
+                }`}
+              disabled={!prescriptionId}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              Generate Bill
+            </button>
+            {!prescriptionId && (
+              <p className="text-sm text-gray-600">Save the prescription first to generate a bill</p>
+            )}
+          </div>
 
           {/* Prescription Preview Section */}
           <div className="mt-12 mb-8">
@@ -3065,13 +3003,13 @@ const PrescriptionPage = () => {
                     )}
                     {formData.de && (
                       <tr>
-                        <td className="border border-gray-300 px-4 py-2 font-medium">Diagnosis</td>
+                        <td className="border border-gray-300 px-4 py-2 font-medium">Oral Examination</td>
                         <td className="border border-gray-300 px-4 py-2 whitespace-pre-wrap">{formData.de}</td>
                       </tr>
                     )}
                     {(selectedTeeth.length > 0 || oralExamNotes) && (
                       <tr>
-                        <td className="border border-gray-300 px-4 py-2 font-medium">Additional Notes</td>
+                        <td className="border border-gray-300 px-4 py-2 font-medium">Diagnosis</td>
                         <td className="border border-gray-300 px-4 py-2 whitespace-pre-wrap">
                           {selectedTeeth.length > 0 && (
                             <div>{selectedTeeth.map(tooth => tooth.category === 'General' || String(tooth.id).startsWith('General') ? tooth.disease : `#${getToothDropdownFormat(tooth.id)} (${tooth.disease})`).join(', ')}</div>
@@ -3120,42 +3058,25 @@ const PrescriptionPage = () => {
               {/* III. Medications */}
               {medicines.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="text-lg font-bold mb-3">III. Medications (Rx)</h3>
+                  <h3 className="text-lg font-bold mb-3">III. Medications</h3>
                   <table className="w-full border-collapse border border-gray-300">
                     <thead>
                       <tr className="bg-gray-100">
-                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Medicine &amp; Composition</th>
-                        <th className="border border-gray-300 px-4 py-2 text-center font-semibold">Dosage</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Timing - Freq. - Duration</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Medication</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Dosage</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Frequency</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Duration</th>
                       </tr>
                     </thead>
                     <tbody>
                       {medicines.map((med, idx) => (
                         <tr key={idx}>
+                          <td className="border border-gray-300 px-4 py-2">{med.name || 'Not specified'}</td>
+                          <td className="border border-gray-300 px-4 py-2">{med.dosage || 'Not specified'}</td>
                           <td className="border border-gray-300 px-4 py-2">
-                            <div className="font-bold text-gray-900">{idx + 1}) {med.name || 'Not specified'}</div>
-                            {med.composition && (
-                              <div className="text-xs text-gray-600 font-mono mt-0.5">
-                                <span className="font-semibold text-gray-500 uppercase">Composition:</span> {med.composition}
-                              </div>
-                            )}
-                            {med.timing && (
-                              <div className="text-xs text-gray-700 mt-0.5">
-                                <span className="font-semibold text-gray-500 uppercase">Timing:</span> {med.timing}
-                              </div>
-                            )}
-                            {med.note && (
-                              <div className="text-xs text-red-700 underline font-semibold mt-0.5">
-                                Note: {med.note}
-                              </div>
-                            )}
+                            {med.dosage || 'Not specified'}
                           </td>
-                          <td className="border border-gray-300 px-4 py-2 text-center font-bold tracking-wider">
-                            {med.dosage || '—'}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2 font-medium">
-                            {med.freq_duration || med.duration || '—'}
-                          </td>
+                          <td className="border border-gray-300 px-4 py-2">{med.duration || 'Not specified'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -3163,8 +3084,7 @@ const PrescriptionPage = () => {
                 </div>
               )}
 
-              {/* IV. Treatment Done (Removed / commented out per user request) */}
-              {/*
+              {/* IV. Treatment Done */}
               {treatmentItems.length > 0 && (
                 <div className="mb-6">
                   <h3 className="text-lg font-bold mb-3">IV. Treatment Done</h3>
@@ -3186,35 +3106,27 @@ const PrescriptionPage = () => {
                   </table>
                 </div>
               )}
-              */}
 
               {/* Signature */}
               <div className="mt-12 text-right">
-                {includeSignature && (
-                  <div className="mb-4">
-                    <img
-                      src={
-                        (() => {
-                          const docObj = availableDoctors.find((d) => d.name.toLowerCase() === (selectedDoctorName || '').toLowerCase());
-                          const sig = docObj?.signature_url;
-                          if (!sig) return (selectedDoctorName || '').toLowerCase().includes('anjali') ? '/sign1.png' : '/sign.png';
-                          if (sig.startsWith('data:') || sig.startsWith('http://') || sig.startsWith('https://')) return sig;
-                          return `/${sig.replace(/^\//, '')}`;
-                        })()
-                      }
-                      alt="Doctor's Signature"
-                      className="inline-block max-h-14 w-auto object-contain"
-                    />
-                  </div>
-                )}
-                <div className="font-semibold">
-                  {selectedDoctorName || 'Dr. Vipeen Raut'}
+                <div className="mb-4">
+                  <img
+                    src={
+                      (() => {
+                        const docObj = availableDoctors.find((d) => d.name.toLowerCase() === (selectedDoctorName || '').toLowerCase());
+                        const sig = docObj?.signature_url;
+                        if (!sig) return (selectedDoctorName || '').toLowerCase().includes('anjali') ? '/sign1.png' : '/sign.png';
+                        if (sig.startsWith('data:') || sig.startsWith('http://') || sig.startsWith('https://')) return sig;
+                        return `/${sig.replace(/^\//, '')}`;
+                      })()
+                    }
+                    alt="Doctor's Signature"
+                    className="inline-block max-h-14 w-auto object-contain"
+                  />
                 </div>
-                {!includeSignature && (
-                  <div className="text-[11px] text-gray-400 italic">
-                    (Without Signature: Doctor name only, no signature image)
-                  </div>
-                )}
+                <div className="font-semibold">
+                  {selectedDoctorName || 'Dr. Kautilya Swaroop'}
+                </div>
               </div>
             </div>
           </div>

@@ -2,16 +2,21 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { addMedicine, getAllMedicines, deleteMedicine, updateMedicine, Medicine } from '@/services/medicine';
-import { PlusCircle, X, Trash2, Search, ArrowUp, ArrowDown, Package, Pill, RefreshCw, Edit, ReceiptText, UserCheck } from 'lucide-react';
+import { PlusCircle, X, Trash2, Search, ArrowUp, ArrowDown, Package, Pill, RefreshCw, Edit, ReceiptText } from 'lucide-react';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 
 export default function AddMedicinePage() {
   const [formData, setFormData] = useState<Medicine>({
     name: '',
-    composition: '',
-    company: '',
     description: '',
-    doctor_name: 'Both Doctors',
+    quantity: 0,
+    rate: 0,
+    cost_price: 0,
+    selling_price: 0,
+    company: '',
+    low_stock_threshold: 10,
+    strips: 0,
+    quantity_per_strip: 0
   });
 
   const [medicines, setMedicines] = useState<Medicine[]>([]);
@@ -21,9 +26,8 @@ export default function AddMedicinePage() {
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [selectedDoctorFilter, setSelectedDoctorFilter] = useState<string>('ALL');
-  const [sortField, setSortField] = useState<keyof Medicine>('name');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortField, setSortField] = useState<keyof Medicine>('created_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [isLoadingMedicines, setIsLoadingMedicines] = useState<boolean>(true);
   const [editMode, setEditMode] = useState<boolean>(false);
   const [editingMedicine, setEditingMedicine] = useState<Medicine | null>(null);
@@ -44,46 +48,92 @@ export default function AddMedicinePage() {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+
+    if (name === 'strips' || name === 'quantity_per_strip') {
+      const numericValue = value === '' ? 0 : Number(value);
+      setFormData(prev => {
+        const strips = name === 'strips' ? numericValue : (prev.strips || 0);
+        const quantityPerStrip = name === 'quantity_per_strip' ? numericValue : (prev.quantity_per_strip || 0);
+        return {
+          ...prev,
+          [name]: numericValue,
+          quantity: strips * quantityPerStrip
+        };
+      });
+    } else if (name === 'quantity' || name === 'rate' || name === 'cost_price' || name === 'selling_price' || name === 'low_stock_threshold') {
+      setFormData({
+        ...formData,
+        [name]: value === '' ? 0 : Number(value)
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formData.name.trim()) {
-      setError('Medicine name is required');
-      return;
-    }
-
     setIsLoading(true);
     setError('');
 
     try {
+      // Set rate equal to selling_price for backwards compatibility
       const submissionData = {
-        name: formData.name.trim(),
-        composition: (formData.composition || '').trim(),
-        company: (formData.company || '').trim(),
-        description: (formData.description || '').trim(),
-        doctor_name: formData.doctor_name || 'Both Doctors',
+        ...formData,
+        rate: formData.selling_price || formData.rate || 0
       };
-
+      
       if (editMode && editingMedicine?.id) {
+        // Update existing medicine
         await updateMedicine(editingMedicine.id, submissionData);
         setSuccess(true);
-        resetForm();
+        setFormData({
+          name: '',
+          description: '',
+          quantity: 0,
+          rate: 0,
+          cost_price: 0,
+          selling_price: 0,
+          company: '',
+          low_stock_threshold: 10,
+          strips: 0,
+          quantity_per_strip: 0
+        });
+        setEditMode(false);
+        setEditingMedicine(null);
       } else {
-        await addMedicine(submissionData as any);
+        // Add new medicine
+        await addMedicine(submissionData);
         setSuccess(true);
-        resetForm();
+        setFormData({
+          name: '',
+          description: '',
+          quantity: 0,
+          rate: 0,
+          cost_price: 0,
+          selling_price: 0,
+          company: '',
+          low_stock_threshold: 10,
+          strips: 0,
+          quantity_per_strip: 0
+        });
       }
-      await fetchMedicines();
+
+      fetchMedicines();
+
+      setTimeout(() => {
+        setSuccess(false);
+      }, 3000);
     } catch (err) {
-      console.error("Error saving medicine:", err);
-      setError('Failed to save medicine. Please try again.');
+      if (err instanceof Error) {
+        setError(err.message || (editMode ? 'Failed to update medicine' : 'Failed to add medicine'));
+      } else {
+        setError(editMode ? 'Failed to update medicine' : 'Failed to add medicine');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -94,7 +144,7 @@ export default function AddMedicinePage() {
       setIsDeleting(true);
       try {
         await deleteMedicine(id);
-        setMedicines(medicines.filter((medicine) => medicine.id !== id));
+        setMedicines(medicines.filter(medicine => medicine.id !== id));
       } catch (err) {
         console.error("Failed to delete medicine:", err);
       } finally {
@@ -104,26 +154,40 @@ export default function AddMedicinePage() {
   };
 
   const handleEdit = (medicine: Medicine) => {
+    // Older medicines may not have strips recorded; default to 1 strip so the total quantity stays accurate
+    const strips = medicine.strips ?? 1;
+    const quantityPerStrip = medicine.quantity_per_strip ?? medicine.quantity;
     setFormData({
       name: medicine.name,
-      composition: medicine.composition || '',
-      company: medicine.company || '',
       description: medicine.description || '',
-      doctor_name: medicine.doctor_name || 'Both Doctors',
+      quantity: medicine.quantity,
+      rate: medicine.rate || 0,
+      cost_price: medicine.cost_price || 0,
+      selling_price: medicine.selling_price || 0,
+      company: medicine.company || '',
+      low_stock_threshold: medicine.low_stock_threshold ?? 10,
+      strips,
+      quantity_per_strip: quantityPerStrip
     });
     setEditMode(true);
     setEditingMedicine(medicine);
     setError('');
+    // Scroll to top to show the form
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
+  
   const resetForm = () => {
     setFormData({
       name: '',
-      composition: '',
-      company: '',
       description: '',
-      doctor_name: 'Both Doctors',
+      quantity: 0,
+      rate: 0,
+      cost_price: 0,
+      selling_price: 0,
+      company: '',
+      low_stock_threshold: 10,
+      strips: 0,
+      quantity_per_strip: 0
     });
     setError('');
     setEditMode(false);
@@ -139,37 +203,42 @@ export default function AddMedicinePage() {
     }
   };
 
-  const filteredMedicines = medicines.filter((medicine) => {
-    const matchesSearch =
-      medicine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (medicine.composition &&
-        medicine.composition.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (medicine.company &&
-        medicine.company.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    if (!matchesSearch) return false;
-
-    if (selectedDoctorFilter === 'ALL') return true;
-    const medDoc = medicine.doctor_name || 'Both Doctors';
-    if (medDoc === 'Both Doctors' || medDoc === 'All Doctors') return true;
-    return medDoc.toLowerCase() === selectedDoctorFilter.toLowerCase();
-  });
+  const filteredMedicines = medicines.filter(medicine =>
+    medicine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (medicine.company && medicine.company.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   const sortedMedicines = [...filteredMedicines].sort((a: Medicine, b: Medicine) => {
-    const valueA = (a[sortField] || '').toString().toLowerCase();
-    const valueB = (b[sortField] || '').toString().toLowerCase();
+    if (sortField === 'created_at') {
+      const dateA = a.created_at ? new Date(a.created_at) : new Date(0);
+      const dateB = b.created_at ? new Date(b.created_at) : new Date(0);
+      return sortDirection === 'asc'
+        ? dateA.getTime() - dateB.getTime()
+        : dateB.getTime() - dateA.getTime();
+    }
+
+    if (sortField === 'name' || sortField === 'company') {
+      const valueA = (a[sortField] || '').toLowerCase();
+      const valueB = (b[sortField] || '').toLowerCase();
+      return sortDirection === 'asc'
+        ? valueA.localeCompare(valueB)
+        : valueB.localeCompare(valueA);
+    }
+
+    const numA = typeof a[sortField] === 'number' ? a[sortField] as number : 0;
+    const numB = typeof b[sortField] === 'number' ? b[sortField] as number : 0;
+
     return sortDirection === 'asc'
-      ? valueA.localeCompare(valueB)
-      : valueB.localeCompare(valueA);
+      ? numA - numB
+      : numB - numA;
   });
+
+  const lowStockItems = sortedMedicines.filter(med => med.quantity < (med.low_stock_threshold ?? 10));
 
   const renderSortIcon = (field: keyof Medicine) => {
     if (sortField !== field) return null;
     return sortDirection === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />;
   };
-
-  const countVipeen = medicines.filter(m => (m.doctor_name || 'Both Doctors') === 'Dr. Vipeen Raut' || (m.doctor_name || 'Both Doctors') === 'Both Doctors').length;
-  const countShillpa = medicines.filter(m => (m.doctor_name || 'Both Doctors') === 'Dr. Shillpa Raut' || (m.doctor_name || 'Both Doctors') === 'Both Doctors').length;
 
   return (
     <div className="min-h-screen bg-white w-full overflow-auto scrollbar-none">
@@ -177,26 +246,24 @@ export default function AddMedicinePage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <header>
             <h1 className="text-3xl font-bold text-gray-800">Medicine Management</h1>
-            <p className="text-gray-600 mt-1">
-              Add medicines and compositions tagged per doctor (Dr. Vipeen Raut / Dr. Shillpa Raut) to auto-populate prescriptions
-            </p>
+            <p className="text-gray-600 mt-1">Add and manage medicines for your dental clinic</p>
           </header>
           <Link
-            href="/admin/prescription"
+            href="/admin/stockists"
             className="inline-flex items-center space-x-2 px-4 py-2.5 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-xl text-sm font-semibold transition-all shadow-xs"
           >
-            <Pill size={18} />
-            <span>Go to Prescriptions →</span>
+            <ReceiptText size={18} />
+            <span>Stockist Bills & Dues →</span>
           </Link>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Add Medicine Form */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 sticky top-6">
+            <div className="bg-white rounded-lg shadow-md p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-gray-800 flex items-center">
-                  <Pill className="mr-2 text-blue-600" size={22} />
+                  <Pill className="mr-2 text-blue-500" size={20} />
                   {editMode ? 'Edit Medicine' : 'Add New Medicine'}
                 </h2>
                 {editMode && (
@@ -205,13 +272,13 @@ export default function AddMedicinePage() {
                     className="text-sm text-gray-600 hover:text-gray-800 flex items-center"
                   >
                     <X size={16} className="mr-1" />
-                    Cancel
+                    Cancel Edit
                   </button>
                 )}
               </div>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl mb-6 flex justify-between items-center text-sm">
+                <div className="bg-red-100 text-red-800 p-4 rounded-md mb-6 flex justify-between items-center">
                   <span>{error}</span>
                   <button onClick={() => setError('')}>
                     <X size={18} />
@@ -220,44 +287,18 @@ export default function AddMedicinePage() {
               )}
 
               {success && (
-                <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-xl mb-6 flex items-center justify-between text-sm">
-                  <span>
-                    {editMode
-                      ? 'Medicine updated successfully!'
-                      : 'Medicine added successfully!'}
-                  </span>
+                <div className="bg-green-100 text-green-800 px-4 py-3 rounded-md mb-6 flex items-center justify-between">
+                  <span>{editMode ? 'Medicine updated successfully!' : 'Medicine added successfully!'}</span>
                   <button onClick={() => setSuccess(false)}>
                     <X size={18} />
                   </button>
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Doctor Assignment */}
+              <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                  <label htmlFor="doctor_name" className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
-                    <UserCheck size={16} className="text-blue-600" />
-                    <span>Assign to Doctor *</span>
-                  </label>
-                  <select
-                    id="doctor_name"
-                    name="doctor_name"
-                    value={formData.doctor_name || 'Both Doctors'}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition text-sm font-medium"
-                  >
-                    <option value="Both Doctors">Both Doctors (All)</option>
-                    <option value="Dr. Vipeen Raut">Dr. Vipeen Raut (Orthopaedic)</option>
-                    <option value="Dr. Shillpa Raut">Dr. Shillpa Raut (Gynecology)</option>
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Shows in prescription dropdown when this doctor is selected
-                  </p>
-                </div>
-
-                <div>
-                  <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-1.5">
-                    Medicine Name *
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                    Medicine Name*
                   </label>
                   <input
                     type="text"
@@ -266,70 +307,151 @@ export default function AddMedicinePage() {
                     value={formData.name}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
-                    placeholder="e.g. ACENAC P TABLET"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter medicine name"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Name displayed prominently on prescription</p>
                 </div>
 
                 <div>
-                  <label htmlFor="composition" className="block text-sm font-semibold text-gray-700 mb-1.5">
-                    Composition *
-                  </label>
-                  <textarea
-                    id="composition"
-                    name="composition"
-                    value={formData.composition || ''}
-                    onChange={handleChange}
-                    rows={3}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
-                    placeholder="e.g. ACECLOFENAC 100 MG + PARACETAMOL 325 MG"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Printed under medicine name on prescription</p>
-                </div>
-
-                <div>
-                  <label htmlFor="company" className="block text-sm font-semibold text-gray-700 mb-1.5">
-                    Company / Manufacturer (Optional)
+                  <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-1">
+                    Company
                   </label>
                   <input
                     type="text"
                     id="company"
                     name="company"
-                    value={formData.company || ''}
+                    value={formData.company}
                     onChange={handleChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
-                    placeholder="e.g. Mankind, Cipla, Sun Pharma"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter company name"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="strips" className="block text-sm font-medium text-gray-700 mb-1">
+                      Strips*
+                    </label>
+                    <input
+                      type="number"
+                      id="strips"
+                      name="strips"
+                      value={formData.strips ?? 0}
+                      onChange={handleChange}
+                      required
+                      min="0"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="e.g. 10"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="quantity_per_strip" className="block text-sm font-medium text-gray-700 mb-1">
+                      Qty per Strip*
+                    </label>
+                    <input
+                      type="number"
+                      id="quantity_per_strip"
+                      name="quantity_per_strip"
+                      value={formData.quantity_per_strip ?? 0}
+                      onChange={handleChange}
+                      required
+                      min="0"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="e.g. 10"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-1">
+                    Total Quantity (Strips × Qty per Strip)
+                  </label>
+                  <input
+                    type="number"
+                    id="quantity"
+                    name="quantity"
+                    value={formData.quantity}
+                    readOnly
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="description" className="block text-sm font-semibold text-gray-700 mb-1.5">
-                    Notes / Category (Optional)
+                  <label htmlFor="low_stock_threshold" className="block text-sm font-medium text-gray-700 mb-1">
+                    Low Stock Alert Below
                   </label>
                   <input
-                    type="text"
-                    id="description"
-                    name="description"
-                    value={formData.description || ''}
+                    type="number"
+                    id="low_stock_threshold"
+                    name="low_stock_threshold"
+                    value={formData.low_stock_threshold ?? 10}
                     onChange={handleChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
-                    placeholder="e.g. Tablet, Capsule, Painkiller, Antibiotic"
+                    min="0"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g. 10"
                   />
                 </div>
 
-                <div className="flex justify-between items-center pt-2">
+                <div>
+                  <label htmlFor="cost_price" className="block text-sm font-medium text-gray-700 mb-1">
+                    Cost Price (₹)
+                  </label>
+                  <input
+                    type="number"
+                    id="cost_price"
+                    name="cost_price"
+                    value={formData.cost_price}
+                    onChange={handleChange}
+                    step="0.01"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter cost price"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="selling_price" className="block text-sm font-medium text-gray-700 mb-1">
+                    Selling Price (₹)
+                  </label>
+                  <input
+                    type="number"
+                    id="selling_price"
+                    name="selling_price"
+                    value={formData.selling_price}
+                    onChange={handleChange}
+                    step="0.01"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter selling price"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    rows={4}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter medicine description"
+                  ></textarea>
+                </div>
+
+                <div className="flex justify-between">
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition text-sm font-medium"
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 flex items-center"
                   >
+                    <X size={16} className="mr-1" />
                     Clear
                   </button>
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition font-medium flex items-center shadow-sm"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center"
                   >
                     {isLoading ? (
                       <>
@@ -338,34 +460,77 @@ export default function AddMedicinePage() {
                       </>
                     ) : (
                       <>
-                        <PlusCircle size={16} className="mr-2" />
-                        <span>{editMode ? 'Update Medicine' : 'Save Medicine'}</span>
+                        {editMode ? <Edit size={16} className="mr-2" /> : <PlusCircle size={16} className="mr-2" />}
+                        <span>{editMode ? 'Update Medicine' : 'Add Medicine'}</span>
                       </>
                     )}
                   </button>
                 </div>
               </form>
             </div>
-          </div>
 
-          {/* Medicines List Table */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-800">Medicines Directory</h2>
-                  <p className="text-sm text-gray-500 mt-0.5">
-                    {sortedMedicines.length} medicine{sortedMedicines.length === 1 ? '' : 's'} registered
+            {/* Quick Stats Card */}
+            <div className="bg-white rounded-lg shadow-md p-6 mt-6">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">Inventory Stats</h2>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <p className="text-sm text-blue-700">Total Medicines</p>
+                  <p className="text-2xl font-bold text-blue-800">{sortedMedicines.length}</p>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <p className="text-sm text-green-700">Total Value (Selling)</p>
+                  <p className="text-2xl font-bold text-green-800">
+                    ₹{sortedMedicines.reduce((total, med) => total + (med.quantity * (Number(med.selling_price) || 0)), 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                   </p>
                 </div>
+                <div className="bg-yellow-50 p-4 rounded-lg">
+                  <p className="text-sm text-yellow-700">Low Stock</p>
+                  <p className="text-2xl font-bold text-yellow-800">
+                    {lowStockItems.length}
+                  </p>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <p className="text-sm text-purple-700">Companies</p>
+                  <p className="text-2xl font-bold text-purple-800">
+                    {new Set(sortedMedicines.map(med => med.company).filter(Boolean)).size}
+                  </p>
+                </div>
+              </div>
+            </div>
 
-                <div className="relative w-full sm:w-64">
+            {/* Low Stock Items List */}
+            {lowStockItems.length > 0 && (
+              <div className="bg-white rounded-lg shadow-md p-6 mt-6 border border-yellow-200">
+                <h2 className="text-lg font-bold text-yellow-800 mb-3">Low Stock Items</h2>
+                <ul className="space-y-2">
+                  {lowStockItems.map(med => (
+                    <li key={med.id} className="flex justify-between items-center text-sm">
+                      <span className="text-gray-800">{med.name}{med.company ? ` (${med.company})` : ''}</span>
+                      <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-800 font-semibold">
+                        {med.quantity} left
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          {/* Medicines List */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                  <Package className="mr-2 text-blue-500" size={20} />
+                  Medicine Inventory
+                </h2>
+                <div className="relative w-64">
                   <input
                     type="text"
-                    placeholder="Search name, composition..."
+                    placeholder="Search medicines..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition text-sm"
+                    className="w-full pl-10 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                     <Search size={16} className="text-gray-400" />
@@ -373,179 +538,162 @@ export default function AddMedicinePage() {
                 </div>
               </div>
 
-              {/* Doctor Filter Tabs */}
-              <div className="flex flex-wrap items-center gap-2 mb-5 pb-3 border-b border-gray-100">
-                <span className="text-xs font-bold text-gray-500 uppercase mr-1">Filter Doctor:</span>
-                <button
-                  type="button"
-                  onClick={() => setSelectedDoctorFilter('ALL')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                    selectedDoctorFilter === 'ALL'
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  All Doctors ({medicines.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedDoctorFilter('Dr. Vipeen Raut')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
-                    selectedDoctorFilter === 'Dr. Vipeen Raut'
-                      ? 'bg-blue-700 text-white shadow-xs'
-                      : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                  }`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-                  Dr. Vipeen Raut ({countVipeen})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedDoctorFilter('Dr. Shillpa Raut')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
-                    selectedDoctorFilter === 'Dr. Shillpa Raut'
-                      ? 'bg-purple-700 text-white shadow-xs'
-                      : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
-                  }`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-purple-400"></span>
-                  Dr. Shillpa Raut ({countShillpa})
-                </button>
-              </div>
-
               {isLoadingMedicines ? (
                 <div className="flex justify-center items-center h-64">
                   <RefreshCw size={32} className="animate-spin text-blue-500" />
                 </div>
               ) : sortedMedicines.length === 0 ? (
-                <div className="text-center py-16 bg-gray-50 rounded-xl border border-gray-100">
+                <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
                   <Package size={48} className="mx-auto text-gray-400 mb-3" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">No medicines found</h3>
-                  <p className="text-sm text-gray-500 max-w-sm mx-auto">
-                    {searchTerm
-                      ? "No medicines match your search. Try another keyword."
-                      : "Add your first medicine with its composition using the form on the left."}
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">No medicines found</h3>
+                  <p className="text-gray-500">
+                    {searchTerm ? "Try a different search term" : "Add your first medicine using the form"}
                   </p>
                 </div>
               ) : (
                 <>
-                  <div className="overflow-x-auto rounded-xl border border-gray-100">
+                  <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th
-                            scope="col"
-                            className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none"
-                            onClick={() => handleSort('name')}
-                          >
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('name')}>
                             <div className="flex items-center space-x-1">
-                              <span>Medicine Name</span>
+                              <span>Name</span>
                               {renderSortIcon('name')}
                             </div>
                           </th>
-                          <th
-                            scope="col"
-                            className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
-                          >
-                            Doctor
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
-                          >
-                            Composition
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none"
-                            onClick={() => handleSort('company')}
-                          >
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('company')}>
                             <div className="flex items-center space-x-1">
                               <span>Company</span>
                               {renderSortIcon('company')}
                             </div>
                           </th>
-                          <th
-                            scope="col"
-                            className="px-5 py-3.5 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider"
-                          >
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('quantity')}>
+                            <div className="flex items-center space-x-1">
+                              <span>Quantity</span>
+                              {renderSortIcon('quantity')}
+                            </div>
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('cost_price')}>
+                            <div className="flex items-center space-x-1">
+                              <span>Cost Price</span>
+                              {renderSortIcon('cost_price')}
+                            </div>
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('selling_price')}>
+                            <div className="flex items-center space-x-1">
+                              <span>Selling Price</span>
+                              {renderSortIcon('selling_price')}
+                            </div>
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('profit_margin')}>
+                            <div className="flex items-center space-x-1">
+                              <span>Profit %</span>
+                              {renderSortIcon('profit_margin')}
+                            </div>
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Actions
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="bg-white divide-y divide-gray-100 text-sm">
-                        {sortedMedicines.map((medicine, idx) => {
-                          const docName = medicine.doctor_name || 'Both Doctors';
-                          return (
-                            <tr key={medicine.id || idx} className="hover:bg-blue-50/40 transition">
-                              <td className="px-5 py-3.5">
-                                <div className="font-semibold text-gray-900">
-                                  {medicine.name}
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {sortedMedicines.map((medicine) => (
+                          <tr key={medicine.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="font-medium text-gray-900">{medicine.name}</div>
+                              {medicine.description && (
+                                <div className="text-xs text-gray-500 truncate max-w-xs" title={medicine.description}>
+                                  {medicine.description}
                                 </div>
-                                {medicine.description && (
-                                  <span className="inline-block text-[11px] font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded mt-1">
-                                    {medicine.description}
-                                  </span>
-                                )}
-                              </td>
-                              <td className="px-5 py-3.5 whitespace-nowrap">
-                                {docName === 'Dr. Vipeen Raut' ? (
-                                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full border border-blue-200">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
-                                    Dr. Vipeen Raut
-                                  </span>
-                                ) : docName === 'Dr. Shillpa Raut' ? (
-                                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-purple-100 text-purple-800 px-2.5 py-0.5 rounded-full border border-purple-200">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
-                                    Dr. Shillpa Raut
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-gray-100 text-gray-700 px-2.5 py-0.5 rounded-full">
-                                    Both Doctors
-                                  </span>
-                                )}
-                              </td>
-                              <td className="px-5 py-3.5 text-gray-700 max-w-xs">
-                                {medicine.composition ? (
-                                  <span className="font-mono text-xs bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-md text-gray-800 block whitespace-pre-wrap">
-                                    {medicine.composition}
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-400 italic text-xs">No composition specified</span>
-                                )}
-                              </td>
-                              <td className="px-5 py-3.5 text-gray-600 text-xs">
-                                {medicine.company || '—'}
-                              </td>
-                              <td className="px-5 py-3.5 text-right font-medium">
-                                <div className="flex items-center justify-end gap-2">
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {medicine.company || "-"}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                Number(medicine.quantity) < (medicine.low_stock_threshold ?? 10)
+                                  ? 'bg-red-100 text-red-800'
+                                  : Number(medicine.quantity) <= (medicine.low_stock_threshold ?? 10) * 2
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-green-100 text-green-800'
+                                }`}>
+                                {medicine.quantity}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              ₹{medicine.cost_price ? Number(medicine.cost_price).toFixed(2) : '0.00'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              ₹{medicine.selling_price ? Number(medicine.selling_price).toFixed(2) : '0.00'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                Number(medicine.profit_margin || 0) > 30
+                                  ? 'bg-green-100 text-green-800'
+                                  : Number(medicine.profit_margin || 0) > 10
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                {medicine.profit_margin ? Number(medicine.profit_margin).toFixed(1) : '0.0'}%
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => handleEdit(medicine)}
+                                  className="text-blue-600 hover:text-blue-900"
+                                  title="Edit Medicine"
+                                >
+                                  <Edit size={18} />
+                                </button>
+                                {isAdmin && (
                                   <button
-                                    onClick={() => handleEdit(medicine)}
-                                    className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition"
-                                    title="Edit Medicine"
+                                    onClick={() => medicine.id && handleDelete(medicine.id)}
+                                    disabled={isDeleting}
+                                    className="text-red-600 hover:text-red-900"
+                                    title="Delete Medicine"
                                   >
-                                    <Edit size={16} />
+                                    <Trash2 size={18} />
                                   </button>
-                                  {isAdmin && (
-                                    <button
-                                      onClick={() => medicine.id && handleDelete(medicine.id)}
-                                      disabled={isDeleting}
-                                      className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition"
-                                      title="Delete Medicine"
-                                    >
-                                      <Trash2 size={16} />
-                                    </button>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
+
+                  <div className="mt-4 text-right text-sm text-gray-500">
+                    Showing {sortedMedicines.length} of {medicines.length} medicines
+                  </div>
                 </>
               )}
+            </div>
+
+            {/* Tips and Help Card */}
+            <div className="bg-white rounded-lg shadow-md p-6 mt-6">
+              <h3 className="text-lg font-bold text-gray-800 mb-3">Quick Tips</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="text-sm font-semibold text-blue-700 mb-2">Managing Inventory</h4>
+                  <ul className="text-sm text-blue-600 space-y-1">
+                    <li>• Items with less than 5 units are highlighted in red</li>
+                    <li>• Click column headers to sort your inventory</li>
+                    <li>• Use search to quickly find medicines</li>
+                  </ul>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <h4 className="text-sm font-semibold text-purple-700 mb-2">Adding New Medicines</h4>
+                  <ul className="text-sm text-purple-600 space-y-1">
+                    <li>• Required fields are marked with *</li>
+                    <li>• Include detailed descriptions for better organization</li>
+                    <li>• Company names help track suppliers</li>
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
         </div>

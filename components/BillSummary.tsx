@@ -2,12 +2,6 @@ import { formatDate } from "@/lib/utils";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { FileText, Download, Printer } from "lucide-react";
-import {
-  convertBillRecordToBillData,
-  viewBillPdf,
-  downloadBillPdf,
-  printBillPdf,
-} from "@/lib/generate-bill-client";
 
 interface Bill {
   id: string;
@@ -18,10 +12,6 @@ interface Bill {
   created_at: string;
   reference_number?: string;
   notes?: string;
-  patient_name?: string;
-  patient_age?: string | number;
-  patient_sex?: string;
-  phone_number?: string;
   items?: Array<{
     description?: string;
     quantity?: number;
@@ -48,18 +38,44 @@ export function BillSummary({ bill }: BillSummaryProps) {
   const displayBalanceAmount = bill.balance_amount;
 
   const handleGeneratePDF = () => {
-    const clientData = convertBillRecordToBillData(bill);
-    viewBillPdf(clientData);
+    if (bill.id) {
+      const queryParams = new URLSearchParams({
+        billId: bill.id,
+        totalAmount: bill.total_amount.toString(),
+        paidAmount: displayPaidAmount.toString(),
+        paymentStatus: bill.payment_status,
+        balanceAmount: displayBalanceAmount.toString(),
+        items: JSON.stringify(bill.items || []),
+        referenceNumber: bill.reference_number || "",
+        createdAt: bill.created_at,
+        notes: bill.notes || "",
+      }).toString();
+
+      window.open(`/api/generate-bill?${queryParams}`, "_blank");
+    }
   };
 
   const handleDownload = () => {
-    const clientData = convertBillRecordToBillData(bill);
-    downloadBillPdf(clientData);
+    if (bill.id) {
+      const queryParams = new URLSearchParams({
+        ...getQueryParams(),
+        download: "true"
+      }).toString();
+      window.open(`/api/generate-bill?${queryParams}`, "_blank");
+    }
   };
 
   const handlePrint = () => {
-    const clientData = convertBillRecordToBillData(bill);
-    printBillPdf(clientData);
+    if (bill.id) {
+      const queryParams = new URLSearchParams({
+        ...getQueryParams(),
+        print: "true"
+      }).toString();
+      const printWindow = window.open(`/api/generate-bill?${queryParams}`, '_blank');
+      printWindow?.addEventListener('load', () => {
+        printWindow.print();
+      });
+    }
   };
 
   const handlePrintableBill = () => {

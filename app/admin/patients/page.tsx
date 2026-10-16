@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { getAllPrescriptions, Prescription as PrescriptionType, deletePrescription } from '@/services/prescription';
-import { deletePatient, getPatients, migratePatientsToCRX } from '@/services/patients';
+import { deletePatient, getPatients } from '@/services/patients';
 import { getAll as getAllBills } from '@/services/bills';
 import { Patient } from '@/types/patient';
 import Link from 'next/link';
@@ -90,7 +90,6 @@ const ViewPatients = () => {
 
       // First, get all patients from the database
       console.log('Fetching patients...');
-      migratePatientsToCRX().catch(() => {});
       const dbPatients = await getPatients();
       if (!dbPatients) {
         throw new Error('No patients data received');
@@ -380,7 +379,7 @@ const ViewPatients = () => {
                   {currentPatients.map((patient) => (
                     <tr key={patient.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {(patient.reference_number || '-').replace(/^CH/i, 'CRX')}
+                        {patient.reference_number || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="font-medium text-gray-900">{patient.name}</div>
@@ -406,7 +405,7 @@ const ViewPatients = () => {
                               Delete
                             </button>
                           )}
-                          <Link href={`/admin/prescription?patientName=${encodeURIComponent(patient.name)}&phoneNumber=${encodeURIComponent(patient.phone_number)}&phone=${encodeURIComponent(patient.phone_number)}&reference_number=${encodeURIComponent((patient.reference_number || '').replace(/^CH/i, 'CRX'))}&uhid=${encodeURIComponent((patient.reference_number || '').replace(/^CH/i, 'CRX'))}&age=${patient.age}&sex=${patient.sex}&medicalHistory=${encodeURIComponent(patient.prescriptions[0]?.medical_history || '')}`}>
+                          <Link href={`/admin/prescription?patientName=${encodeURIComponent(patient.name)}&phone=${encodeURIComponent(patient.phone_number)}&age=${patient.age}&sex=${patient.sex}&medicalHistory=${encodeURIComponent(patient.prescriptions[0]?.medical_history || '')}`}>
                             <button className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition">
                               New Prescription
                             </button>
@@ -574,7 +573,7 @@ const ViewPatients = () => {
                                         const params = new URLSearchParams({
                                           billIds: allIds.join(','),
                                           signature: 'sign.png',
-                                          doctorName: 'Dr. Vipeen Raut',
+                                          doctorName: 'Dr. Kautilya Swaroop',
                                         });
                                         window.open(`/print-bill/statement?${params.toString()}`, '_blank');
                                       }}
@@ -631,7 +630,7 @@ const ViewPatients = () => {
 
                   {/* Modal Footer */}
                   <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse flex-wrap gap-2">
-                    <Link href={`/admin/prescription?patientName=${encodeURIComponent(selectedPatient.name)}&phoneNumber=${encodeURIComponent(selectedPatient.phone_number)}&phone=${encodeURIComponent(selectedPatient.phone_number)}&reference_number=${encodeURIComponent((selectedPatient.reference_number || '').replace(/^CH/i, 'CRX'))}&uhid=${encodeURIComponent((selectedPatient.reference_number || '').replace(/^CH/i, 'CRX'))}&age=${selectedPatient.age}&sex=${selectedPatient.sex}&medicalHistory=${encodeURIComponent(selectedPatient.prescriptions[0]?.medical_history || '')}`}>
+                    <Link href={`/admin/prescription?patientName=${encodeURIComponent(selectedPatient.name)}&age=${selectedPatient.age}&sex=${selectedPatient.sex}&phone=${encodeURIComponent(selectedPatient.phone_number)}&medicalHistory=${encodeURIComponent(selectedPatient.prescriptions[0]?.medical_history || '')}`}>
                       <button
                         type="button"
                         className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm"
@@ -650,7 +649,7 @@ const ViewPatients = () => {
                             const params = new URLSearchParams({
                               billIds: allBillIds.join(','),
                               signature: 'sign.png',
-                              doctorName: 'Dr. Vipeen Raut',
+                              doctorName: 'Dr. Kautilya Swaroop',
                             });
                             window.open(`/print-bill/statement?${params.toString()}`, '_blank');
                           }}

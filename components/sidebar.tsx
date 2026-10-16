@@ -1,6 +1,6 @@
-"use client";
+"use client"
 import React, { useState, useEffect } from 'react';
-import { Inbox, Menu, ChevronRight, Pill, FileText, LogOut, Wrench, TrendingUp, CreditCard, Package, Calendar, ClipboardList, Activity, UserCheck, Crown, ReceiptText, Link2, Bed } from "lucide-react";
+import { Inbox, Menu, ChevronRight, Pill, FileText, LogOut, Wrench, TrendingUp, CreditCard, Package, Calendar, ClipboardList, Activity, UserCheck, Crown, ReceiptText, Link2 } from "lucide-react";
 import { useRouter, usePathname } from 'next/navigation';
 import { getCurrentUser, signOut } from "@/services/adminuser";
 import { useIsAdmin } from "@/hooks/use-is-admin";
@@ -61,8 +61,8 @@ const MenuItem: React.FC<MenuItemProps> = ({ icon: Icon, title, url, isActive, o
       href="#"
       title={!isExpanded ? title : undefined}
       className={`flex items-center w-full py-3 px-3 rounded-lg transition-all duration-200 ${isActive
-        ? 'bg-blue-600 text-white shadow-sm'
-        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+          ? 'bg-blue-600 text-white shadow-sm'
+          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
         } ${!isExpanded ? 'justify-center' : ''}`}
       onClick={(e) => {
         e.preventDefault();
@@ -116,7 +116,6 @@ export function AppSidebar({ children }: { children?: React.ReactNode }): React.
       }
     };
 
-    /* Auth check commented out for now
     const checkAuth = async () => {
       try {
         const user = await getCurrentUser();
@@ -134,8 +133,6 @@ export function AppSidebar({ children }: { children?: React.ReactNode }): React.
     };
 
     checkAuth();
-    */
-    setUserEmail('admin@cortexhospital.com');
     checkViewport();
     window.addEventListener('resize', checkViewport);
     setTimeout(() => setAnimateItems(true), 100);
@@ -143,20 +140,16 @@ export function AppSidebar({ children }: { children?: React.ReactNode }): React.
   }, [router]);
 
   const items: MenuItemDef[] = [
-    { id: "appointments", title: "Appointments", url: "/admin/appointments", icon: Calendar },
     { id: "patient-management", title: "Patient Management", url: "/admin/patients", icon: Inbox },
-    { id: "opd-management", title: "OPD Management", url: "/admin/opd", icon: ClipboardList },
-    { id: "ipd-management", title: "IPD Management", url: "/admin/ipd", icon: Bed },
-    { id: "hospital-billing", title: "OPD & Hospital Billing", url: "/admin/billing", icon: ReceiptText },
-
-    // { id: "crown-management", title: "Crowns & Revenue", url: "/admin/crowns", icon: Crown },
-    // { id: "registers-records", title: "Registers & Records", url: "/admin/registers", icon: ClipboardList },
-    // ...(isAdmin ? [{ id: "doctor-management", title: "Doctor Management", url: "/admin/doctors", icon: UserCheck }] : []),
-    // { id: "investigations-opg", title: "Investigation & OPG", url: "/admin/investigations", icon: Activity },
+    { id: "appointments", title: "Appointments", url: "/admin/appointments", icon: Calendar },
+    { id: "crown-management", title: "Crowns & Revenue", url: "/admin/crowns", icon: Crown },
+    { id: "registers-records", title: "Registers & Records", url: "/admin/registers", icon: ClipboardList },
+    ...(isAdmin ? [{ id: "doctor-management", title: "Doctor Management", url: "/admin/doctors", icon: UserCheck }] : []),
+    { id: "investigations-opg", title: "Investigation & OPG", url: "/admin/investigations", icon: Activity },
     { id: "medicine-management", title: "Medicine Management", url: "/admin/medicines", icon: Pill },
-    // { id: "stockist-bills", title: "Stockist Bills & Dues", url: "/admin/stockists", icon: ReceiptText },
-    // { id: "Inventory-management", title: "Inventory Management", url: "/admin/inventory", icon: Wrench },
-    // { id: "treatment-links", title: "Treatment Auto-Link", url: "/admin/treatment-links", icon: Link2 },
+    { id: "stockist-bills", title: "Stockist Bills & Dues", url: "/admin/stockists", icon: ReceiptText },
+    { id: "Inventory-management", title: "Inventory Management", url: "/admin/inventory", icon: Wrench },
+    { id: "treatment-links", title: "Treatment Auto-Link", url: "/admin/treatment-links", icon: Link2 },
     ...(isAdmin ? [{ id: "sales-report", title: "Sales Report", url: "/admin/medicines/sales", icon: TrendingUp }] : []),
     { id: "installments", title: "Payment Installments", url: "/admin/installments", icon: CreditCard },
     { id: "generate-prescription", title: "Generate Prescription", url: "/admin/prescription", icon: FileText },
@@ -221,27 +214,17 @@ export function AppSidebar({ children }: { children?: React.ReactNode }): React.
         `}
       >
         {/* Logo/header with toggle always inside sidebar */}
-        <div
-          className={`relative flex items-center border-b border-gray-100 shrink-0 transition-all duration-200 ${
-            showExpanded ? 'h-20 px-3 justify-center' : 'h-16 px-3 justify-center'
-          }`}
-        >
+        <div className={`flex items-center border-b border-gray-100 shrink-0 h-16 px-3 ${showExpanded ? 'justify-between' : 'justify-center'}`}>
           {showExpanded ? (
             <>
-              <div
-                className="flex items-center justify-center w-full px-7 cursor-pointer"
-                onClick={() => router.push('/admin/appointments')}
-                title="Cortex Hospital"
-              >
-                <img
-                  src="/cortex_logo.png"
-                  alt="Cortex Hospital"
-                  className="h-14 w-auto max-h-14 max-w-full object-contain select-none"
-                />
-              </div>
+              <img
+                src="/dental_logo.webp"
+                alt="Shahi Dental"
+                className="h-9 w-auto object-contain"
+              />
               <button
                 onClick={toggleSidebar}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all duration-200"
+                className="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all duration-200 shrink-0"
                 title="Collapse sidebar"
               >
                 <Menu size={18} />
@@ -300,12 +283,6 @@ export function AppSidebar({ children }: { children?: React.ReactNode }): React.
                 <LogOut className="w-4 h-4" />
                 <span>Logout</span>
               </button>
-              {/* Svasth HMS Branding */}
-              <div className="pt-2 mt-1 border-t border-gray-100 flex items-center justify-center gap-1.5 text-[11px] text-gray-400 select-none">
-                <span>Powered by</span>
-                <img src="/Svasth_logo.png" alt="Svasth HMS" className="h-4 w-4 rounded-xs object-contain" />
-                <span className="font-semibold text-gray-600">Svasth HMS</span>
-              </div>
             </div>
           ) : (
             <>
@@ -322,10 +299,6 @@ export function AppSidebar({ children }: { children?: React.ReactNode }): React.
               >
                 <LogOut className="w-4 h-4" />
               </button>
-              {/* Svasth HMS Branding collapsed */}
-              <div className="pt-1 border-t border-gray-100 flex items-center justify-center select-none" title="Powered by Svasth HMS">
-                <img src="/Svasth_logo.png" alt="Svasth HMS" className="h-5 w-5 rounded-xs object-contain opacity-70 hover:opacity-100 transition" />
-              </div>
             </>
           )}
         </div>

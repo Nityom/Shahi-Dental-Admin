@@ -6,7 +6,7 @@ import { v } from "convex/values";
  */
 const DEFAULT_MAIN_DOCTORS = [
   {
-    name: "Dr. Vipeen Raut",
+    name: "Dr. Kautilya Swaroop",
     doctor_type: "MAIN" as const,
     commission_percentage: undefined,
     phone: "9917606732",
@@ -16,7 +16,7 @@ const DEFAULT_MAIN_DOCTORS = [
     notes: "Chief Dental Surgeon & Founder",
   },
   {
-    name: "Dr. Shillpa Raut",
+    name: "Dr. Anjali Swaroop",
     doctor_type: "MAIN" as const,
     commission_percentage: undefined,
     status: "ACTIVE" as const,

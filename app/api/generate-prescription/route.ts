@@ -1,4 +1,4 @@
-// app/api/generate-prescription/route.ts
+﻿// app/api/generate-prescription/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from 'pdf-lib';
 import fs from 'fs/promises';
@@ -147,7 +147,7 @@ export async function POST(req: NextRequest) {
     let y = PAGE_H - 40;
 
     // Header
-    const clinicName = 'Cortex Hospital';
+    const clinicName = 'Shahi Dental Clinic';
     const clinicNameW = boldFont.widthOfTextAtSize(clinicName, 18);
     page.drawText(clinicName, {
       x: (PAGE_W - clinicNameW) / 2, y,

@@ -13,25 +13,7 @@ const formatPatient = (p: any): Patient => ({
     ...p,
     id: p._id,
     age: Number(p.age),
-    reference_number: (p.reference_number || '').replace(/^CH/i, 'CRX'),
 });
-
-export const migratePatientsToCRX = async () => {
-    try {
-        await convex.mutation(api.patients.migratePrefixToCRX, {});
-    } catch (e) {
-        console.warn("Migration to CRX skipped:", e);
-    }
-};
-
-export const getNextPatientReference = async (): Promise<string> => {
-    try {
-        const next = await convex.query(api.patients.getNextReferenceNumber, {});
-        return next || 'CRX0003';
-    } catch (e) {
-        return 'CRX0003';
-    }
-};
 
 export const createPatient = async (patient: Omit<Patient, 'id' | 'created_at' | 'updated_at' | 'reference_number'>) => {
     const data = await convex.mutation(api.patients.create, {

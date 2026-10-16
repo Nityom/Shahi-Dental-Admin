@@ -12,12 +12,8 @@ const convex = new ConvexHttpClient(convexUrl);
 export interface MedicineEntry {
   name: string;
   dosage: string;
-  duration?: string;
+  duration: string;
   quantity?: number;
-  composition?: string;
-  timing?: string;
-  freq_duration?: string;
-  note?: string;
 }
 
 export interface ToothData {
@@ -65,8 +61,6 @@ export interface Prescription {
   advice?: string;
   followup_date?: string;
   doctor_name?: string;
-  opd_visit_id?: string;
-  vitals?: any;
   created_at?: string;
   updated_at?: string;
   bills?: Bill[];

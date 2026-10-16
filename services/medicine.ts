@@ -12,10 +12,9 @@ const convex = new ConvexHttpClient(convexUrl);
 export type Medicine = {
   id?: string;
   name: string;
-  composition?: string;
   description?: string;
-  quantity?: number;
-  rate?: number;
+  quantity: number;
+  rate: number;
   cost_price?: number;
   selling_price?: number;
   profit_margin?: number;
@@ -26,23 +25,20 @@ export type Medicine = {
   low_stock_threshold?: number;
   strips?: number;
   quantity_per_strip?: number;
-  doctor_name?: string;
 };
 
 export const addMedicine = async (medicine: Medicine) => {
   const data = await convex.mutation(api.medicines.create, {
     name: medicine.name,
-    composition: medicine.composition,
     description: medicine.description,
-    quantity: medicine.quantity !== undefined ? Number(medicine.quantity) : undefined,
-    rate: medicine.rate !== undefined ? Number(medicine.rate) : undefined,
+    quantity: Number(medicine.quantity),
+    rate: Number(medicine.rate),
     cost_price: medicine.cost_price ? Number(medicine.cost_price) : undefined,
     selling_price: medicine.selling_price ? Number(medicine.selling_price) : undefined,
     company: medicine.company,
     low_stock_threshold: medicine.low_stock_threshold ? Number(medicine.low_stock_threshold) : undefined,
     strips: medicine.strips ? Number(medicine.strips) : undefined,
     quantity_per_strip: medicine.quantity_per_strip ? Number(medicine.quantity_per_strip) : undefined,
-    doctor_name: medicine.doctor_name || undefined,
   });
   return data;
 };
@@ -59,14 +55,12 @@ export const getAllMedicines = async () => {
     return {
       ...item,
       id: item._id,
-      composition: item.composition || '',
-      doctor_name: item.doctor_name || '',
-      quantity: item.quantity !== undefined ? Number(item.quantity) : 0,
-      rate: item.rate !== undefined ? Number(item.rate) : 0,
+      quantity: Number(item.quantity),
+      rate: Number(item.rate),
       selling_price: sellingPrice,
       cost_price: costPrice,
       profit_margin: profitMargin,
-      price: sellingPrice ? sellingPrice : Number(item.rate || 0),
+      price: sellingPrice ? sellingPrice : Number(item.rate),
       low_stock_threshold: item.low_stock_threshold !== undefined ? Number(item.low_stock_threshold) : 10,
       strips: item.strips !== undefined ? Number(item.strips) : undefined,
       quantity_per_strip: item.quantity_per_strip !== undefined ? Number(item.quantity_per_strip) : undefined,
@@ -78,7 +72,6 @@ export const updateMedicine = async (id: string, updates: Partial<Medicine>) => 
   // Only pass fields accepted by the Convex medicines.update mutation
   const validUpdate: Record<string, any> = { id: id as any };
   if (updates.name !== undefined) validUpdate.name = updates.name;
-  if (updates.composition !== undefined) validUpdate.composition = updates.composition;
   if (updates.description !== undefined) validUpdate.description = updates.description;
   if (updates.quantity !== undefined) validUpdate.quantity = Number(updates.quantity);
   if (updates.rate !== undefined) validUpdate.rate = Number(updates.rate);
@@ -88,7 +81,6 @@ export const updateMedicine = async (id: string, updates: Partial<Medicine>) => 
   if (updates.low_stock_threshold !== undefined) validUpdate.low_stock_threshold = Number(updates.low_stock_threshold);
   if (updates.strips !== undefined) validUpdate.strips = Number(updates.strips);
   if (updates.quantity_per_strip !== undefined) validUpdate.quantity_per_strip = Number(updates.quantity_per_strip);
-  if (updates.doctor_name !== undefined) validUpdate.doctor_name = updates.doctor_name;
 
   const data = await convex.mutation(api.medicines.update, validUpdate as any);
   return data;
@@ -114,16 +106,6 @@ export const deductMedicineStock = async (medicineItems: Array<{ name: string, q
       try {
         const medicine = await getMedicineByName(item.name);
 
-        if (medicine.quantity === undefined || medicine.quantity === null) {
-          // Inventory tracking is disabled for this medicine
-          results.push({
-            name: item.name,
-            status: 'success',
-            message: 'Medicine dispensed (quantity not tracked)'
-          });
-          continue;
-        }
-
         if (medicine.quantity < item.quantity) {
           results.push({
             name: item.name,
@@ -142,9 +124,9 @@ export const deductMedicineStock = async (medicineItems: Array<{ name: string, q
           medicine_name: medicine.name,
           company: medicine.company,
           quantity: item.quantity,
-          unit_price: medicine.price || medicine.rate || 0,
+          unit_price: medicine.price || medicine.rate,
           unit_cost: medicine.cost_price || undefined,
-          total_amount: (medicine.price || medicine.rate || 0) * item.quantity,
+          total_amount: (medicine.price || medicine.rate) * item.quantity,
           sale_date: new Date().toISOString().split('T')[0],
         });
 

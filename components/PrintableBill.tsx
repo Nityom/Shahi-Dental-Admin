@@ -35,11 +35,8 @@ interface PrintableBillProps {
   termsAndConditions?: string;
   showPrintButton?: boolean;
   signature?: string;
-  doctorName?: string;
   paymentTransactions?: PaymentTransaction[];
-  referenceNumber?: string;
-  prescriptionId?: string;
-  includeSignature?: boolean;
+  doctorName?: string;
 }
 
 const PrintableBill: React.FC<PrintableBillProps> = ({
@@ -55,21 +52,12 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
   total,
   amountPaid = 0,
   balance = 0,
-  termsAndConditions = 'All disputes are subject to Wardha jurisdiction only',
+  termsAndConditions = 'All disputes are subject to Muzaffarpur jurisdiction only',
   showPrintButton = true,
   signature = 'sign.png',
-  doctorName = 'Dr. Vipeen Raut',
+  doctorName = 'Dr. Kautilya Swaroop',
   paymentTransactions = [],
-  referenceNumber,
-  prescriptionId,
-  includeSignature = true,
 }) => {
-  const [includeSigState, setIncludeSigState] = useState<boolean>(includeSignature);
-
-  useEffect(() => {
-    setIncludeSigState(includeSignature);
-  }, [includeSignature]);
-
   const getSignatureSrc = (sig?: string) => {
     if (!sig) return '/sign.png';
     if (sig.startsWith('data:') || sig.startsWith('http://') || sig.startsWith('https://')) {
@@ -129,7 +117,7 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
     window.print();
   };
 
-  const formattedBillNumber = (billNumber || '').replace(/^KSD-INV/i, 'CRX-INV').replace(/^KSD-/i, 'CRX-').replace(/^CH-INV/i, 'CRX-INV').replace(/^CH-/i, 'CRX-');
+  const formattedBillNumber = (billNumber || '').replace(/^KSD-INV/i, 'SDC-INV').replace(/^KSD-/i, 'SDC-');
 
   // If items > 5, split evenly across 2 pages so both pages look balanced & complete
   const isMultiPage = (items?.length || 0) > 5;
@@ -238,18 +226,16 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
       <div className="mt-4 pt-2">
         <div className="flex justify-end">
           <div className="text-center min-w-[180px]">
-            {includeSigState && (
-              <div className="mb-1 h-14 flex items-center justify-center">
-                <img
-                  src={getSignatureSrc(signature)}
-                  alt="Signature"
-                  className="max-h-12 w-auto object-contain"
-                />
-              </div>
-            )}
+            <div className="mb-1 h-14 flex items-center justify-center">
+              <img
+                src={getSignatureSrc(signature)}
+                alt="Signature"
+                className="max-h-12 w-auto object-contain"
+              />
+            </div>
             <div className="border-t border-gray-800 pt-1 text-xs font-semibold text-gray-900">
               <div>{doctorName}</div>
-              <div className="text-[11px] text-gray-600 font-normal">Cortex Hospital, Wardha</div>
+              <div className="text-[11px] text-gray-600 font-normal">Shahi Dental Clinic</div>
             </div>
           </div>
         </div>
@@ -273,15 +259,15 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
         <div className="mt-2 text-center">
           <div className="flex items-center justify-center mb-2">
             <img
-              src="/cortex_logo.png"
-              alt="Cortex Hospital Logo"
+              src="/dental_logo.webp"
+              alt="Shahi Dental Logo"
               className="h-14 mr-3 logo-print object-contain"
             />
           </div>
           <p className="text-xs text-gray-800 font-medium">
-            Beside Urich Mall, Aarti Square, Mohini Nagar, Nagpur Road, Wardha (M.S) - 442001
+            Juran Chhapra Main Rd, in front of Road Number 2, Juran Chapra, Brahmapura, Muzaffarpur, Bihar 842001
           </p>
-          <p className="text-xs text-gray-700 mt-0.5">Mobile: +91 9373280505 &nbsp;|&nbsp; +91 7184273030</p>
+          <p className="text-xs text-gray-700 mt-0.5">Mobile: 9525048993 &nbsp;|&nbsp; Reg. No. 7329/A</p>
         </div>
       </div>
 
@@ -299,9 +285,9 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
         </div>
 
         {/* Bill To Section */}
-        <div className="bg-white p-3 rounded border border-gray-300 flex justify-between items-start">
+        <div className="bg-white p-3 rounded border border-gray-300">
+          <div className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">BILL TO</div>
           <div className="text-sm">
-            <div className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">BILL TO</div>
             <div className="font-bold text-gray-900">{patientName}</div>
             {patientPhone && <div className="text-xs text-gray-600">Mobile: {patientPhone}</div>}
             {(patientAge || patientSex) && (
@@ -312,23 +298,6 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
               </div>
             )}
           </div>
-
-          {(referenceNumber || (prescriptionId && !['DIRECT_BILL', 'OPD_DIRECT', 'IPD_DIRECT'].includes(prescriptionId))) && (
-            <div className="text-right text-xs text-gray-600 space-y-1">
-              {referenceNumber && (
-                <div>
-                  <span className="font-semibold text-gray-700">UHID: </span>
-                  <span className="font-mono font-bold text-gray-900">{referenceNumber}</span>
-                </div>
-              )}
-              {prescriptionId && !['DIRECT_BILL', 'OPD_DIRECT', 'IPD_DIRECT'].includes(prescriptionId) && (
-                <div>
-                  <span className="font-semibold text-gray-700">Prescription: </span>
-                  <span className="font-mono font-bold text-teal-800">#{prescriptionId.slice(-6)}</span>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </>
@@ -340,7 +309,7 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
         @media print {
           @page {
             size: A4 portrait;
-            margin: 6mm 8mm 6mm 8mm;
+            margin: 10mm 12mm 10mm 12mm;
           }
 
           html, body {
@@ -423,11 +392,8 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
             {renderTotalsAndSignature()}
           </div>
 
-          <div className="mt-auto pt-3 border-t border-gray-300 text-[10px] text-gray-500 flex justify-between items-center">
+          <div className="mt-auto pt-3 border-t border-gray-300 text-[10px] text-gray-500 flex justify-between">
             <span>Valid system-generated tax invoice / bill of supply</span>
-            <span className="flex items-center gap-1 text-gray-500 font-medium">
-              Powered by <img src="/Svasth_logo.png" alt="Svasth HMS" className="h-3.5 w-3.5 inline-block object-contain rounded-xs" /> <strong className="text-gray-700">Svasth HMS</strong>
-            </span>
             <span>Page 1 of 1</span>
           </div>
         </div>
@@ -468,11 +434,8 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
             </div>
 
             {/* Bottom Page 2 Footer */}
-            <div className="mt-auto pt-3 border-t border-gray-300 text-[10px] text-gray-500 flex justify-between items-center">
+            <div className="mt-auto pt-3 border-t border-gray-300 text-[10px] text-gray-500 flex justify-between">
               <span>Valid system-generated tax invoice / bill of supply</span>
-              <span className="flex items-center gap-1 text-gray-500 font-medium">
-                Powered by <img src="/Svasth_logo.png" alt="Svasth HMS" className="h-3.5 w-3.5 inline-block object-contain rounded-xs" /> <strong className="text-gray-700">Svasth HMS</strong>
-              </span>
               <span>Page 2 of 2</span>
             </div>
           </div>
@@ -480,19 +443,10 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
       )}
 
       {showPrintButton && (
-        <div className="no-print flex flex-col sm:flex-row items-center justify-center gap-4 mt-6 mb-4">
-          <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-gray-700 bg-gray-50 hover:bg-gray-100 px-3.5 py-2 rounded-lg border border-gray-300 shadow-2xs">
-            <input
-              type="checkbox"
-              checked={includeSigState}
-              onChange={(e) => setIncludeSigState(e.target.checked)}
-              className="w-4 h-4 text-blue-600 rounded cursor-pointer"
-            />
-            <span>{includeSigState ? "✓ Doctor Signature Included" : "Without Sign (Name Only)"}</span>
-          </label>
+        <div className="no-print flex justify-center mt-6 mb-4">
           <button
             onClick={handlePrint}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-8 rounded-lg shadow-md transition-colors"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-colors"
           >
             Print Bill
           </button>

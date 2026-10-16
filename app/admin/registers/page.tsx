@@ -93,7 +93,7 @@ function RegistersContent() {
     phone_number: '',
     reference_number: '',
     review_date: todayStr,
-    doctor_name: 'Dr. Vipeen Raut',
+    doctor_name: 'Dr. Kautilya Swaroop',
     chief_complaint_or_treatment: '',
     findings_notes: '',
     status: 'Scheduled',
@@ -106,7 +106,7 @@ function RegistersContent() {
     recall_type: '6-Month Preventive Checkup',
     due_date: todayStr,
     status: 'Due',
-    doctor_name: 'Dr. Vipeen Raut',
+    doctor_name: 'Dr. Kautilya Swaroop',
     notes: '',
     contacted_date: '',
   });
@@ -117,7 +117,7 @@ function RegistersContent() {
     reference_number: '',
     followup_date: todayStr,
     treatment_summary: '',
-    doctor_name: 'Dr. Vipeen Raut',
+    doctor_name: 'Dr. Kautilya Swaroop',
     status: 'Pending',
     notes: '',
     next_followup_date: '',
@@ -156,7 +156,7 @@ function RegistersContent() {
     pending_balance: 0,
     payment_mode: 'Cash',
     transaction_reference: '',
-    paid_by: 'Dr. Vipeen Raut',
+    paid_by: 'Dr. Kautilya Swaroop',
     notes: '',
   });
 
@@ -298,7 +298,7 @@ function RegistersContent() {
         pending_balance: 0,
         payment_mode: 'Cash',
         transaction_reference: '',
-        paid_by: 'Dr. Vipeen Raut',
+        paid_by: 'Dr. Kautilya Swaroop',
         notes: '',
       });
     }
@@ -374,7 +374,7 @@ function RegistersContent() {
       pending_balance: 0,
       payment_mode: 'Cash',
       transaction_reference: '',
-      paid_by: 'Dr. Vipeen Raut',
+      paid_by: 'Dr. Kautilya Swaroop',
       notes: '',
     });
     setIsModalOpen(true);
@@ -1360,7 +1360,7 @@ function RegistersContent() {
                         type="text"
                         value={staffPaymentForm.paid_by || ''}
                         onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, paid_by: e.target.value })}
-                        placeholder="Dr. Vipeen Raut"
+                        placeholder="Dr. Kautilya Swaroop"
                         className="w-full px-3 py-1.5 border rounded-lg"
                       />
                     </div>

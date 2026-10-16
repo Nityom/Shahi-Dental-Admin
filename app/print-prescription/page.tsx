@@ -5,15 +5,27 @@ import { useSearchParams } from 'next/navigation';
 import { getPrescriptionById } from '@/services/prescription';
 import { doctorService } from '@/services/doctors';
 
+interface ToothData {
+  id: number;
+  type: string;
+  category: string;
+  disease: string;
+}
+
 interface MedicineEntry {
   name: string;
   dosage: string;
-  duration?: string;
+  duration: string;
   quantity?: number;
-  composition?: string;
-  timing?: string;
-  freq_duration?: string;
-  note?: string;
+}
+
+interface TreatmentItem {
+  id: number;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+  date?: string;
 }
 
 interface PrescriptionData {
@@ -28,16 +40,14 @@ interface PrescriptionData {
   medical_history?: string;
   investigation?: string;
   diagnosis?: string;
-  treatment_plan?: any[];
+  treatment_plan?: any[]; // string[] (legacy) or TreatmentPlanItem objects
   oral_exam_notes?: string;
-  selected_teeth?: any[];
+  selected_teeth?: ToothData[];
   medicines?: MedicineEntry[];
-  treatment_done?: any[];
+  treatment_done?: TreatmentItem[];
   advice?: string;
   followup_date?: string;
   doctor_name?: string;
-  opd_visit_id?: string;
-  vitals?: any;
 }
 
 const getSignatureSrc = (sig?: string) => {
@@ -48,89 +58,12 @@ const getSignatureSrc = (sig?: string) => {
   return `/${sig.replace(/^\//, '')}`;
 };
 
-function formatPrescriptionDate(dateStr?: string): string {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = months[d.getMonth()];
-  const year = d.getFullYear();
-  return `${day}-${month}-${year}`;
-}
-
-function formatTimestamp(dateStr?: string): string {
-  const d = dateStr ? new Date(dateStr) : new Date();
-  const validD = isNaN(d.getTime()) ? new Date() : d;
-  const day = String(validD.getDate()).padStart(2, '0');
-  const month = String(validD.getMonth() + 1).padStart(2, '0');
-  const year = validD.getFullYear();
-  const hours = String(validD.getHours()).padStart(2, '0');
-  const mins = String(validD.getMinutes()).padStart(2, '0');
-  return `${day}/${month}/${year}, ${hours}:${mins}`;
-}
-
-function formatFollowup(followupDate?: string, prescriptionDate?: string): string {
-  if (!followupDate) return '';
-  const fDate = new Date(followupDate);
-  if (isNaN(fDate.getTime())) return followupDate;
-
-  const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-  const dayName = daysOfWeek[fDate.getDay()];
-  const formattedDate = `${String(fDate.getDate()).padStart(2, '0')}-${months[fDate.getMonth()]}-${fDate.getFullYear()}`;
-
-  let diffPrefix = '';
-  if (prescriptionDate) {
-    const pDate = new Date(prescriptionDate);
-    if (!isNaN(pDate.getTime())) {
-      const diffMs = fDate.getTime() - pDate.getTime();
-      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-      if (diffDays > 0) {
-        diffPrefix = `${diffDays} days `;
-      }
-    }
-  }
-
-  return `${diffPrefix}(${formattedDate} - ${dayName})`;
-}
-
-function getTimingFromDosage(dosage?: string): string {
-  if (!dosage) return '';
-  const trimmed = dosage.trim();
-  const parts = trimmed.split('-').map(p => p.trim());
-  if (parts.length === 3) {
-    const [m, a, n] = parts;
-    const segments: string[] = [];
-    if (m && m !== '0') {
-      segments.push(`${m} - नाश्ता नंतर`);
-    }
-    if (a && a !== '0') {
-      segments.push(`${a} - दुपारी जेवणानंतर`);
-    }
-    if (n && n !== '0') {
-      segments.push(`${n} - रात्री जेवणानंतर`);
-    }
-    if (segments.length > 0) {
-      return segments.join(', ');
-    }
-  }
-  if (trimmed.toLowerCase() === 'stat') {
-    return 'तातडीने (Stat)';
-  }
-  return '';
-}
-
 function PrintPrescriptionContent() {
   const searchParams = useSearchParams();
   const prescriptionId = searchParams.get('prescriptionId');
   const signatureParam = searchParams.get('signature') || 'sign.png';
-  const doctorNameParam = searchParams.get('doctorName') || 'Dr. Vipeen Raut';
-  const includeSigParam = searchParams.get('includeSignature');
-
+  const doctorNameParam = searchParams.get('doctorName') || 'Dr. Kautilya Swaroop';
   const [prescriptionData, setPrescriptionData] = useState<PrescriptionData | null>(null);
-  const [includeSignature, setIncludeSignature] = useState<boolean>(includeSigParam !== 'false');
   const [resolvedSignature, setResolvedSignature] = useState<string>(signatureParam);
   const [resolvedDoctorName, setResolvedDoctorName] = useState<string>(doctorNameParam);
   const [loading, setLoading] = useState(true);
@@ -151,6 +84,8 @@ function PrintPrescriptionContent() {
         const docName = searchParams.get('doctorName') || (data as any)?.doctor_name || doctorNameParam;
         setResolvedDoctorName(docName);
 
+        // Resolve signature: if searchParams passed explicit non-default signature, use that.
+        // Otherwise look up doctor by name in doctorService
         const paramSig = searchParams.get('signature');
         if (paramSig && paramSig !== 'sign.png') {
           setResolvedSignature(paramSig);
@@ -160,13 +95,13 @@ function PrintPrescriptionContent() {
             const match = doctors.find((d) => d.name.toLowerCase() === docName.toLowerCase());
             if (match?.signature_url) {
               setResolvedSignature(match.signature_url);
-            } else if (docName.toLowerCase().includes('shillpa') || docName.toLowerCase().includes('anjali')) {
+            } else if (docName.toLowerCase().includes('anjali')) {
               setResolvedSignature('sign1.png');
             } else {
               setResolvedSignature('sign.png');
             }
           } catch {
-            setResolvedSignature(paramSig || (docName.toLowerCase().includes('shillpa') || docName.toLowerCase().includes('anjali') ? 'sign1.png' : 'sign.png'));
+            setResolvedSignature(paramSig || (docName.toLowerCase().includes('anjali') ? 'sign1.png' : 'sign.png'));
           }
         }
       } catch (err) {
@@ -183,10 +118,9 @@ function PrintPrescriptionContent() {
   // Auto-print when data is loaded
   useEffect(() => {
     if (!loading && prescriptionData) {
-      const timer = setTimeout(() => {
+      setTimeout(() => {
         window.print();
-      }, 600);
-      return () => clearTimeout(timer);
+      }, 500);
     }
   }, [loading, prescriptionData]);
 
@@ -194,8 +128,8 @@ function PrintPrescriptionContent() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-900 mx-auto mb-4"></div>
-          <p className="text-gray-900 font-medium">Loading prescription...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-900">Loading prescription...</p>
         </div>
       </div>
     );
@@ -205,43 +139,18 @@ function PrintPrescriptionContent() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center p-8">
-          <h2 className="text-2xl font-bold text-red-600 mb-2">Error</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Error</h2>
           <p className="text-gray-700">{error || 'Prescription not found'}</p>
         </div>
       </div>
     );
   }
 
-  // Derive diagnosis text
-  const diagnosisText =
-    prescriptionData.diagnosis ||
-    prescriptionData.oral_exam_notes ||
-    (prescriptionData.selected_teeth && prescriptionData.selected_teeth.length > 0
-      ? prescriptionData.selected_teeth.map((t) => (t.disease ? `${t.disease}` : `#${t.id}`)).join(', ')
-      : '');
-
-  const patientNameFormatted = prescriptionData.patient_name
-    ? prescriptionData.patient_name.toUpperCase()
-    : 'PATIENT';
-
-  let refNumber = (prescriptionData.reference_number || '').replace(/^CH/i, 'CRX');
-  if (prescriptionData.patient_name?.toLowerCase() === 'testing' && (refNumber === 'CRX0001' || !refNumber)) {
-    refNumber = 'CRX0002';
-  } else if (refNumber === 'CRX0002' && prescriptionData.patient_name?.toLowerCase() !== 'testing') {
-    refNumber = 'CRX0003';
-  }
-  if (!refNumber) refNumber = '00000';
-  const ageDisplay = prescriptionData.age ? `${prescriptionData.age}y` : '';
-  const sexDisplay = prescriptionData.sex ? prescriptionData.sex : '';
-  const phoneDisplay = prescriptionData.phone_number || '';
-
-  const vitals = prescriptionData.vitals || (prescriptionData as any).vital_signs || {};
-  const bpDisplay = vitals.bp || (vitals.bp_systolic && vitals.bp_diastolic ? `${vitals.bp_systolic}/${vitals.bp_diastolic}` : '') || (prescriptionData as any).bp || '';
-  const spo2Display = vitals.spo2 || (prescriptionData as any).spo2 || '';
-  const heightDisplay = vitals.height || (prescriptionData as any).height || '';
-  const weightDisplay = vitals.weight || (prescriptionData as any).weight || '';
-  const pulseDisplay = vitals.pulse || (prescriptionData as any).pulse || '';
-  const hasVitals = !!(bpDisplay || spo2Display || heightDisplay || weightDisplay);
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? '' : date.toLocaleDateString('en-GB');
+  };
 
   return (
     <>
@@ -249,876 +158,348 @@ function PrintPrescriptionContent() {
         @media print {
           @page {
             size: A4 portrait;
-            margin: 5mm 6mm 5mm 6mm;
+            margin-top: 7cm; 
+            margin-bottom: 4cm;
+            margin-left: 1.8cm;
+            margin-right: 1.8cm;
           }
 
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            height: 100% !important;
-            max-height: 100% !important;
-            overflow: hidden !important;
-            background: #fff !important;
-            color: #000 !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
+          body {
+            margin: 0;
+            padding: 0;
+            background: white;
+            color: black;
           }
 
-          .no-print {
-            display: none !important;
-            height: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-
-          .prescription-sheet {
-            width: 100% !important;
-            max-width: 100% !important;
-            height: 268mm !important;
-            max-height: 268mm !important;
-            min-height: 268mm !important;
-            margin: 0 !important;
-            padding: 0 !important;
+          * {
+            background: transparent !important;
+            color: black !important;
             box-shadow: none !important;
-            border: none !important;
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: space-between !important;
-            box-sizing: border-box !important;
-            overflow: hidden !important;
-            page-break-after: avoid !important;
-            page-break-inside: avoid !important;
-            page-break-before: avoid !important;
-            break-after: avoid !important;
-            break-inside: avoid !important;
+            text-shadow: none !important;
           }
 
-          .sheet-content {
-            height: 100% !important;
-            max-height: 268mm !important;
-            min-height: 268mm !important;
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: space-between !important;
-            overflow: hidden !important;
-            page-break-inside: avoid !important;
+          button, .no-print {
+            display: none !important;
           }
 
-          .sheet-bottom-section {
-            margin-top: auto !important;
-            page-break-inside: avoid !important;
-            padding-top: 4px !important;
-          }
-
-          .footer-banner-container {
-            page-break-inside: avoid !important;
-            page-break-before: avoid !important;
-            margin-top: 4px !important;
+          .print-content {
+            width: 100%;
+            margin: 0;
+            padding: 0;
           }
         }
 
         @media screen {
           body {
-            background: #cbd5e1;
-            padding: 16px 0;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            background: #d1d5db;
           }
 
-          .prescription-sheet {
-            width: 210mm;
-            min-height: 285mm;
-            max-height: 297mm;
-            max-width: 210mm;
-            margin: 0 auto;
-            background: #ffffff;
-            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.15);
-            padding: 5mm 7mm 5mm 7mm;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-          }
-
-          .sheet-content {
-            height: 100%;
-            min-height: calc(285mm - 10mm);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-          }
-
-          .sheet-bottom-section {
-            margin-top: auto;
-            padding-top: 6px;
+          .print-content {
+            max-width: 21cm;
+            margin: 1.5cm auto;
+            padding: 5cm 1.8cm 3.5cm 1.8cm;
+            background: white;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.15);
+            min-height: 29.7cm;
           }
         }
 
-        .prescription-sheet {
-          position: relative;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-          color: #000000;
-          background: #ffffff;
-          line-height: 1.3;
-          box-sizing: border-box;
+        .print-content {
+          font-family: "Times New Roman", Times, Georgia, serif;
+          font-size: 10.5pt;
+          line-height: 1.45;
+          color: #000;
         }
 
-        /* ── Centered Faint Watermark ── */
-        .sheet-watermark {
-          position: absolute;
-          top: 48%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: 300px;
-          opacity: 0.055;
-          pointer-events: none;
-          z-index: 0;
-        }
-
-        .sheet-content {
-          position: relative;
-          z-index: 1;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          height: 100%;
-        }
-
-        .sheet-top-and-body {
-          display: flex;
-          flex-direction: column;
-          flex-shrink: 0;
-        }
-
-        .sheet-bottom-section {
-          display: flex;
-          flex-direction: column;
-          flex-shrink: 0;
-          margin-top: auto;
-          padding-top: 12px;
-        }
-
-        /* ── Top Small Meta Line ── */
-        .top-meta-row {
-          display: flex;
-          justify-content: space-between;
-          font-size: 7.5pt;
-          color: #555555;
-          margin-bottom: 2px;
-        }
-
-        /* ── Header Area ── */
-        .header-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          padding-bottom: 4px;
-          border-bottom: 1.5px solid #d1d5db;
-        }
-
-        .hospital-logo {
-          height: 56px;
-          width: auto;
-          object-fit: contain;
-        }
-
-        .doctor-header-block {
-          text-align: right;
-        }
-
-        .doctor-title-name {
-          font-size: 16pt;
-          font-weight: 800;
-          color: #7B1828; /* Cortex maroon */
-          margin: 0;
-          line-height: 1.15;
-          letter-spacing: -0.2px;
-        }
-
-        .doctor-qualifications {
-          font-size: 9.5pt;
-          font-weight: 700;
-          color: #111111;
-          margin-top: 1px;
-        }
-
-        .doctor-reg {
-          font-size: 8pt;
-          color: #4b5563;
-          margin-top: 1px;
-        }
-
-        .doctor-diplomate {
-          font-size: 9pt;
-          font-weight: 600;
-          color: #1f2937;
-          margin-top: 1px;
-        }
-
-        .doctor-specialty {
-          font-size: 9pt;
-          font-weight: 600;
-          color: #1f2937;
-          margin-top: 1px;
-        }
-
-        /* ── Patient Bar ── */
-        .patient-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 5px 0 3px 0;
-          font-size: 9pt;
-          font-weight: 700;
-          color: #000000;
-        }
-
-        .patient-info-left {
-          flex: 1;
-          letter-spacing: 0.1px;
-        }
-
-        .patient-date-right {
-          white-space: nowrap;
-          font-weight: 700;
-        }
-
-        /* ── Vitals Row (BP, SpO2, Height, Weight) ── */
-        .vitals-row {
-          display: flex;
-          align-items: center;
-          flex-wrap: wrap;
-          gap: 14px;
-          padding: 2.5px 0 3px 0;
-          font-size: 8.5pt;
-          color: #111111;
-          border-top: 1px dashed #cbd5e1;
-        }
-
-        .vitals-label {
-          font-weight: 800;
-          color: #000000;
-          text-transform: uppercase;
-          font-size: 8pt;
-          letter-spacing: 0.5px;
-        }
-
-        .vitals-item {
-          display: inline-flex;
-          align-items: center;
-          gap: 3px;
-        }
-
-        /* ── Diagnosis Row ── */
-        .diagnosis-row {
-          padding: 2px 0 5px 0;
-          font-size: 9pt;
-          line-height: 1.3;
-          border-bottom: 1px solid #d1d5db;
-        }
-
-        .diagnosis-label {
-          font-weight: 800;
-          color: #000000;
-        }
-
-        .diagnosis-text {
-          font-weight: 700;
-          color: #111111;
-          text-transform: uppercase;
-        }
-
-        /* ── Rx Section ── */
-        .rx-wrapper {
-          margin-top: 4px;
-        }
-
-        .rx-symbol {
-          font-family: Georgia, "Times New Roman", serif;
-          font-size: 17pt;
-          font-weight: bold;
-          font-style: italic;
-          color: #1f2937;
-          line-height: 1;
-          margin-bottom: 2px;
-        }
-
-        .med-table {
+        /* ── Patient Info Grid ── */
+        .patient-grid {
           width: 100%;
+          font-size: 10pt;
+          margin-bottom: 8px;
+          border-top: 1.5px solid #000;
+          border-bottom: 1.5px solid #000;
+          padding: 4px 0;
+        }
+
+        .patient-grid .row {
+          display: flex;
+          line-height: 1.45;
+        }
+
+        .patient-grid .col {
+          display: flex;
+          width: 50%;
+        }
+
+        .patient-grid .lbl {
+          font-weight: bold;
+          min-width: 130px;
+          padding-left: 4px;
+        }
+
+        .patient-grid .val {
+          flex: 1;
+        }
+
+        /* ── Section Heading ── */
+        .sec-heading {
+          font-size: 10.5pt;
+          font-weight: bold;
+          text-decoration: underline;
+          margin: 7px 0 2px 0;
+          padding: 0;
+        }
+
+        /* ── Section Body ── */
+        .sec-body {
+          font-size: 10pt;
+          line-height: 1.35;
+          margin: 0 0 1px 14px;
+          white-space: pre-wrap;
+          text-align: justify;
+        }
+
+        /* ── Medication Table ── */
+        .med-table {
           border-collapse: collapse;
+          width: 100%;
+          font-size: 10pt;
+          margin: 4px 0 2px 0;
         }
 
         .med-table th {
-          font-size: 8.5pt;
-          font-weight: 700;
-          color: #374151;
-          padding: 3px 5px;
-          border-bottom: 1.5px solid #9ca3af;
-        }
-
-        .med-table th.col-med {
-          width: 52%;
+          font-weight: bold;
+          border: 1px solid #000;
+          padding: 3px 8px;
           text-align: left;
         }
 
-        .med-table th.col-dosage {
-          width: 18%;
-          text-align: center;
-        }
-
-        .med-table th.col-timing {
-          width: 30%;
+        .med-table td {
+          border: 1px solid #000;
+          padding: 3px 8px;
           text-align: left;
-        }
-
-        .med-row td {
-          padding: 3.5px 5px;
           vertical-align: top;
-          border-bottom: 1px solid #e5e7eb;
         }
 
-        .med-name-heading {
-          font-size: 9.5pt;
-          font-weight: 800;
-          color: #000000;
-          letter-spacing: 0.2px;
-          text-transform: uppercase;
-        }
-
-        .med-sub-line {
-          display: flex;
-          font-size: 7.5pt;
-          margin-top: 1px;
-          padding-left: 12px;
-          line-height: 1.3;
-        }
-
-        .med-sub-lbl {
-          width: 70px;
-          color: #555555;
-          font-weight: 600;
-          text-transform: uppercase;
-          flex-shrink: 0;
-        }
-
-        .med-sub-sep {
-          margin-right: 5px;
-          color: #555555;
-          flex-shrink: 0;
-        }
-
-        .med-sub-val {
-          color: #111111;
-          font-weight: 600;
-        }
-
-        .med-note-val {
-          color: #000000;
-          font-weight: 700;
-          text-decoration: underline;
-          text-decoration-color: #dc2626;
-        }
-
-        .dosage-val {
-          font-size: 10pt;
-          font-weight: 700;
-          color: #000000;
-          text-align: center;
-          letter-spacing: 1px;
-          white-space: nowrap;
-          padding-top: 1px;
-        }
-
-        .timing-val {
-          font-size: 8.5pt;
-          font-weight: 600;
-          color: #111111;
-          line-height: 1.3;
-        }
-
-        /* ── Advice & Tests Section ── */
-        .clinical-bottom-grid {
-          margin-top: 8px;
+        /* ── Signature Row ── */
+        .sig-row {
           display: flex;
           justify-content: space-between;
           align-items: flex-end;
-          gap: 12px;
-        }
-
-        .advice-box {
-          flex: 1;
-        }
-
-        .advice-heading {
-          font-size: 9.5pt;
-          font-weight: 800;
-          color: #000000;
-          margin-bottom: 2px;
-        }
-
-        .advice-content-body {
-          font-size: 8.5pt;
-          font-weight: 600;
-          line-height: 1.35;
-          color: #1f2937;
-          white-space: pre-line;
-          margin-bottom: 4px;
-        }
-
-        .marathi-item {
-          font-size: 9pt;
-          font-weight: 700;
-          margin-top: 3px;
-          color: #000000;
-        }
-
-        .marathi-label {
-          font-weight: 800;
-          margin-right: 5px;
-        }
-
-        /* ── Signature ── */
-        .signature-block {
-          text-align: center;
-          min-width: 140px;
-          flex-shrink: 0;
-          padding-bottom: 2px;
-        }
-
-        .sig-img {
-          height: 42px;
-          max-width: 120px;
-          object-fit: contain;
-          margin: 0 auto;
-          display: block;
-        }
-
-        .sig-doc-name {
-          font-size: 8.5pt;
-          font-weight: 700;
-          color: #111111;
-          margin-top: 2px;
-        }
-
-        /* ── Bottom Schedule Banner ── */
-        .footer-banner-container {
-          margin-top: 6px;
-          padding-top: 3px;
-          border-top: 1.5px solid #d1d5db;
-          text-align: center;
-        }
-
-        .footer-top-pill-row {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-          margin-bottom: 3px;
-        }
-
-        .clinic-pill {
-          background-color: #7B1828;
-          color: #ffffff;
-          font-size: 8pt;
-          font-weight: 700;
-          padding: 1.5px 8px;
-          border-radius: 9999px;
-          letter-spacing: 0.2px;
-        }
-
-        .clinic-time {
-          font-size: 8.5pt;
-          font-weight: 700;
-          color: #111111;
-        }
-
-        .footer-clinic-title {
+          margin-top: 20px;
           font-size: 10pt;
-          font-weight: 800;
-          color: #000000;
-          margin-bottom: 1px;
         }
 
-        .footer-opd-line {
-          font-size: 7.5pt;
-          font-weight: 600;
-          color: #1f2937;
-          margin-bottom: 1.5px;
+        .sig-block {
+          text-align: center;
+          min-width: 160px;
         }
 
-        .footer-opd-label {
-          font-weight: 800;
-          color: #7B1828;
-        }
-
-        .footer-sunday-line {
-          font-size: 7.5pt;
-          font-weight: 700;
-          color: #7B1828;
+        .sig-line {
+          display: inline-block;
           margin-bottom: 2px;
         }
 
-        .footer-address-line {
-          font-size: 7.5pt;
-          font-weight: 500;
-          color: #374151;
+        .sig-label {
+          font-weight: bold;
         }
 
-        .footer-bottom-bar {
-          height: 4px;
-          background: linear-gradient(90deg, #4c1d95 0%, #7B1828 50%, #4c1d95 100%);
-          border-radius: 2px;
-          margin-top: 4px;
-        }
-
-        .footer-hms-branding {
-          display: flex;
-          align-items: center;
-          justify-content: flex-end;
-          gap: 4px;
-          margin-top: 3px;
-          font-size: 7pt;
-          color: #6b7280;
-        }
-
-        .footer-hms-branding img {
-          height: 10px;
-          width: 10px;
-          object-fit: contain;
-          border-radius: 2px;
-        }
-
-        .footer-hms-branding strong {
-          color: #374151;
-          font-weight: 700;
+        .sig-title {
+          font-size: 9.5pt;
+          margin-top: 1px;
         }
       `}</style>
 
-      {/* Main Prescription Sheet */}
-      <div className="prescription-sheet">
-        {/* Faint Background Watermark */}
-        <img
-          src="/cortex_logo.png"
-          alt="Watermark"
-          className="sheet-watermark"
-        />
+      <div className="print-content">
 
-        <div className="sheet-content">
-          <div className="sheet-top-and-body">
-            {/* Top Meta Line */}
-            <div className="top-meta-row">
-              <span>{formatTimestamp(prescriptionData.prescription_date)}</span>
-              <span>Svasth HMS</span>
+        {/* ── Patient Information (top/bottom border only) ── */}
+        <div className="patient-grid">
+          <div className="row">
+            <div className="col"><span className="lbl">Patient Name</span><span className="val">{prescriptionData.patient_name}</span></div>
+            <div className="col"><span className="lbl">Patient Number</span><span className="val">{prescriptionData.reference_number || '—'}</span></div>
+          </div>
+          <div className="row">
+            <div className="col"><span className="lbl">Age</span><span className="val">{prescriptionData.age}</span></div>
+            <div className="col"><span className="lbl">Date</span><span className="val">{formatDate(prescriptionData.prescription_date)}</span></div>
+          </div>
+          <div className="row">
+            <div className="col"><span className="lbl">Sex</span><span className="val">{prescriptionData.sex}</span></div>
+            <div className="col"><span className="lbl">Contact No.</span><span className="val">{prescriptionData.phone_number}</span></div>
+          </div>
+          {prescriptionData.followup_date && (
+            <div className="row">
+              <div className="col"><span className="lbl">Visit Type</span><span className="val">Consultation</span></div>
+              <div className="col"><span className="lbl">Follow-up Date</span><span className="val">{formatDate(prescriptionData.followup_date)}</span></div>
             </div>
+          )}
+        </div>
 
-            {/* Header Area */}
-            <div className="header-row">
-              <div className="flex items-center">
-                <img
-                  src="/cortex_logo.png"
-                  alt="Cortex Hospital"
-                  className="hospital-logo"
-                />
-              </div>
+        {/* ── CHIEF COMPLAINT ── */}
+        {prescriptionData.chief_complaint && (
+          <>
+            <p className="sec-heading">CHIEF COMPLAINT</p>
+            <p className="sec-body">{prescriptionData.chief_complaint}</p>
+          </>
+        )}
 
-              <div className="doctor-header-block">
-                {(resolvedDoctorName || '').toLowerCase().includes('shillpa') ? (
-                  <>
-                    <h1 className="doctor-title-name">Dr. Shillpa Raut</h1>
-                    <div className="doctor-qualifications">M.B.B.S., M.D. (Gynecology &amp; Obstetrics)</div>
-                    <div className="doctor-reg">Reg. No. 2004/05/1842</div>
-                    <div className="doctor-diplomate">Consulting Gynecologist &amp; Obstetrician</div>
-                    <div className="doctor-specialty">Maternity, Infertility &amp; Women Care Specialist</div>
-                  </>
-                ) : (
-                  <>
-                    <h1 className="doctor-title-name">
-                      {resolvedDoctorName || 'Dr. Vipeen Raut'}
-                    </h1>
-                    <div className="doctor-qualifications">
-                      M.B.B.S.,Dip.Ortho.,DNB Ortho
-                    </div>
-                    <div className="doctor-reg">Reg. No. 1692/03/2002</div>
-                    <div className="doctor-diplomate">
-                      Diplomate of National Board (Orthopaedics)
-                    </div>
-                    <div className="doctor-specialty">
-                      Consulting Orthopaedic and Joint Replacement Surgeon
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
+        {/* ── MEDICAL HISTORY ── */}
+        {prescriptionData.medical_history && (
+          <>
+            <p className="sec-heading">MEDICAL HISTORY</p>
+            <p className="sec-body">{prescriptionData.medical_history}</p>
+          </>
+        )}
 
-            {/* Patient Info Bar */}
-            <div className="patient-row">
-              <div className="patient-info-left">
-                <span>{refNumber}</span> : <span>MR.{patientNameFormatted}</span>{' '}
-                <span>
-                  ({ageDisplay}
-                  {ageDisplay && sexDisplay ? ', ' : ''}
-                  {sexDisplay})
-                </span>
-                {phoneDisplay ? <span> - {phoneDisplay}</span> : ''}
-              </div>
-              <div className="patient-date-right">
-                Date: {formatPrescriptionDate(prescriptionData.prescription_date)}
-              </div>
-            </div>
+        {/* ── INVESTIGATION ── */}
+        {prescriptionData.investigation && (
+          <>
+            <p className="sec-heading">INVESTIGATION</p>
+            <p className="sec-body">{prescriptionData.investigation}</p>
+          </>
+        )}
 
-            {/* Vitals Bar (BP, SpO2, Height, Weight, Pulse) */}
-            {hasVitals && (
-              <div className="vitals-row">
-                <span className="vitals-label">Vitals:</span>
-                {bpDisplay && (
-                  <span className="vitals-item">
-                    <strong>BP:</strong> {bpDisplay}{!bpDisplay.toLowerCase().includes('mmhg') ? ' mmHg' : ''}
-                  </span>
-                )}
-                {spo2Display && (
-                  <span className="vitals-item">
-                    <strong>SpO₂:</strong> {spo2Display}{!String(spo2Display).includes('%') ? '%' : ''}
-                  </span>
-                )}
-                {heightDisplay && (
-                  <span className="vitals-item">
-                    <strong>Height:</strong> {heightDisplay}{!String(heightDisplay).toLowerCase().includes('cm') ? ' cm' : ''}
-                  </span>
-                )}
-                {weightDisplay && (
-                  <span className="vitals-item">
-                    <strong>Weight:</strong> {weightDisplay}{!String(weightDisplay).toLowerCase().includes('kg') ? ' kg' : ''}
-                  </span>
-                )}
-                {pulseDisplay && (
-                  <span className="vitals-item">
-                    <strong>Pulse:</strong> {pulseDisplay}{!String(pulseDisplay).includes('/') ? ' /min' : ''}
-                  </span>
-                )}
+        {/* ── ORAL EXAMINATION (was Diagnosis D/E) ── */}
+        {prescriptionData.diagnosis && (
+          <>
+            <p className="sec-heading">ORAL EXAMINATION</p>
+            <p className="sec-body">{prescriptionData.diagnosis}</p>
+          </>
+        )}
+
+        {/* ── DIAGNOSIS (was Oral Examination: tooth chart + notes) ── */}
+        {(prescriptionData.oral_exam_notes || (prescriptionData.selected_teeth && prescriptionData.selected_teeth.length > 0)) && (
+          <>
+            <p className="sec-heading">DIAGNOSIS</p>
+            {prescriptionData.selected_teeth && prescriptionData.selected_teeth.length > 0 && (
+              <div className="sec-body">
+                {prescriptionData.selected_teeth.map((tooth, index) => (
+                  <div key={index}>
+                    {tooth.category === 'General' ? tooth.disease : `Tooth #${tooth.id} (${tooth.type}) – ${tooth.disease}`}
+                  </div>
+                ))}
               </div>
             )}
-
-            {/* Diagnosis Bar */}
-            {diagnosisText && (
-              <div className="diagnosis-row">
-                <span className="diagnosis-label">Diagnosis: </span>
-                <span className="diagnosis-text">{diagnosisText}</span>
-              </div>
+            {prescriptionData.oral_exam_notes && (
+              <p className="sec-body">{prescriptionData.oral_exam_notes}</p>
             )}
+          </>
+        )}
 
-            {/* Rx Section */}
-            <div className="rx-wrapper">
-              <div className="rx-symbol">℞</div>
+        {/* ── TREATMENT PLAN (Estimate) ── */}
+        {prescriptionData.treatment_plan && prescriptionData.treatment_plan.length > 0 && (
+          <>
+            <p className="sec-heading">TREATMENT PLAN (ESTIMATE)</p>
+            <div className="sec-body">
+              {prescriptionData.treatment_plan.map((step: any, index: number) => {
+                const name = typeof step === 'string' ? step : step.name || String(step);
+                const cost = typeof step === 'object' && step.cost ? ` (₹${step.cost})` : '';
+                const notes = typeof step === 'object' && step.notes ? ` — ${step.notes}` : '';
+                return <div key={index}>{index + 1}. {name}{cost}{notes}</div>;
+              })}
+              {(() => {
+                const total = prescriptionData.treatment_plan.reduce((sum: number, step: any) => sum + (typeof step === 'object' && step.cost ? Number(step.cost) : 0), 0);
+                return total > 0 ? <div style={{ fontWeight: 'bold', marginTop: 4 }}>Estimated Cost: ₹{total}</div> : null;
+              })()}
+            </div>
+          </>
+        )}
 
-              <table className="med-table">
-                <thead>
-                  <tr>
-                    <th className="col-med">Medicine</th>
-                    <th className="col-dosage">Dosage</th>
-                    <th className="col-timing">Timing - Freq. - Duration</th>
+        {/* ── TREATMENT DONE ── */}
+        {prescriptionData.treatment_done && prescriptionData.treatment_done.length > 0 && (
+          <>
+            <p className="sec-heading">TREATMENT DONE</p>
+            <div className="sec-body">
+              {prescriptionData.treatment_done.map((item, index) => (
+                <div key={index}>{index + 1}. {item.description}{item.date ? ` (${formatDate(item.date)})` : ''}</div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* ── ADVICE / INSTRUCTIONS ── */}
+        {prescriptionData.advice && (
+          <>
+            <p className="sec-heading">ADVICE / INSTRUCTIONS</p>
+            <p className="sec-body">{prescriptionData.advice}</p>
+          </>
+        )}
+
+        {/* ── MEDICATIONS ── */}
+        {prescriptionData.medicines && prescriptionData.medicines.length > 0 && (
+          <>
+            <p className="sec-heading">MEDICATIONS</p>
+            <table className="med-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '6%', textAlign: 'center' }}>S.No</th>
+                  <th style={{ width: '44%' }}>Medication</th>
+                  <th style={{ width: '25%' }}>Dosage</th>
+                  <th style={{ width: '25%' }}>Duration</th>
+                </tr>
+              </thead>
+              <tbody>
+                {prescriptionData.medicines.map((medicine, index) => (
+                  <tr key={index}>
+                    <td style={{ textAlign: 'center' }}>{index + 1}</td>
+                    <td>{medicine.name}</td>
+                    <td>{medicine.dosage || '—'}</td>
+                    <td>{medicine.duration || '—'}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {prescriptionData.medicines && prescriptionData.medicines.length > 0 ? (
-                    prescriptionData.medicines.map((med, index) => (
-                      <tr key={index} className="med-row">
-                        {/* Medicine Name, Composition, Timing, Note */}
-                        <td>
-                          <div className="med-name-heading">
-                            {index + 1}) &nbsp;{med.name}
-                          </div>
-                          {med.composition && (
-                            <div className="med-sub-line">
-                              <span className="med-sub-lbl">Composition</span>
-                              <span className="med-sub-sep">:</span>
-                              <span className="med-sub-val">{med.composition}</span>
-                            </div>
-                          )}
-                          {(() => {
-                            const timingVal = med.timing || getTimingFromDosage(med.dosage);
-                            if (!timingVal) return null;
-                            return (
-                              <div className="med-sub-line">
-                                <span className="med-sub-lbl">Timing</span>
-                                <span className="med-sub-sep">:</span>
-                                <span className="med-sub-val">{timingVal}</span>
-                              </div>
-                            );
-                          })()}
-                          {med.note && (
-                            <div className="med-sub-line">
-                              <span className="med-sub-lbl">Note</span>
-                              <span className="med-sub-sep">:</span>
-                              <span className="med-sub-val med-note-val">{med.note}</span>
-                            </div>
-                          )}
-                        </td>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
 
-                        {/* Dosage */}
-                        <td>
-                          <div className="dosage-val">
-                            {med.dosage ? med.dosage.replace(/-/g, ' — ') : '—'}
-                          </div>
-                        </td>
-
-                        {/* Timing - Freq - Duration */}
-                        <td>
-                          <div className="timing-val">
-                            {med.freq_duration || med.duration || '—'}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr className="med-row">
-                      <td colSpan={3} className="text-center py-4 text-gray-500 italic">
-                        No medicines prescribed.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+        {/* ── Signature Area (two-column like hospital docs) ── */}
+        <div className="sig-row">
+          <div className="sig-block" style={{ textAlign: 'left' }}>
+            <div className="sig-line">&nbsp;</div>
           </div>
-
-          {/* Bottom Section: Advice, Doctor Signature & Pinned Schedule Footer */}
-          <div className="sheet-bottom-section">
-            {/* Advice, Investigation, Followup & Signature Section */}
-            <div className="clinical-bottom-grid">
-              <div className="advice-box">
-                {prescriptionData.advice && (
-                  <div>
-                    <div className="advice-heading">Advice:</div>
-                    <div className="advice-content-body">{prescriptionData.advice}</div>
-                  </div>
-                )}
-
-                {prescriptionData.investigation && (
-                  <div className="marathi-item">
-                    <span className="marathi-label">फेर चाचणी :</span>
-                    <span>{prescriptionData.investigation}</span>
-                  </div>
-                )}
-
-                {prescriptionData.followup_date && (
-                  <div className="marathi-item">
-                    <span className="marathi-label">फेरतपासणी:</span>
-                    <span>
-                      {formatFollowup(
-                        prescriptionData.followup_date,
-                        prescriptionData.prescription_date
-                      )}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Signature Block */}
-              <div className="signature-block">
-                {includeSignature && resolvedSignature && (
-                  <img
-                    src={getSignatureSrc(resolvedSignature)}
-                    alt="Doctor Signature"
-                    className="sig-img"
-                  />
-                )}
-                <div className="sig-doc-name">
-                  {resolvedDoctorName || 'Dr Vipeen Raut'}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer Schedule Banner */}
-          <div className="footer-banner-container">
-            <div className="footer-top-pill-row">
-              <span className="clinic-pill">Hip & Knee Joint Clinic</span>
-              <span className="clinic-time">Every Thursday 6 pm to 8 pm</span>
-            </div>
-
-            <div className="footer-clinic-title">Orthopaedics Clinic</div>
-
-            <div className="footer-opd-line">
-              <span className="footer-opd-label">OPD Time : </span>
-              Mon. to Fri. - 10 am to 1 pm & 6 pm to 8 pm | Sat. - 10 am to 1 pm & Evening OPD Closed
-            </div>
-
-            <div className="footer-sunday-line">Sunday OPD Closed</div>
-
-            <div className="footer-address-line">
-              Cortex Hospital, Aarti Chowk, Nagpur Road, Wardha - 442001
-              &nbsp;|&nbsp; Ph. : 07152-255795, Cell : 9373280505
-            </div>
-
-            <div className="footer-bottom-bar"></div>
-
-            <div className="footer-hms-branding">
-              <span>Powered by</span>
-              <img src="/Svasth_logo.png" alt="Svasth HMS" />
-              <strong>Svasth HMS</strong>
-            </div>
+          <div className="sig-block" style={{ textAlign: 'center' }}>
+            {resolvedSignature && (
+              <img
+                src={getSignatureSrc(resolvedSignature)}
+                alt="Doctor's Signature"
+                style={{ maxHeight: '60px', maxWidth: '140px', objectFit: 'contain', marginBottom: '4px', display: 'inline-block' }}
+              />
+            )}
+            <div className="sig-label">{resolvedDoctorName}</div>
+            <div className="sig-title">Consultant</div>
           </div>
         </div>
+
       </div>
 
-      {/* Buttons (Screen only) */}
-      <div className="no-print" style={{ textAlign: 'center', padding: '20px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', flexWrap: 'wrap' }}>
-        <label
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            backgroundColor: '#ffffff',
-            padding: '10px 18px',
-            borderRadius: '8px',
-            border: '1px solid #cbd5e1',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-            cursor: 'pointer',
-            fontSize: '13px',
-            fontWeight: '600',
-            color: '#1f2937',
-            userSelect: 'none',
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={includeSignature}
-            onChange={(e) => setIncludeSignature(e.target.checked)}
-            style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-          />
-          <span>{includeSignature ? '✓ Include Doctor Signature Image' : 'Name Only (No Signature Image)'}</span>
-        </label>
-
+      {/* Print / Close buttons (screen only) */}
+      <div className="no-print" style={{ textAlign: 'center', padding: '20px' }}>
         <button
           onClick={() => window.print()}
           style={{
-            padding: '10px 26px',
-            backgroundColor: '#7B1828',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: '700',
-            cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(123, 24, 40, 0.4)',
-          }}
-        >
-          🖨️ Print Prescription
-        </button>
-
-        <button
-          onClick={() => window.close()}
-          style={{
-            padding: '10px 20px',
-            backgroundColor: '#4b5563',
+            padding: '12px 24px',
+            backgroundColor: '#2563eb',
             color: 'white',
             border: 'none',
             borderRadius: '8px',
             fontSize: '14px',
             fontWeight: '600',
             cursor: 'pointer',
+            marginRight: '10px'
+          }}
+        >
+          Print Prescription
+        </button>
+        <button
+          onClick={() => window.close()}
+          style={{
+            padding: '12px 24px',
+            backgroundColor: '#6b7280',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: 'pointer'
           }}
         >
           Close
@@ -1130,16 +511,14 @@ function PrintPrescriptionContent() {
 
 export default function PrintPrescriptionPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-900 mx-auto mb-4"></div>
-            <p className="text-gray-900 font-medium">Loading...</p>
-          </div>
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-900">Loading...</p>
         </div>
-      }
-    >
+      </div>
+    }>
       <PrintPrescriptionContent />
     </Suspense>
   );

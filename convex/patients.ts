@@ -21,34 +21,19 @@ export const create = mutation({
             return existingPatient._id;
         }
 
-        // Check all existing patients to determine the absolute highest reference number
-        const allPatients = await ctx.db.query("patients").collect();
-        let maxExisting = 2; // System already has CRX0001 (Test) and CRX0002 (Testing)
-        for (const p of allPatients) {
-            if (p.reference_number) {
-                const match = p.reference_number.match(/\d+/);
-                if (match) {
-                    const num = parseInt(match[0], 10);
-                    if (num > maxExisting) maxExisting = num;
-                }
-            }
-        }
-
+        // Get next reference number
         let counter = await ctx.db
             .query("reference_counter")
             .withIndex("by_counter_id", (q) => q.eq("counter_id", 1))
             .first();
-        
-        let nextNumber = maxExisting + 1;
+        let currentNumber = 0;
         if (counter) {
-            if (counter.current_number >= nextNumber) {
-                nextNumber = counter.current_number + 1;
-            }
-            await ctx.db.patch(counter._id, { current_number: nextNumber });
+            currentNumber = counter.current_number;
+            await ctx.db.patch(counter._id, { current_number: currentNumber + 1 });
         } else {
-            await ctx.db.insert("reference_counter", { counter_id: 1, current_number: nextNumber });
+            await ctx.db.insert("reference_counter", { counter_id: 1, current_number: 1 });
         }
-        const reference_number = `CRX${String(nextNumber).padStart(4, "0")}`;  
+        const reference_number = `SDC${String(currentNumber + 1).padStart(4, "0")}`;  
 
         const newPatientId = await ctx.db.insert("patients", {
             reference_number,
@@ -59,46 +44,6 @@ export const create = mutation({
             address: args.address,
         });
         return newPatientId;
-    },
-});
-
-export const getNextReferenceNumber = query({
-    args: {},
-    handler: async (ctx) => {
-        const allPatients = await ctx.db.query("patients").collect();
-        let maxExisting = 2; // Base minimum since CRX0001 and CRX0002 already exist
-        for (const p of allPatients) {
-            if (p.reference_number) {
-                const match = p.reference_number.match(/\d+/);
-                if (match) {
-                    const num = parseInt(match[0], 10);
-                    if (num > maxExisting) maxExisting = num;
-                }
-            }
-        }
-        let counter = await ctx.db
-            .query("reference_counter")
-            .withIndex("by_counter_id", (q) => q.eq("counter_id", 1))
-            .first();
-        let next = maxExisting + 1;
-        if (counter && counter.current_number >= next) {
-            next = counter.current_number + 1;
-        }
-        return `CRX${String(next).padStart(4, "0")}`;
-    },
-});
-
-export const migratePrefixToCRX = mutation({
-    args: {},
-    handler: async (ctx) => {
-        const patients = await ctx.db.query("patients").collect();
-        for (const p of patients) {
-            if (p.reference_number && p.reference_number.startsWith("CH")) {
-                const newRef = p.reference_number.replace(/^CH/i, "CRX");
-                await ctx.db.patch(p._id, { reference_number: newRef });
-            }
-        }
-        return true;
     },
 });
 

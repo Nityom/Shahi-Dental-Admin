@@ -135,11 +135,11 @@ const PrescriptionHistory: React.FC<PrescriptionHistoryProps> = ({ prescriptions
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {prescription.medicines.map((medicine: any, idx: number) => (
+                          {prescription.medicines.map((medicine: { name: string; dosage: string; duration: string; }, idx: number) => (
                             <tr key={idx}>
                               <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{medicine.name}</td>
                               <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{medicine.dosage}</td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{medicine.duration || medicine.freq_duration || '—'}</td>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{medicine.duration}</td>
                             </tr>
                           ))}
                         </tbody>

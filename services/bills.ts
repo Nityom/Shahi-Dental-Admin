@@ -33,9 +33,7 @@ export type Bill = {
 const validateBillData = (bill: Bill) => {
   const errors: string[] = [];
 
-  if (!bill.prescription_id) {
-    bill.prescription_id = 'DIRECT_BILL';
-  }
+  if (!bill.prescription_id) errors.push('Prescription ID is required');
   if (!bill.patient_id) errors.push('Patient ID is required');
   if (!bill.reference_number) errors.push('Reference number is required');
   if (typeof bill.total_amount !== 'number' || bill.total_amount < 0) {

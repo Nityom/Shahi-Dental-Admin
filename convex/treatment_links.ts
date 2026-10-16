@@ -16,7 +16,7 @@ export const list = query({
     const invByName = new Map(inventory.map((i) => [i.name.trim().toLowerCase(), i]));
 
     return links.map((link) => {
-      const enrichedItems = link.items.map((item: any) => {
+      const enrichedItems = link.items.map((item) => {
         let matchedInv = item.inventory_id ? invById.get(item.inventory_id) : undefined;
         if (!matchedInv && item.inventory_name) {
           matchedInv = invByName.get(item.inventory_name.trim().toLowerCase());

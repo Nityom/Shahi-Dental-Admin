@@ -16,7 +16,7 @@ interface BillHistoryWithPaymentsProps {
   defaultDoctorName?: string;
 }
 
-export function BillHistoryWithPayments({ bills, onBillUpdated, defaultSignature = 'sign.png', defaultDoctorName = 'Dr. Vipeen Raut' }: BillHistoryWithPaymentsProps) {
+export function BillHistoryWithPayments({ bills, onBillUpdated, defaultSignature = 'sign.png', defaultDoctorName = 'Dr. Kautilya Swaroop' }: BillHistoryWithPaymentsProps) {
   const [expandedBillId, setExpandedBillId] = useState<string | null>(null);
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);

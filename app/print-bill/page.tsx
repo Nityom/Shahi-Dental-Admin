@@ -37,17 +37,13 @@ interface BillData {
   total: number;
   amountPaid: number;
   balance: number;
-  referenceNumber?: string;
-  prescriptionId?: string;
 }
 
 function PrintBillContent() {
   const searchParams = useSearchParams();
   const billId = searchParams.get('billId');
   const signatureParam = searchParams.get('signature') || 'sign.png';
-  const doctorNameParam = searchParams.get('doctorName') || 'Dr. Vipeen Raut';
-  const includeSigParam = searchParams.get('includeSignature');
-  const includeSignature = includeSigParam !== 'false';
+  const doctorNameParam = searchParams.get('doctorName') || 'Dr. Kautilya Swaroop';
   const [billData, setBillData] = useState<BillData | null>(null);
   const [resolvedSignature, setResolvedSignature] = useState<string>(signatureParam);
   const [resolvedDoctorName, setResolvedDoctorName] = useState<string>(doctorNameParam);
@@ -116,8 +112,6 @@ function PrintBillContent() {
           total,
           amountPaid,
           balance,
-          referenceNumber: (bill as any).reference_number || '',
-          prescriptionId: (bill as any).prescription_id || '',
         });
 
         // Resolve doctor name & signature
@@ -202,7 +196,7 @@ function PrintBillContent() {
     );
   }
 
-  return <PrintableBill {...billData} signature={resolvedSignature} doctorName={resolvedDoctorName} paymentTransactions={paymentTransactions} includeSignature={includeSignature} />;
+  return <PrintableBill {...billData} signature={resolvedSignature} doctorName={resolvedDoctorName} paymentTransactions={paymentTransactions} />;
 }
 
 export default function PrintBillPage() {

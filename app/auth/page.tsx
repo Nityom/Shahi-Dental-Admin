@@ -55,9 +55,9 @@ const DantsriAdminLogin: React.FC = () => {
             <rect x="52" y="35" width="4" height="25" rx="2" fill="white" />
             <rect x="60" y="40" width="4" height="20" rx="2" fill="white" />
           </svg>
-          <h1 className="text-4xl font-bold text-white mb-6">Cortex Hospital</h1>
+          <h1 className="text-4xl font-bold text-white mb-6">Shahi Dental Clinic</h1>
           <p className="text-gray-300 text-lg leading-relaxed mb-8">
-            Welcome to the Cortex Hospital administration portal. Manage appointments, patient records, and hospital operations with ease.
+            Welcome to the Shahi Dental Clinic administration portal. Manage appointments, patient records, and clinic operations with ease.
           </p>
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-black p-4 rounded-lg border border-gray-800 shadow-lg transform transition-all duration-300 hover:scale-105 hover:border-white group">
@@ -120,7 +120,7 @@ const DantsriAdminLogin: React.FC = () => {
                   value={formData.email}
                   onChange={handleChange}
                   className="block w-full pl-10 py-3 border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-black focus:border-black transition-all duration-200"
-                  placeholder="admin@cortexhospital.com"
+                  placeholder="admin@shahidentalclinic.com"
                 />
               </div>
             </div>
@@ -209,7 +209,7 @@ const DantsriAdminLogin: React.FC = () => {
               <span className="text-sm text-gray-500">
                 Contact system administrator at{' '}
                 <a href="mailto:support@titanium.com" className="font-medium text-gray-700 hover:text-black transition-colors duration-200 border-b border-transparent hover:border-black">
-                  support@cortexhospital.com
+                  support@shahidentalclinic.com
                 </a>
               </span>
             </div>

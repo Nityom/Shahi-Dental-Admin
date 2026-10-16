@@ -80,8 +80,6 @@ export default defineSchema({
     advice: v.optional(v.string()),
     followup_date: v.optional(v.string()), // YYYY-MM-DD
     doctor_name: v.optional(v.string()),
-    vitals: v.optional(v.any()),
-    opd_visit_id: v.optional(v.string()),
   })
     .index("by_phone", ["phone_number"])
     .index("by_date", ["prescription_date"])
@@ -107,17 +105,15 @@ export default defineSchema({
 
   medicines: defineTable({
     name: v.string(),
-    composition: v.optional(v.string()),
     description: v.optional(v.string()),
-    quantity: v.optional(v.number()),
-    rate: v.optional(v.number()),
+    quantity: v.number(),
+    rate: v.number(),
     cost_price: v.optional(v.number()),
     selling_price: v.optional(v.number()),
     company: v.optional(v.string()),
     low_stock_threshold: v.optional(v.number()),
     strips: v.optional(v.number()),
     quantity_per_strip: v.optional(v.number()),
-    doctor_name: v.optional(v.string()),
   }).index("by_name", ["name"]),
 
   inventory: defineTable({

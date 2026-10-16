@@ -280,7 +280,7 @@ export const getAutomaticInvestigationReport = query({
         phone_number: rx.phone_number,
         reference_number: rx.reference_number,
         prescription_date: rx.prescription_date,
-        doctor_name: rx.doctor_name || "Dr. Vipeen Raut",
+        doctor_name: rx.doctor_name || "Dr. Kautilya Swaroop",
         investigation_text: invText || types.join(", "),
         has_opg: hasOpg,
         has_iopar: hasIopar,
