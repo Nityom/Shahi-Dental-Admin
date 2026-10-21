@@ -29,14 +29,10 @@ import {
   Layers,
   FlaskConical,
   Package,
-  Sliders,
   Check,
   Info,
   Crown,
   Stethoscope,
-  Scissors,
-  Activity,
-  Smile,
   RotateCcw,
 } from 'lucide-react';
 
@@ -44,7 +40,7 @@ import {
  * Standard dental procedure definitions aligned with the Prescription module.
  * Includes Cap / Crown, Root Canal, Extraction, Cleaning, and all catalog items.
  */
-export interface PrescriptionTreatmentDef {
+interface PrescriptionTreatmentDef {
   name: string;
   category: 'Crown & Cap' | 'Surgery & Extraction' | 'Endodontics' | 'Restorative' | 'Hygiene' | 'Prosthodontics' | 'Implantology' | 'Cosmetic' | 'Diagnostics' | 'Orthodontics';
   isCrownOrCap: boolean;
@@ -63,7 +59,7 @@ export interface PrescriptionTreatmentDef {
   }[];
 }
 
-export const PRESCRIPTION_TREATMENTS: PrescriptionTreatmentDef[] = [
+const PRESCRIPTION_TREATMENTS: PrescriptionTreatmentDef[] = [
   {
     name: 'Crown Cutting Done',
     category: 'Crown & Cap',
