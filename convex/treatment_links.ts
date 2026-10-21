@@ -202,6 +202,33 @@ export const deductForTreatments = mutation({
       // Word boundary or contains match
       if (a.includes(b) || b.includes(a)) return true;
 
+      // Crown & Cap matching
+      const aIsCrownOrCap = a.includes("crown") || a.includes("cap");
+      const bIsCrownOrCap = b.includes("crown") || b.includes("cap");
+
+      if (aIsCrownOrCap && bIsCrownOrCap) {
+        // If both are cutting / preparation
+        const aCutting = a.includes("cutting") || a.includes("prep");
+        const bCutting = b.includes("cutting") || b.includes("prep");
+        if (aCutting && bCutting) return true;
+
+        // If both are fixed / cemented / fitting
+        const aFixed = a.includes("fixed") || a.includes("cement") || a.includes("fitting");
+        const bFixed = b.includes("fixed") || b.includes("cement") || b.includes("fitting");
+        if (aFixed && bFixed) return true;
+
+        // If both mention PFM
+        if (a.includes("pfm") && b.includes("pfm")) return true;
+
+        // If both mention Zirconia
+        if (a.includes("zirconia") && b.includes("zirconia")) return true;
+
+        // Generic fallback if neither specifies cutting vs fixed
+        if (!aCutting && !bCutting && !aFixed && !bFixed && !a.includes("pfm") && !b.includes("pfm") && !a.includes("zirconia") && !b.includes("zirconia")) {
+          return true;
+        }
+      }
+
       // Special common abbreviations:
       // "Extraction" <-> "Tooth Extraction"
       if (
@@ -211,7 +238,9 @@ export const deductForTreatments = mutation({
         (a.includes("scaling") && (b.includes("scaling") || b.includes("cleaning"))) ||
         (a.includes("cleaning") && (b.includes("scaling") || b.includes("cleaning"))) ||
         (a.includes("filling") && b.includes("filling")) ||
-        (a.includes("crown") && b.includes("crown"))
+        (a.includes("bridge") && b.includes("bridge")) ||
+        (a.includes("implant") && b.includes("implant")) ||
+        (a.includes("whitening") && b.includes("whitening"))
       ) {
         return true;
       }
