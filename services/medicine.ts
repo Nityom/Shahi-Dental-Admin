@@ -46,11 +46,11 @@ export const addMedicine = async (medicine: Medicine) => {
 export const getAllMedicines = async () => {
   const data = await convex.query(api.medicines.list);
   return data.map((item: any) => {
-    const costPrice = item.cost_price ? Number(item.cost_price) : undefined;
-    const sellingPrice = item.selling_price ? Number(item.selling_price) : undefined;
+    const costPrice = item.cost_price !== undefined && item.cost_price !== null ? Number(item.cost_price) : undefined;
+    const sellingPrice = item.selling_price !== undefined && item.selling_price !== null ? Number(item.selling_price) : undefined;
     let profitMargin: number | undefined;
-    if (costPrice && sellingPrice && costPrice > 0) {
-      profitMargin = ((sellingPrice - costPrice) / costPrice) * 100;
+    if (costPrice !== undefined && sellingPrice !== undefined && sellingPrice > 0) {
+      profitMargin = ((sellingPrice - costPrice) / sellingPrice) * 100;
     }
     return {
       ...item,
