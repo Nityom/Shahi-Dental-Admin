@@ -44,10 +44,14 @@ export interface UpdatePaymentData {
 }
 
 export const paymentTransactionService = {
-  // Get all payments (Not implemented in convex explicitly, but simple to add if needed, skipping for now as frontend might just use patient/bill specific)
-  getAll: async (): Promise<PaymentTransaction[]> => {
-    // If needed: return convex.query(api.payment_transactions.list);
-    return [];
+  getAll: async (startDate?: string, endDate?: string): Promise<PaymentTransaction[]> => {
+    try {
+      const data = await convex.query(api.payment_transactions.list, { startDate, endDate });
+      return data.map((item: any) => ({ ...item, id: item._id })) as PaymentTransaction[];
+    } catch (e) {
+      console.error("Error fetching payment transactions:", e);
+      return [];
+    }
   },
 
   getById: async (id: string): Promise<PaymentTransaction> => {

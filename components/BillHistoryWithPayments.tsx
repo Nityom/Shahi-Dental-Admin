@@ -11,16 +11,25 @@ import { Bill } from "@/services/bills";
 
 interface BillHistoryWithPaymentsProps {
   bills: Bill[];
+  allBills?: Bill[];
   onBillUpdated?: () => void;
   defaultSignature?: string;
   defaultDoctorName?: string;
 }
 
-export function BillHistoryWithPayments({ bills, onBillUpdated, defaultSignature = 'sign.png', defaultDoctorName = 'Dr. Kautilya Swaroop' }: BillHistoryWithPaymentsProps) {
+export function BillHistoryWithPayments({
+  bills,
+  allBills,
+  onBillUpdated,
+  defaultSignature = 'sign.png',
+  defaultDoctorName = 'Dr. Kautilya Swaroop'
+}: BillHistoryWithPaymentsProps) {
   const [expandedBillId, setExpandedBillId] = useState<string | null>(null);
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
   const [selectedBillIds, setSelectedBillIds] = useState<Set<string>>(new Set());
+
+  const fullList = allBills || bills;
 
   if (!bills || bills.length === 0) {
     return (
@@ -30,10 +39,10 @@ export function BillHistoryWithPayments({ bills, onBillUpdated, defaultSignature
     );
   }
 
-  // Overall totals
-  const overallTotal = bills.reduce((s, b) => s + (b.total_amount || 0), 0);
-  const overallPaid = bills.reduce((s, b) => s + (b.paid_amount || 0), 0);
-  const overallBalance = bills.reduce((s, b) => s + (Number(b.balance_amount) || 0), 0);
+  // Overall totals from full list
+  const overallTotal = fullList.reduce((s, b) => s + (b.total_amount || 0), 0);
+  const overallPaid = fullList.reduce((s, b) => s + (b.paid_amount || 0), 0);
+  const overallBalance = fullList.reduce((s, b) => s + (Number(b.balance_amount) || 0), 0);
 
   const toggleSelect = (id: string) => {
     setSelectedBillIds((prev) => {
@@ -45,7 +54,7 @@ export function BillHistoryWithPayments({ bills, onBillUpdated, defaultSignature
   };
 
   const selectAll = () => {
-    const ids = bills.map((b) => b.id).filter(Boolean) as string[];
+    const ids = fullList.map((b) => b.id).filter(Boolean) as string[];
     setSelectedBillIds(new Set(ids));
   };
 
@@ -63,7 +72,7 @@ export function BillHistoryWithPayments({ bills, onBillUpdated, defaultSignature
   };
 
   const handlePrintAll = () => {
-    const ids = bills.map((b) => b.id).filter(Boolean) as string[];
+    const ids = fullList.map((b) => b.id).filter(Boolean) as string[];
     const params = new URLSearchParams({
       billIds: ids.join(','),
       signature: defaultSignature,

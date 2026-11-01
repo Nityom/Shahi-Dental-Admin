@@ -51,3 +51,28 @@ export const listByBill = query({
             .collect();
     },
 });
+
+export const list = query({
+    args: {
+        startDate: v.optional(v.string()),
+        endDate: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        let transactions = await ctx.db
+            .query("payment_transactions")
+            .order("desc")
+            .collect();
+
+        if (args.startDate || args.endDate) {
+            return transactions.filter((tx) => {
+                const date = tx.payment_date;
+                if (!date) return true;
+                if (args.startDate && date < args.startDate) return false;
+                if (args.endDate && date > args.endDate) return false;
+                return true;
+            });
+        }
+
+        return transactions;
+    },
+});

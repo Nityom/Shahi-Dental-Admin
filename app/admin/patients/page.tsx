@@ -9,11 +9,16 @@ import Link from 'next/link';
 import { Alert } from "@/components/ui/alert";
 import PrescriptionHistory from "@/components/PrescriptionHistory";
 import { useIsAdmin } from '@/hooks/use-is-admin';
-import { Calendar as CalendarIcon, X, Search, RefreshCw, UserPlus, Filter } from 'lucide-react';
+import { Calendar as CalendarIcon, X, Search, RefreshCw, UserPlus, Filter, IndianRupee, Printer, History, CheckCircle2 } from 'lucide-react';
+import { paymentTransactionService, PaymentTransaction } from '@/services/payment-transactions';
 
 // Group prescriptions by patient name to create a patient list
 interface Bill {
   id: string;
+  patient_id?: string;
+  prescription_id?: string;
+  bill_number?: string;
+  reference_number?: string;
   total_amount: number;
   paid_amount: number;
   balance_amount: number;
@@ -47,6 +52,17 @@ const ViewPatients = () => {
   const { isAdmin } = useIsAdmin();
   const patientsPerPage = 10;
 
+  // Installment payment state
+  const [isInstallmentModalOpen, setIsInstallmentModalOpen] = useState<boolean>(false);
+  const [selectedBillForPayment, setSelectedBillForPayment] = useState<Bill | null>(null);
+  const [installmentAmount, setInstallmentAmount] = useState<number | ''>('');
+  const [installmentMethod, setInstallmentMethod] = useState<string>('Cash');
+  const [installmentDate, setInstallmentDate] = useState<string>('');
+  const [installmentNotes, setInstallmentNotes] = useState<string>('');
+  const [submittingInstallment, setSubmittingInstallment] = useState<boolean>(false);
+  const [patientTransactions, setPatientTransactions] = useState<PaymentTransaction[]>([]);
+  const [showPaymentHistory, setShowPaymentHistory] = useState<boolean>(false);
+
   const fetchPatients = useCallback(async () => {
     setLoading(true);
     setError(null); // Clear any previous errors
@@ -64,16 +80,23 @@ const ViewPatients = () => {
       try {
         const allBills = await getAllBills();
         allBills.forEach((bill: any) => {
+          const billObj: Bill = {
+            id: bill.id || bill._id,
+            patient_id: bill.patient_id || '',
+            prescription_id: bill.prescription_id || '',
+            bill_number: bill.bill_number || '',
+            reference_number: bill.reference_number || '',
+            total_amount: Number(bill.total_amount) || 0,
+            paid_amount: Number(bill.paid_amount) || 0,
+            balance_amount: typeof bill.balance_amount === 'number'
+              ? bill.balance_amount
+              : Math.max(0, (Number(bill.total_amount) || 0) - (Number(bill.paid_amount) || 0)),
+            payment_status: bill.payment_status || 'PENDING',
+            created_at: bill.created_at || (bill._creationTime ? new Date(bill._creationTime).toISOString() : '') || '',
+          };
           if (bill.prescription_id) {
             const existing = billsByPrescriptionId.get(bill.prescription_id) || [];
-            existing.push({
-              id: bill.id || bill._id,
-              total_amount: bill.total_amount,
-              paid_amount: bill.paid_amount,
-              balance_amount: bill.balance_amount,
-              payment_status: bill.payment_status,
-              created_at: bill.created_at || (bill._creationTime ? new Date(bill._creationTime).toISOString() : '') || '',
-            });
+            existing.push(billObj);
             billsByPrescriptionId.set(bill.prescription_id, existing);
           }
         });
@@ -337,13 +360,127 @@ const ViewPatients = () => {
     }
   };
 
+  const loadTransactionsForPatient = async (patient: PatientWithPrescriptions) => {
+    const bills = (patient.prescriptions || []).flatMap(p => p.bills || []);
+    const billIds = bills.map(b => b.id).filter(Boolean);
+    if (billIds.length === 0) {
+      setPatientTransactions([]);
+      return;
+    }
+    try {
+      const txLists = await Promise.all(billIds.map(id => paymentTransactionService.getByBillId(id)));
+      const merged = txLists.flat().sort((a, b) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime());
+      setPatientTransactions(merged);
+    } catch (err) {
+      console.error("Failed to load patient transactions:", err);
+    }
+  };
+
   const openPatientDetails = (patient: PatientWithPrescriptions) => {
     setSelectedPatient(patient);
     setIsModalOpen(true);
+    setShowPaymentHistory(false);
+    loadTransactionsForPatient(patient);
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
+    setIsInstallmentModalOpen(false);
+    setSelectedBillForPayment(null);
+  };
+
+  const handleOpenInstallment = (bill?: Bill) => {
+    if (!selectedPatient) return;
+    const allBills = (selectedPatient.prescriptions || []).flatMap(p => p.bills || []);
+    const pendingBills = allBills.filter(b => {
+      const bal = typeof b.balance_amount === 'number' ? b.balance_amount : ((b.total_amount || 0) - (b.paid_amount || 0));
+      return bal > 0;
+    });
+
+    const targetBill = bill || pendingBills[0] || allBills[0];
+    if (!targetBill) {
+      setAlertMessage({ type: 'error', message: 'No bill found for this patient to pay installment.' });
+      return;
+    }
+
+    setSelectedBillForPayment(targetBill);
+    const currentBal = typeof targetBill.balance_amount === 'number'
+      ? targetBill.balance_amount
+      : Math.max(0, (targetBill.total_amount || 0) - (targetBill.paid_amount || 0));
+
+    setInstallmentAmount(currentBal > 0 ? currentBal : '');
+    setInstallmentMethod('Cash');
+    setInstallmentDate(getTodayStr());
+    setInstallmentNotes('');
+    setIsInstallmentModalOpen(true);
+  };
+
+  const handleRecordInstallment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBillForPayment || !selectedPatient) return;
+
+    const amt = Number(installmentAmount);
+    if (!amt || amt <= 0) {
+      setAlertMessage({ type: 'error', message: 'Please enter a valid payment amount greater than 0.' });
+      return;
+    }
+
+    const currentBal = typeof selectedBillForPayment.balance_amount === 'number'
+      ? selectedBillForPayment.balance_amount
+      : Math.max(0, (selectedBillForPayment.total_amount || 0) - (selectedBillForPayment.paid_amount || 0));
+
+    if (amt > currentBal) {
+      setAlertMessage({ type: 'error', message: `Installment amount cannot exceed the pending balance (₹${currentBal.toFixed(2)}).` });
+      return;
+    }
+
+    try {
+      setSubmittingInstallment(true);
+      await paymentTransactionService.create({
+        bill_id: selectedBillForPayment.id,
+        patient_id: selectedBillForPayment.patient_id || selectedPatient.id || '',
+        amount: amt,
+        payment_method: installmentMethod,
+        payment_date: installmentDate || getTodayStr(),
+        notes: installmentNotes.trim() || undefined,
+      });
+
+      // Update selectedPatient locally
+      const updatedPrescriptions = selectedPatient.prescriptions.map(p => ({
+        ...p,
+        bills: (p.bills || []).map(b => {
+          if (b.id === selectedBillForPayment.id) {
+            const newPaid = (b.paid_amount || 0) + amt;
+            const newBal = Math.max(0, (b.total_amount || 0) - newPaid);
+            return {
+              ...b,
+              paid_amount: newPaid,
+              balance_amount: newBal,
+              payment_status: (newBal <= 0 ? 'PAID' : 'PARTIAL') as 'PAID' | 'PARTIAL',
+            };
+          }
+          return b;
+        }),
+      }));
+
+      const updatedPatient: PatientWithPrescriptions = {
+        ...selectedPatient,
+        prescriptions: updatedPrescriptions,
+      };
+
+      setSelectedPatient(updatedPatient);
+      setIsInstallmentModalOpen(false);
+      setAlertMessage({ type: 'success', message: `Payment of ₹${amt.toFixed(2)} recorded successfully!` });
+
+      // Refresh transactions and patients data
+      loadTransactionsForPatient(updatedPatient);
+      fetchPatients();
+    } catch (err: any) {
+      console.error('Error recording installment:', err);
+      setAlertMessage({ type: 'error', message: `Failed to record payment: ${err.message || 'Error'}` });
+    } finally {
+      setSubmittingInstallment(false);
+    }
   };
 
   // Format date to readable format
@@ -788,34 +925,56 @@ const ViewPatients = () => {
                           <p><span className="font-medium">Last Follow-up Date:</span> {selectedPatient.prescriptions[0]?.prescription_date ? formatDate(selectedPatient.prescriptions[0].prescription_date) : 'N/A'}</p>
 
                           {/* Payment Summary Section */}
-                          <div className="mt-6 p-4 bg-white rounded-lg border border-purple-200">
-                            <h5 className="text-md font-semibold text-purple-800 mb-3">Payment Summary</h5>
-                            <div className="space-y-3">
-                              <div className="flex justify-between items-center">                                <span className="font-medium text-gray-600">Total Paid Amount:</span>
-                                <span className="text-green-600 font-semibold">₹{selectedPatient.prescriptions.reduce((total, p) => {
-                                  if (!p.bills) return total;
-                                  return total + p.bills.reduce((billTotal, b) => billTotal + (b.paid_amount || 0), 0);
-                                }, 0).toFixed(2)}</span>
-                              </div>
-                              <div className="flex justify-between items-center">
-                                <span className="font-medium text-gray-600">Total Pending Amount:</span>
-                                <span className="text-red-600 font-semibold">₹{selectedPatient.prescriptions.reduce((total, p) => {
-                                  if (!p.bills) return total;
-                                  const billTotal = p.bills.reduce((sum, b) => {
-                                    // Calculate pending amount as total_amount minus paid_amount for each bill
-                                    const pending = b.total_amount - (b.paid_amount || 0);
-                                    return sum + (pending > 0 ? pending : 0);
-                                  }, 0);
-                                  return total + billTotal;
-                                }, 0).toFixed(2)}</span>
-                              </div>
-                              {/* Print All Bills button */}
-                              {(() => {
-                                const allIds = selectedPatient.prescriptions
-                                  .flatMap(p => (p.bills || []).map((b: any) => b.id || b._id))
-                                  .filter(Boolean) as string[];
-                                return allIds.length > 0 ? (
-                                  <div className="pt-2 border-t border-purple-100">
+                          {(() => {
+                            const allPatientBills = selectedPatient.prescriptions.flatMap(p => p.bills || []);
+                            const allIds = allPatientBills.map((b: any) => b.id || b._id).filter(Boolean) as string[];
+                            const totalPaid = allPatientBills.reduce((sum, b) => sum + (Number(b.paid_amount) || 0), 0);
+                            const totalPending = allPatientBills.reduce((sum, b) => {
+                              const bal = typeof b.balance_amount === 'number' ? b.balance_amount : ((b.total_amount || 0) - (b.paid_amount || 0));
+                              return sum + Math.max(0, bal);
+                            }, 0);
+                            const hasPending = totalPending > 0;
+
+                            return (
+                              <div className="mt-6 p-4 bg-white rounded-lg border border-purple-200 space-y-3">
+                                <div className="flex justify-between items-center">
+                                  <h5 className="text-md font-semibold text-purple-800">Payment Summary</h5>
+                                  {allPatientBills.length > 0 && (
+                                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${
+                                      hasPending ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'
+                                    }`}>
+                                      {hasPending ? 'Pending Balance' : 'Fully Paid'}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="space-y-2">
+                                  <div className="flex justify-between items-center text-sm">
+                                    <span className="font-medium text-gray-600">Total Paid Amount:</span>
+                                    <span className="text-green-600 font-bold">₹{totalPaid.toFixed(2)}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center text-sm">
+                                    <span className="font-medium text-gray-600">Total Pending Amount:</span>
+                                    <span className={`font-bold ${hasPending ? 'text-red-600 text-base' : 'text-gray-500'}`}>
+                                      ₹{totalPending.toFixed(2)}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Action Buttons: Pay Installment + Print All Bills */}
+                                <div className="pt-2 border-t border-purple-100 flex flex-col sm:flex-row gap-2">
+                                  {hasPending && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenInstallment()}
+                                      className="flex-1 inline-flex justify-center items-center gap-1.5 rounded-lg px-3.5 py-2.5 bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 shadow-sm transition"
+                                    >
+                                      <IndianRupee size={16} />
+                                      <span>Pay Installment</span>
+                                    </button>
+                                  )}
+
+                                  {allIds.length > 0 && (
                                     <button
                                       type="button"
                                       onClick={() => {
@@ -826,18 +985,52 @@ const ViewPatients = () => {
                                         });
                                         window.open(`/print-bill/statement?${params.toString()}`, '_blank');
                                       }}
-                                      className="w-full inline-flex justify-center items-center gap-2 rounded-md px-4 py-2 bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
+                                      className="flex-1 inline-flex justify-center items-center gap-1.5 rounded-lg px-3.5 py-2.5 bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 shadow-sm transition"
                                     >
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                                      </svg>
-                                      Print All Bills ({allIds.length})
+                                      <Printer size={16} />
+                                      <span>Print All Bills ({allIds.length})</span>
                                     </button>
+                                  )}
+                                </div>
+
+                                {/* Past Installment Transactions History Collapsible */}
+                                {patientTransactions.length > 0 && (
+                                  <div className="pt-2 border-t border-purple-100">
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowPaymentHistory(!showPaymentHistory)}
+                                      className="w-full flex justify-between items-center text-xs font-semibold text-purple-700 hover:text-purple-900"
+                                    >
+                                      <span className="flex items-center gap-1">
+                                        <History size={13} />
+                                        <span>Past Payments / Installments ({patientTransactions.length})</span>
+                                      </span>
+                                      <span className="text-[11px] text-gray-500">{showPaymentHistory ? '▲ Hide' : '▼ View'}</span>
+                                    </button>
+
+                                    {showPaymentHistory && (
+                                      <div className="mt-2 space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                                        {patientTransactions.map((tx, idx) => (
+                                          <div key={tx.id || idx} className="flex justify-between items-center text-xs bg-purple-50/70 p-2 rounded border border-purple-100">
+                                            <div>
+                                              <div className="font-semibold text-gray-800">₹{Number(tx.amount).toFixed(2)} • {tx.payment_method || 'Cash'}</div>
+                                              <div className="text-[10px] text-gray-500">
+                                                {formatDate(tx.payment_date)}
+                                                {tx.notes ? ` • ${tx.notes}` : ''}
+                                              </div>
+                                            </div>
+                                            <span className="text-[10px] bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">
+                                              Received
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
-                                ) : null;
-                              })()}
-                            </div>
-                          </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -918,6 +1111,258 @@ const ViewPatients = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Installment Payment Modal */}
+        {isInstallmentModalOpen && selectedBillForPayment && selectedPatient && (
+          <div className="fixed inset-0 z-[60] overflow-y-auto flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+            <div className="relative bg-white rounded-2xl max-w-md w-full shadow-2xl border border-gray-100 overflow-hidden">
+              {/* Header */}
+              <div className="bg-emerald-600 px-5 py-4 text-white flex justify-between items-center">
+                <div>
+                  <h3 className="font-bold text-lg flex items-center gap-2">
+                    <IndianRupee size={20} />
+                    <span>Pay Installment</span>
+                  </h3>
+                  <p className="text-xs text-emerald-100 mt-0.5">
+                    Patient: <span className="font-semibold text-white">{selectedPatient.name}</span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsInstallmentModalOpen(false)}
+                  className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleRecordInstallment} className="p-5 space-y-4">
+                {/* Select Bill if multiple pending bills */}
+                {(() => {
+                  const pendingBills = (selectedPatient.prescriptions || [])
+                    .flatMap(p => p.bills || [])
+                    .filter(b => {
+                      const bal = typeof b.balance_amount === 'number' ? b.balance_amount : ((b.total_amount || 0) - (b.paid_amount || 0));
+                      return bal > 0;
+                    });
+
+                  if (pendingBills.length > 1) {
+                    return (
+                      <div>
+                        <label className="text-xs font-semibold text-gray-700 block mb-1">Select Bill to Pay Towards *</label>
+                        <select
+                          value={selectedBillForPayment.id}
+                          onChange={(e) => {
+                            const found = pendingBills.find(b => b.id === e.target.value);
+                            if (found) {
+                              setSelectedBillForPayment(found);
+                              const bal = typeof found.balance_amount === 'number'
+                                ? found.balance_amount
+                                : Math.max(0, (found.total_amount || 0) - (found.paid_amount || 0));
+                              setInstallmentAmount(bal);
+                            }
+                          }}
+                          className="w-full px-3 py-2 border rounded-lg text-xs sm:text-sm bg-white font-medium"
+                        >
+                          {pendingBills.map((b) => {
+                            const bal = typeof b.balance_amount === 'number'
+                              ? b.balance_amount
+                              : Math.max(0, (b.total_amount || 0) - (b.paid_amount || 0));
+                            return (
+                              <option key={b.id} value={b.id}>
+                                {b.bill_number ? `Bill #${b.bill_number}` : 'Bill'} — Due: ₹{bal.toFixed(2)} (Total: ₹{b.total_amount.toFixed(2)})
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {/* Balance Summary Box */}
+                {(() => {
+                  const currentBal = typeof selectedBillForPayment.balance_amount === 'number'
+                    ? selectedBillForPayment.balance_amount
+                    : Math.max(0, (selectedBillForPayment.total_amount || 0) - (selectedBillForPayment.paid_amount || 0));
+
+                  return (
+                    <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3.5 flex justify-between items-center text-sm">
+                      <div>
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-800 block">Pending Balance</span>
+                        <span className="text-xl font-black text-emerald-900">₹{currentBal.toFixed(2)}</span>
+                      </div>
+                      {selectedBillForPayment.bill_number && (
+                        <span className="text-xs bg-white text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-md font-semibold">
+                          Invoice #{selectedBillForPayment.bill_number}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Installment Amount */}
+                {(() => {
+                  const currentBal = typeof selectedBillForPayment.balance_amount === 'number'
+                    ? selectedBillForPayment.balance_amount
+                    : Math.max(0, (selectedBillForPayment.total_amount || 0) - (selectedBillForPayment.paid_amount || 0));
+
+                  return (
+                    <div>
+                      <label className="text-xs font-semibold text-gray-700 block mb-1">Installment Amount (₹) *</label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 font-bold text-base">₹</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          max={currentBal}
+                          value={installmentAmount}
+                          onChange={(e) => setInstallmentAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                          placeholder="Enter amount"
+                          required
+                          className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg text-lg font-bold text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+                        />
+                      </div>
+
+                      {/* Quick Amount Chips */}
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => setInstallmentAmount(currentBal)}
+                          className="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-md text-xs font-semibold transition"
+                        >
+                          Full (₹{currentBal.toFixed(2)})
+                        </button>
+                        {currentBal > 500 && (
+                          <button
+                            type="button"
+                            onClick={() => setInstallmentAmount(Math.round(currentBal / 2))}
+                            className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-xs font-medium transition"
+                          >
+                            Half (₹{Math.round(currentBal / 2)})
+                          </button>
+                        )}
+                        {currentBal >= 1000 && (
+                          <button
+                            type="button"
+                            onClick={() => setInstallmentAmount(1000)}
+                            className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-xs font-medium transition"
+                          >
+                            ₹1,000
+                          </button>
+                        )}
+                        {currentBal >= 500 && (
+                          <button
+                            type="button"
+                            onClick={() => setInstallmentAmount(500)}
+                            className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-xs font-medium transition"
+                          >
+                            ₹500
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Payment Method */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">Payment Method *</label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {['Cash', 'UPI', 'Card', 'Net Banking', 'Cheque', 'Other'].map((method) => (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => setInstallmentMethod(method)}
+                        className={`py-1.5 px-2 text-xs font-semibold rounded-lg border transition ${
+                          installmentMethod === method
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {method}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Payment Date & Notes */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-700 block mb-1">Payment Date *</label>
+                    <input
+                      type="date"
+                      value={installmentDate}
+                      onChange={(e) => setInstallmentDate(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-700 block mb-1">Notes / Ref (Optional)</label>
+                    <input
+                      type="text"
+                      value={installmentNotes}
+                      onChange={(e) => setInstallmentNotes(e.target.value)}
+                      placeholder="e.g. Google Pay UPI ref"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm bg-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Remaining Balance Preview */}
+                {(() => {
+                  const currentBal = typeof selectedBillForPayment.balance_amount === 'number'
+                    ? selectedBillForPayment.balance_amount
+                    : Math.max(0, (selectedBillForPayment.total_amount || 0) - (selectedBillForPayment.paid_amount || 0));
+                  const amt = Number(installmentAmount) || 0;
+                  const rem = Math.max(0, currentBal - amt);
+
+                  return (
+                    <div className="pt-2 border-t text-xs flex justify-between items-center text-gray-600">
+                      <span>Remaining after this payment:</span>
+                      <span className={`font-bold ${rem === 0 ? 'text-emerald-700' : 'text-gray-900'}`}>
+                        ₹{rem.toFixed(2)} {rem === 0 ? ' (Full Settlement ✓)' : ''}
+                      </span>
+                    </div>
+                  );
+                })()}
+
+                {/* Dialog Footer Actions */}
+                <div className="pt-3 border-t flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsInstallmentModalOpen(false)}
+                    disabled={submittingInstallment}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingInstallment || !installmentAmount || Number(installmentAmount) <= 0}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition flex items-center gap-1.5"
+                  >
+                    {submittingInstallment ? (
+                      <>
+                        <div className="h-4 w-4 border-2 border-white border-t-transparent animate-spin rounded-full" />
+                        <span>Recording...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 size={16} />
+                        <span>Confirm Payment (₹{Number(installmentAmount || 0).toFixed(2)})</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
