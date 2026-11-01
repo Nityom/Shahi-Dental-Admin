@@ -553,6 +553,7 @@ export const listCrownReceived = query({
 
 export const createStaffPayment = mutation({
   args: {
+    staff_id: v.optional(v.union(v.id("staff_members"), v.literal(""), v.null())),
     staff_name: v.string(),
     staff_role: v.string(),
     staff_phone: v.optional(v.string()),
@@ -567,6 +568,7 @@ export const createStaffPayment = mutation({
     ),
     base_salary: v.optional(v.number()),
     amount_paid: v.number(),
+    advance_deducted: v.optional(v.number()),
     previous_payments_total: v.optional(v.number()),
     pending_balance: v.optional(v.number()),
     payment_mode: v.union(v.literal("Cash"), v.literal("UPI"), v.literal("Bank Transfer"), v.literal("Cheque"), v.literal("Other")),
@@ -576,8 +578,12 @@ export const createStaffPayment = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+    const cleanArgs: any = { ...args };
+    if (!cleanArgs.staff_id || cleanArgs.staff_id === "") {
+      delete cleanArgs.staff_id;
+    }
     return await ctx.db.insert("staff_payments", {
-      ...args,
+      ...cleanArgs,
       created_at: now,
     });
   },
@@ -586,6 +592,7 @@ export const createStaffPayment = mutation({
 export const updateStaffPayment = mutation({
   args: {
     id: v.id("staff_payments"),
+    staff_id: v.optional(v.union(v.id("staff_members"), v.literal(""), v.null())),
     staff_name: v.optional(v.string()),
     staff_role: v.optional(v.string()),
     staff_phone: v.optional(v.string()),
@@ -600,6 +607,7 @@ export const updateStaffPayment = mutation({
     )),
     base_salary: v.optional(v.number()),
     amount_paid: v.optional(v.number()),
+    advance_deducted: v.optional(v.number()),
     previous_payments_total: v.optional(v.number()),
     pending_balance: v.optional(v.number()),
     payment_mode: v.optional(v.union(v.literal("Cash"), v.literal("UPI"), v.literal("Bank Transfer"), v.literal("Cheque"), v.literal("Other"))),
@@ -609,7 +617,11 @@ export const updateStaffPayment = mutation({
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
-    await ctx.db.patch(id, updates);
+    const cleanUpdates: any = { ...updates };
+    if (cleanUpdates.staff_id === "" || cleanUpdates.staff_id === null) {
+      delete cleanUpdates.staff_id;
+    }
+    await ctx.db.patch(id, cleanUpdates);
     return await ctx.db.get(id);
   },
 });

@@ -393,8 +393,12 @@ function RegistersContent() {
         if (isEditMode && editingId) await followupService.update(editingId, followupForm);
         else await followupService.create(followupForm);
       } else if (activeTab === 'STAFF_PAYMENTS') {
-        if (isEditMode && editingId) await staffPaymentService.update(editingId, staffPaymentForm);
-        else await staffMemberService.recordPayment(staffPaymentForm);
+        const { _id, id, _creationTime, created_at, ...cleanPaymentForm } = staffPaymentForm as any;
+        if (!cleanPaymentForm.staff_id || cleanPaymentForm.staff_id === '') {
+          delete cleanPaymentForm.staff_id;
+        }
+        if (isEditMode && editingId) await staffPaymentService.update(editingId, cleanPaymentForm);
+        else await staffMemberService.recordPayment(cleanPaymentForm);
       }
 
       setIsModalOpen(false);

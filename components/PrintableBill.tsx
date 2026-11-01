@@ -119,35 +119,107 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
 
   const formattedBillNumber = (billNumber || '').replace(/^KSD-INV/i, 'SDC-INV').replace(/^KSD-/i, 'SDC-');
 
-  // If items > 5, split evenly across 2 pages so both pages look balanced & complete
-  const isMultiPage = (items?.length || 0) > 5;
-  const halfIndex = isMultiPage ? Math.ceil(items.length / 2) : (items?.length || 0);
-  const page1Items = (items || []).slice(0, halfIndex);
-  const page2Items = isMultiPage ? (items || []).slice(halfIndex) : [];
+  // Max items that can fit on a single page along with Header, Totals, and Signature
+  const maxSinglePageItems = (paymentTransactions && paymentTransactions.length > 2) ? 10 : 12;
+
+  interface PageData {
+    pageNumber: number;
+    items: BillItem[];
+    isFirstPage: boolean;
+    isLastPage: boolean;
+  }
+
+  const buildPages = (allItems: BillItem[]): PageData[] => {
+    if (allItems.length <= maxSinglePageItems) {
+      return [
+        {
+          pageNumber: 1,
+          items: allItems,
+          isFirstPage: true,
+          isLastPage: true,
+        },
+      ];
+    }
+
+    // Multi-page bill: only extend when it cannot fit on 1 page
+    // Last page needs room for Totals & Signature (max ~10 items)
+    // First/middle pages have no totals, so they can hold up to ~16 items
+    const remaining = [...allItems];
+
+    if (remaining.length <= 22) {
+      const page2Count = Math.max(4, Math.min(10, Math.floor(remaining.length / 2)));
+      const page1Count = remaining.length - page2Count;
+      return [
+        {
+          pageNumber: 1,
+          items: remaining.slice(0, page1Count),
+          isFirstPage: true,
+          isLastPage: false,
+        },
+        {
+          pageNumber: 2,
+          items: remaining.slice(page1Count),
+          isFirstPage: false,
+          isLastPage: true,
+        },
+      ];
+    }
+
+    const pages: PageData[] = [];
+    let pageNum = 1;
+    while (remaining.length > 0) {
+      if (remaining.length <= 10) {
+        pages.push({
+          pageNumber: pageNum,
+          items: remaining.splice(0, remaining.length),
+          isFirstPage: pageNum === 1,
+          isLastPage: true,
+        });
+        break;
+      }
+
+      let take = 16;
+      if (remaining.length <= 20) {
+        take = Math.ceil(remaining.length / 2);
+      }
+      pages.push({
+        pageNumber: pageNum,
+        items: remaining.splice(0, take),
+        isFirstPage: pageNum === 1,
+        isLastPage: false,
+      });
+      pageNum++;
+    }
+
+    return pages;
+  };
+
+  const pages = buildPages(items || []);
+  const totalPages = pages.length;
 
   const renderItemsTable = (itemList: BillItem[]) => (
     <table className="w-full border-collapse">
       <thead>
         <tr className="border-t-2 border-b-2 border-gray-800 bg-gray-50/50">
-          <th className="text-left py-2 px-2 text-xs font-bold uppercase tracking-wider text-gray-800">ITEMS/SERVICES</th>
-          <th className="text-center py-2 px-2 text-xs font-bold uppercase tracking-wider text-gray-800 w-24">DATE</th>
-          <th className="text-center py-2 px-2 text-xs font-bold uppercase tracking-wider text-gray-800 w-20">QTY</th>
-          <th className="text-right py-2 px-2 text-xs font-bold uppercase tracking-wider text-gray-800 w-24">RATE</th>
-          <th className="text-right py-2 px-2 text-xs font-bold uppercase tracking-wider text-gray-800 w-28">AMOUNT</th>
+          <th className="text-left py-1.5 px-2 text-xs font-bold uppercase tracking-wider text-gray-800">ITEMS/SERVICES</th>
+          <th className="text-center py-1.5 px-2 text-xs font-bold uppercase tracking-wider text-gray-800 w-24">DATE</th>
+          <th className="text-center py-1.5 px-2 text-xs font-bold uppercase tracking-wider text-gray-800 w-20">QTY</th>
+          <th className="text-right py-1.5 px-2 text-xs font-bold uppercase tracking-wider text-gray-800 w-24">RATE</th>
+          <th className="text-right py-1.5 px-2 text-xs font-bold uppercase tracking-wider text-gray-800 w-28">AMOUNT</th>
         </tr>
       </thead>
       <tbody>
         {itemList.map((item, index) => (
           <tr key={item.id || index} className="border-b border-gray-200">
-            <td className="py-2 px-2 text-sm font-medium text-gray-900">{item.description}</td>
-            <td className="py-2 px-2 text-xs text-center text-gray-600">
+            <td className="py-1.5 px-2 text-sm font-medium text-gray-900">{item.description}</td>
+            <td className="py-1.5 px-2 text-xs text-center text-gray-600">
               {item.date ? new Date(item.date).toLocaleDateString('en-GB') : '-'}
             </td>
-            <td className="py-2 px-2 text-xs text-center text-gray-800 font-medium">
+            <td className="py-1.5 px-2 text-xs text-center text-gray-800 font-medium">
               {item.quantity} {item.unit || (item.itemType === 'medicine' ? 'PCS' : 'EACH')}
             </td>
-            <td className="py-2 px-2 text-sm text-right text-gray-800">₹{item.unitPrice.toLocaleString('en-IN')}</td>
-            <td className="py-2 px-2 text-sm text-right font-semibold text-gray-900">₹{item.total.toLocaleString('en-IN')}</td>
+            <td className="py-1.5 px-2 text-sm text-right text-gray-800">₹{item.unitPrice.toLocaleString('en-IN')}</td>
+            <td className="py-1.5 px-2 text-sm text-right font-semibold text-gray-900">₹{item.total.toLocaleString('en-IN')}</td>
           </tr>
         ))}
       </tbody>
@@ -155,16 +227,16 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
   );
 
   const renderTotalsAndSignature = () => (
-    <div className="bill-footer-section mt-4 pt-2">
+    <div className="bill-footer-section mt-3 pt-2">
       {/* Totals Section */}
-      <div className="flex justify-between items-start gap-4 mb-4">
+      <div className="flex justify-between items-start gap-4 mb-2">
         <div className="w-1/2 pt-1">
-          <div className="text-xs font-bold text-gray-800 uppercase tracking-wider mb-1">TERMS AND CONDITIONS</div>
-          <div className="text-[11px] text-gray-600 leading-relaxed">{termsAndConditions}</div>
+          <div className="text-[11px] font-bold text-gray-800 uppercase tracking-wider mb-1">TERMS AND CONDITIONS</div>
+          <div className="text-[10px] text-gray-600 leading-relaxed">{termsAndConditions}</div>
         </div>
 
         <div className="w-5/12">
-          <div className="border-t-2 border-gray-800 pt-2 space-y-1">
+          <div className="border-t-2 border-gray-800 pt-1.5 space-y-1">
             <div className="flex justify-between text-xs">
               <span className="font-semibold text-gray-700">SUBTOTAL</span>
               <span className="font-semibold text-gray-900">{formatCurrency(subtotal)}</span>
@@ -177,7 +249,7 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
               </div>
             )}
 
-            <div className="flex justify-between border-t border-gray-300 pt-1.5 text-sm font-bold text-gray-900">
+            <div className="flex justify-between border-t border-gray-300 pt-1 text-sm font-bold text-gray-900">
               <span>Total Amount</span>
               <span>{formatCurrency(total)}</span>
             </div>
@@ -206,7 +278,7 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
               </div>
             )}
 
-            <div className="flex justify-between border-t-2 border-gray-800 pt-1.5 text-sm font-bold">
+            <div className="flex justify-between border-t-2 border-gray-800 pt-1 text-sm font-bold">
               <span className="text-gray-900">Balance</span>
               <span className={balance > 0 ? 'text-red-600' : 'text-emerald-700'}>{formatCurrency(balance)}</span>
             </div>
@@ -215,7 +287,7 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
       </div>
 
       {/* Amount in Words */}
-      <div className="mb-4 border-t border-gray-300 pt-2 bg-gray-50/50 p-2 rounded">
+      <div className="mb-3 border-t border-gray-300 pt-1.5 bg-gray-50/50 p-2 rounded">
         <div className="text-xs">
           <span className="font-bold text-gray-800">Total Amount (in words): </span>
           <span className="text-gray-700 italic">{numberToWords(total)}</span>
@@ -223,14 +295,14 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
       </div>
 
       {/* Signature Section */}
-      <div className="mt-4 pt-2">
+      <div className="mt-2 pt-1">
         <div className="flex justify-end">
           <div className="text-center min-w-[180px]">
-            <div className="mb-1 h-14 flex items-center justify-center">
+            <div className="mb-0.5 h-12 flex items-center justify-center">
               <img
                 src={getSignatureSrc(signature)}
                 alt="Signature"
-                className="max-h-12 w-auto object-contain"
+                className="max-h-11 w-auto object-contain"
               />
             </div>
             <div className="border-t border-gray-800 pt-1 text-xs font-semibold text-gray-900">
@@ -246,22 +318,22 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
   const renderHeader = () => (
     <>
       {/* Header Section */}
-      <div className="pb-3 mb-3 border-b border-gray-300">
+      <div className="pb-2.5 mb-2.5 border-b border-gray-300">
         <div className="flex justify-between items-start">
           <div className="text-left">
-            <div className="text-xs text-gray-600 mb-1">BILL OF SUPPLY</div>
-            <div className="text-xs border border-gray-400 px-2 py-0.5 inline-block font-medium">
+            <div className="text-xs text-gray-600 mb-0.5">BILL OF SUPPLY</div>
+            <div className="text-[11px] border border-gray-400 px-2 py-0.5 inline-block font-medium">
               ORIGINAL FOR RECIPIENT
             </div>
           </div>
         </div>
 
-        <div className="mt-2 text-center">
-          <div className="flex items-center justify-center mb-2">
+        <div className="mt-1 text-center">
+          <div className="flex items-center justify-center mb-1.5">
             <img
               src="/dental_logo.webp"
               alt="Shahi Dental Logo"
-              className="h-14 mr-3 logo-print object-contain"
+              className="h-12 mr-3 logo-print object-contain"
             />
           </div>
           <p className="text-xs text-gray-800 font-medium">
@@ -272,8 +344,8 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
       </div>
 
       {/* Invoice Info Section */}
-      <div className="pb-2 mb-3">
-        <div className="flex justify-between items-center mb-2">
+      <div className="pb-2 mb-2.5">
+        <div className="flex justify-between items-center mb-1.5">
           <div>
             <span className="text-sm font-semibold text-gray-800">Invoice No.: </span>
             <span className="text-sm font-bold text-gray-900">{formattedBillNumber}</span>
@@ -285,18 +357,15 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
         </div>
 
         {/* Bill To Section */}
-        <div className="bg-white p-3 rounded border border-gray-300">
-          <div className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">BILL TO</div>
+        <div className="bg-white p-2.5 rounded border border-gray-300">
+          <div className="text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">BILL TO</div>
           <div className="text-sm">
             <div className="font-bold text-gray-900">{patientName}</div>
-            {patientPhone && <div className="text-xs text-gray-600">Mobile: {patientPhone}</div>}
-            {(patientAge || patientSex) && (
-              <div className="text-xs text-gray-600">
-                {patientAge && `Age: ${patientAge}`}
-                {patientAge && patientSex && ' | '}
-                {patientSex && `Gender: ${patientSex}`}
-              </div>
-            )}
+            <div className="flex flex-wrap gap-x-3 text-xs text-gray-600 mt-0.5">
+              {patientPhone && <span>Mobile: {patientPhone}</span>}
+              {patientAge && <span>Age: {patientAge}</span>}
+              {patientSex && <span>Gender: {patientSex}</span>}
+            </div>
           </div>
         </div>
       </div>
@@ -309,7 +378,7 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
         @media print {
           @page {
             size: A4 portrait;
-            margin: 10mm 12mm 10mm 12mm;
+            margin: 8mm 10mm 8mm 10mm;
           }
 
           html, body {
@@ -339,7 +408,8 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
             justify-content: space-between !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
-            min-height: 265mm !important;
+            min-height: 250mm !important;
+            max-height: 280mm !important;
           }
 
           .page-break-after {
@@ -367,8 +437,8 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
             margin: 0 auto 28px auto;
             max-width: 210mm;
             width: 100%;
-            padding: 10mm 14mm;
-            min-height: 275mm;
+            padding: 8mm 12mm;
+            min-height: 265mm;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
@@ -377,70 +447,40 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
         }
       `}</style>
 
-      {!isMultiPage ? (
-        /* SINGLE PAGE BILL */
-        <div className="printable-page bg-white">
+      {pages.map((page) => (
+        <div
+          key={page.pageNumber}
+          className={`printable-page bg-white ${!page.isLastPage ? 'page-break-after' : ''}`}
+        >
           <div>
             {renderHeader()}
 
             {/* Items Table */}
-            <div className="mb-4">
-              {renderItemsTable(page1Items)}
+            <div className="mb-3">
+              {renderItemsTable(page.items)}
             </div>
 
-            {/* Totals + Words + Signature */}
-            {renderTotalsAndSignature()}
+            {/* Totals + Words + Signature only on the final page */}
+            {page.isLastPage && renderTotalsAndSignature()}
           </div>
 
-          <div className="mt-auto pt-3 border-t border-gray-300 text-[10px] text-gray-500 flex justify-between">
-            <span>Valid system-generated tax invoice / bill of supply</span>
-            <span>Page 1 of 1</span>
+          {/* Bottom Page Footer */}
+          <div className="mt-auto pt-2.5 border-t border-gray-300 text-xs text-gray-600 flex justify-between items-center">
+            {!page.isLastPage ? (
+              <span className="font-semibold text-blue-700 italic">
+                Continued on Page {page.pageNumber + 1}...
+              </span>
+            ) : (
+              <span className="text-[10px] text-gray-500">
+                Valid system-generated tax invoice / bill of supply
+              </span>
+            )}
+            <span className="text-[11px] text-gray-500 font-medium">
+              Page {page.pageNumber} of {totalPages}
+            </span>
           </div>
         </div>
-      ) : (
-        /* BALANCED MULTI-PAGE BILL */
-        <>
-          {/* PAGE 1 */}
-          <div className="printable-page bg-white page-break-after">
-            <div>
-              {renderHeader()}
-
-              {/* Table with First Half of Items */}
-              <div className="mb-4">
-                {renderItemsTable(page1Items)}
-              </div>
-            </div>
-
-            {/* Bottom Continuation Banner */}
-            <div className="mt-auto pt-3 border-t border-gray-300 text-xs text-gray-600 flex justify-between items-center">
-              <span className="font-semibold text-blue-700 italic">Continued on Page 2...</span>
-              <span>Page 1 of 2</span>
-            </div>
-          </div>
-
-          {/* PAGE 2 */}
-          <div className="printable-page bg-white">
-            <div>
-              {/* Exact Same Full Header as Page 1 */}
-              {renderHeader()}
-
-              {/* Table with Second Half of Items */}
-              <div className="mb-4">
-                {renderItemsTable(page2Items)}
-              </div>
-
-              {/* Totals + Words + Signature */}
-              {renderTotalsAndSignature()}
-            </div>
-
-            {/* Bottom Page 2 Footer */}
-            <div className="mt-auto pt-3 border-t border-gray-300 text-[10px] text-gray-500 flex justify-between">
-              <span>Valid system-generated tax invoice / bill of supply</span>
-              <span>Page 2 of 2</span>
-            </div>
-          </div>
-        </>
-      )}
+      ))}
 
       {showPrintButton && (
         <div className="no-print flex justify-center mt-6 mb-4">

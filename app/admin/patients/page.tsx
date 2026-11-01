@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { Alert } from "@/components/ui/alert";
 import PrescriptionHistory from "@/components/PrescriptionHistory";
 import { useIsAdmin } from '@/hooks/use-is-admin';
+import { Calendar as CalendarIcon, X, Search, RefreshCw, UserPlus, Filter } from 'lucide-react';
 
 // Group prescriptions by patient name to create a patient list
 interface Bill {
@@ -37,6 +38,8 @@ const ViewPatients = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<string>(''); // YYYY-MM-DD
+  const [dateFilterMode, setDateFilterMode] = useState<'ALL' | 'TODAY' | 'YESTERDAY' | 'THIS_MONTH' | 'CUSTOM'>('ALL');
   const [selectedPatient, setSelectedPatient] = useState<PatientWithPrescriptions | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -179,21 +182,123 @@ const ViewPatients = () => {
     fetchPatients();
   }, [fetchPatients]);
 
+  // Date helper functions for calendar filtering
+  const getTodayStr = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getYesterdayStr = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const isPatientOnDate = (patient: PatientWithPrescriptions, targetDate: string): boolean => {
+    if (!targetDate) return false;
+    // Check all prescriptions
+    const hasRx = (patient.prescriptions || []).some((p) => {
+      if (!p.prescription_date) return false;
+      const pDate = p.prescription_date.slice(0, 10);
+      if (pDate === targetDate) return true;
+      try {
+        const d = new Date(p.prescription_date);
+        if (!isNaN(d.getTime())) {
+          const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          return local === targetDate;
+        }
+      } catch {}
+      return false;
+    });
+    if (hasRx) return true;
+
+    // Check latestVisit
+    if (patient.latestVisit) {
+      if (patient.latestVisit.slice(0, 10) === targetDate) return true;
+      try {
+        const d = new Date(patient.latestVisit);
+        if (!isNaN(d.getTime())) {
+          const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          return local === targetDate;
+        }
+      } catch {}
+    }
+
+    // Check created_at (for new patients registered on that date)
+    if (patient.created_at) {
+      try {
+        const d = new Date(patient.created_at);
+        if (!isNaN(d.getTime())) {
+          const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          return local === targetDate;
+        }
+      } catch {}
+    }
+
+    return false;
+  };
+
+  const isPatientInCurrentMonth = (patient: PatientWithPrescriptions): boolean => {
+    const now = new Date();
+    const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    const hasRx = (patient.prescriptions || []).some((p) => {
+      if (!p.prescription_date) return false;
+      return p.prescription_date.startsWith(currentYearMonth);
+    });
+    if (hasRx) return true;
+
+    if (patient.latestVisit && patient.latestVisit.startsWith(currentYearMonth)) return true;
+
+    if (patient.created_at) {
+      try {
+        const d = new Date(patient.created_at);
+        if (!isNaN(d.getTime())) {
+          const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          return ym === currentYearMonth;
+        }
+      } catch {}
+    }
+
+    return false;
+  };
+
   useEffect(() => {
-    // Filter patients when search term changes
-    if (searchTerm.trim() === '') {
-      setFilteredPatients(patients);
-    } else {
+    // Filter patients by both date and search term
+    let result = patients;
+
+    // 1. Date Filter
+    if (dateFilterMode === 'TODAY') {
+      const today = getTodayStr();
+      result = result.filter(p => isPatientOnDate(p, today));
+    } else if (dateFilterMode === 'YESTERDAY') {
+      const yesterday = getYesterdayStr();
+      result = result.filter(p => isPatientOnDate(p, yesterday));
+    } else if (dateFilterMode === 'THIS_MONTH') {
+      result = result.filter(p => isPatientInCurrentMonth(p));
+    } else if (dateFilterMode === 'CUSTOM' && selectedDate) {
+      result = result.filter(p => isPatientOnDate(p, selectedDate));
+    }
+
+    // 2. Search Term Filter
+    if (searchTerm.trim() !== '') {
       const searchLower = searchTerm.toLowerCase();
-      const filtered = patients.filter(patient =>
+      result = result.filter(patient =>
         patient.name.toLowerCase().includes(searchLower) ||
         patient.phone_number.includes(searchTerm) ||
         (patient.reference_number && patient.reference_number.toLowerCase().includes(searchLower))
       );
-      setFilteredPatients(filtered);
     }
-    setCurrentPage(1); // Reset to first page on new search
-  }, [searchTerm, patients]);
+
+    setFilteredPatients(result);
+    setCurrentPage(1); // Reset to first page on new filter
+  }, [searchTerm, selectedDate, dateFilterMode, patients]);
 
   const handleDelete = async (patient: PatientWithPrescriptions) => {
     if (window.confirm('Are you sure you want to delete this patient and all their prescriptions? This action cannot be undone.')) {
@@ -243,7 +348,9 @@ const ViewPatients = () => {
 
   // Format date to readable format
   const formatDate = (dateString: string) => {
+    if (!dateString) return '-';
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
     return date.toLocaleDateString('en-GB', {
       day: '2-digit',
       month: '2-digit',
@@ -270,71 +377,194 @@ const ViewPatients = () => {
       )}
 
       <div className="w-full max-w-7xl mx-auto mt-4 sm:mt-8 p-4">
-        <h2 className="text-3xl font-bold mb-8 text-center text-blue-700 border-b pb-4">Patient Records</h2>
+        <h2 className="text-3xl font-bold mb-6 text-center text-blue-700 border-b pb-4">Patient Records</h2>
 
-        {/* Search and Actions Bar */}
-        <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4">
-          <div className="relative w-full md:w-96">
-            <input
-              type="text"
-              placeholder="Search.."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-              </svg>
+        {/* Search, Calendar Date Filter & Actions Bar */}
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 space-y-4">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+            
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-md">
+              <input
+                type="text"
+                placeholder="Search patient name, phone, ref no..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-9 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                <Search size={18} />
+              </div>
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            {/* Calendar / Date Picker & Actions */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Calendar Date Picker */}
+              <div className="flex items-center gap-2 bg-gray-50 border border-gray-300 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
+                <CalendarIcon size={16} className="text-blue-600 shrink-0" />
+                <span className="text-xs font-semibold text-gray-700">Filter Date:</span>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value);
+                    setDateFilterMode(e.target.value ? 'CUSTOM' : 'ALL');
+                  }}
+                  className="bg-transparent text-xs sm:text-sm font-medium text-gray-800 outline-none cursor-pointer"
+                />
+                {selectedDate && (
+                  <button
+                    onClick={() => {
+                      setSelectedDate('');
+                      setDateFilterMode('ALL');
+                    }}
+                    title="Clear date"
+                    className="text-gray-400 hover:text-gray-600 ml-0.5"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 ml-auto">
+                <Link href="/admin/prescription">
+                  <button className="px-3.5 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-xs sm:text-sm font-medium transition shadow-sm flex items-center gap-1.5">
+                    <UserPlus size={16} />
+                    <span>New Patient</span>
+                  </button>
+                </Link>
+
+                <button
+                  onClick={() => fetchPatients()}
+                  className="px-3.5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs sm:text-sm font-medium transition shadow-sm flex items-center gap-1.5"
+                >
+                  <RefreshCw size={16} />
+                  <span>Refresh</span>
+                </button>
+              </div>
             </div>
           </div>
 
-
-          <div className="flex gap-3">
-            <Link href="/admin/prescription">
-              <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition shadow-sm flex items-center">
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                New Patient
-              </button>
-            </Link>
-
+          {/* Date Filter Quick Pills */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-gray-100 text-xs">
+            <span className="text-gray-500 font-medium mr-1 flex items-center gap-1">
+              <Filter size={13} /> Quick Filter:
+            </span>
             <button
-              onClick={() => fetchPatients()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition shadow-sm flex items-center"
+              onClick={() => {
+                setDateFilterMode('ALL');
+                setSelectedDate('');
+              }}
+              className={`px-3 py-1 rounded-full font-medium transition ${
+                dateFilterMode === 'ALL'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
             >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Refresh
+              All Time ({patients.length})
             </button>
+            <button
+              onClick={() => {
+                const t = getTodayStr();
+                setDateFilterMode('TODAY');
+                setSelectedDate(t);
+              }}
+              className={`px-3 py-1 rounded-full font-medium transition ${
+                dateFilterMode === 'TODAY'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Today
+            </button>
+            <button
+              onClick={() => {
+                const y = getYesterdayStr();
+                setDateFilterMode('YESTERDAY');
+                setSelectedDate(y);
+              }}
+              className={`px-3 py-1 rounded-full font-medium transition ${
+                dateFilterMode === 'YESTERDAY'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Yesterday
+            </button>
+            <button
+              onClick={() => {
+                setDateFilterMode('THIS_MONTH');
+                setSelectedDate('');
+              }}
+              className={`px-3 py-1 rounded-full font-medium transition ${
+                dateFilterMode === 'THIS_MONTH'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              This Month
+            </button>
+
+            {dateFilterMode !== 'ALL' && (
+              <span className="ml-auto text-blue-700 bg-blue-50 border border-blue-200 px-3 py-0.5 rounded-full font-medium flex items-center gap-1.5">
+                <span>
+                  Showing <b>{filteredPatients.length}</b> patient{filteredPatients.length !== 1 ? 's' : ''}
+                  {dateFilterMode === 'TODAY' && ' for Today'}
+                  {dateFilterMode === 'YESTERDAY' && ' for Yesterday'}
+                  {dateFilterMode === 'THIS_MONTH' && ' for This Month'}
+                  {dateFilterMode === 'CUSTOM' && selectedDate && ` on ${formatDate(selectedDate)}`}
+                </span>
+                <button
+                  onClick={() => {
+                    setDateFilterMode('ALL');
+                    setSelectedDate('');
+                  }}
+                  className="hover:text-blue-900"
+                  title="Clear filter"
+                >
+                  <X size={13} />
+                </button>
+              </span>
+            )}
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-blue-50 p-6 rounded-lg border border-blue-100 shadow-sm">
-            <h4 className="text-lg font-semibold text-blue-800 mb-1">Total Patients</h4>
-            <p className="text-3xl font-bold text-blue-700">{patients.length}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm">
+            <h4 className="text-xs font-semibold text-blue-800 uppercase tracking-wider mb-1">Total Patients</h4>
+            <p className="text-2xl md:text-3xl font-bold text-blue-700">{patients.length}</p>
           </div>
 
-          <div className="bg-purple-50 p-6 rounded-lg border border-purple-100 shadow-sm">
-            <h4 className="text-lg font-semibold text-purple-800 mb-1">Total Consultations</h4>
-            <p className="text-3xl font-bold text-purple-700">
+          <div className="bg-purple-50 p-5 rounded-xl border border-purple-100 shadow-sm">
+            <h4 className="text-xs font-semibold text-purple-800 uppercase tracking-wider mb-1">Total Consultations</h4>
+            <p className="text-2xl md:text-3xl font-bold text-purple-700">
               {patients.reduce((sum, patient) => sum + patient.totalVisits, 0)}
             </p>
           </div>
 
-          <div className="bg-green-50 p-6 rounded-lg border border-green-100 shadow-sm">
-            <h4 className="text-lg font-semibold text-green-800 mb-1">Patients This Month</h4>
-            <p className="text-3xl font-bold text-green-700">
-              {patients.filter(patient => {
-                const today = new Date();
-                const visitDate = new Date(patient.latestVisit);
-                return visitDate.getMonth() === today.getMonth() &&
-                  visitDate.getFullYear() === today.getFullYear();
-              }).length}
+          <div className="bg-emerald-50 p-5 rounded-xl border border-emerald-100 shadow-sm">
+            <h4 className="text-xs font-semibold text-emerald-800 uppercase tracking-wider mb-1">Patients Today</h4>
+            <p className="text-2xl md:text-3xl font-bold text-emerald-700">
+              {patients.filter(p => isPatientOnDate(p, getTodayStr())).length}
+            </p>
+          </div>
+
+          <div className="bg-amber-50 p-5 rounded-xl border border-amber-100 shadow-sm">
+            <h4 className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-1">
+              {dateFilterMode !== 'ALL' ? 'Filtered Patients' : 'Patients This Month'}
+            </h4>
+            <p className="text-2xl md:text-3xl font-bold text-amber-700">
+              {dateFilterMode !== 'ALL' ? filteredPatients.length : patients.filter(p => isPatientInCurrentMonth(p)).length}
             </p>
           </div>
         </div>
@@ -357,8 +587,27 @@ const ViewPatients = () => {
               </button>
             </div>
           ) : filteredPatients.length === 0 ? (
-            <div className="p-10 text-center text-gray-600">
-              <p>No patients found. {searchTerm ? "Try a different search term." : ""}</p>
+            <div className="p-12 text-center text-gray-600">
+              <div className="inline-flex p-3 bg-blue-50 text-blue-600 rounded-full mb-3">
+                <CalendarIcon size={24} />
+              </div>
+              <p className="text-base font-semibold text-gray-800">No patients found</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {searchTerm ? `No matches for search "${searchTerm}".` : ''}
+                {dateFilterMode !== 'ALL' ? ` No patient visits recorded for the selected date.` : ''}
+              </p>
+              {(searchTerm || dateFilterMode !== 'ALL') && (
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setDateFilterMode('ALL');
+                    setSelectedDate('');
+                  }}
+                  className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition"
+                >
+                  Clear All Filters
+                </button>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">

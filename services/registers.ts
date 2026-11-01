@@ -212,7 +212,11 @@ export const staffMemberService = {
   },
   recordPayment: async (data: any) => {
     const anyApi: any = api;
-    return await convex.mutation(anyApi.staff.recordPayment, data);
+    const { _id, id, _creationTime, created_at, ...cleanData } = data;
+    if (!cleanData.staff_id || cleanData.staff_id === "") {
+      delete cleanData.staff_id;
+    }
+    return await convex.mutation(anyApi.staff.recordPayment, cleanData);
   },
   migrateExistingStaff: async () => {
     const anyApi: any = api;
@@ -222,10 +226,17 @@ export const staffMemberService = {
 
 export const staffPaymentService = {
   create: async (data: Omit<StaffPaymentRecord, '_id' | 'id' | 'created_at'>) => {
-    return await convex.mutation(api.registers.createStaffPayment, data);
+    const { _id, id, _creationTime, created_at, ...cleanData }: any = data;
+    if (!cleanData.staff_id || cleanData.staff_id === "") {
+      delete cleanData.staff_id;
+    }
+    return await convex.mutation(api.registers.createStaffPayment, cleanData);
   },
   update: async (id: string, updates: Partial<StaffPaymentRecord>) => {
-    const { _id, id: rawId, created_at, ...cleanUpdates } = updates;
+    const { _id, id: rawId, _creationTime, created_at, ...cleanUpdates }: any = updates;
+    if (!cleanUpdates.staff_id || cleanUpdates.staff_id === "") {
+      delete cleanUpdates.staff_id;
+    }
     return await convex.mutation(api.registers.updateStaffPayment, {
       id: id as any,
       ...cleanUpdates,

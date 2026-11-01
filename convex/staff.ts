@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 /**
  * List all staff members with dynamic advance balance and monthly payment metrics
@@ -200,7 +201,7 @@ export const remove = mutation({
  */
 export const recordPayment = mutation({
   args: {
-    staff_id: v.optional(v.id("staff_members")),
+    staff_id: v.optional(v.union(v.id("staff_members"), v.literal(""), v.null())),
     staff_name: v.string(),
     staff_role: v.string(),
     staff_phone: v.optional(v.string()),
@@ -216,6 +217,7 @@ export const recordPayment = mutation({
     amount_paid: v.number(),
     advance_deducted: v.optional(v.number()), // Advance adjusted in this payment
     base_salary: v.optional(v.number()),
+    previous_payments_total: v.optional(v.number()),
     pending_balance: v.optional(v.number()),
     payment_mode: v.union(
       v.literal("Cash"),
@@ -231,8 +233,10 @@ export const recordPayment = mutation({
   handler: async (ctx, args) => {
     const now = Date.now();
 
+    const staffId = args.staff_id && args.staff_id !== "" ? (args.staff_id as Id<"staff_members">) : undefined;
+
     // Find staff member if not passed
-    let staffMember = args.staff_id ? await ctx.db.get(args.staff_id) : null;
+    let staffMember = staffId ? await ctx.db.get(staffId) : null;
     if (!staffMember && args.staff_name) {
       staffMember = await ctx.db
         .query("staff_members")
@@ -243,7 +247,7 @@ export const recordPayment = mutation({
     const baseSalary = args.base_salary ?? (staffMember ? staffMember.fixed_salary : 0);
 
     const paymentId = await ctx.db.insert("staff_payments", {
-      staff_id: staffMember ? staffMember._id : args.staff_id,
+      staff_id: (staffMember ? staffMember._id : staffId) as any,
       staff_name: args.staff_name.trim(),
       staff_role: args.staff_role.trim(),
       staff_phone: args.staff_phone || (staffMember ? staffMember.phone : undefined),
@@ -253,6 +257,7 @@ export const recordPayment = mutation({
       base_salary: baseSalary,
       amount_paid: Number(args.amount_paid) || 0,
       advance_deducted: args.advance_deducted ? Number(args.advance_deducted) : undefined,
+      previous_payments_total: args.previous_payments_total ? Number(args.previous_payments_total) : undefined,
       pending_balance: args.pending_balance,
       payment_mode: args.payment_mode,
       transaction_reference: args.transaction_reference,
