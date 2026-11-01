@@ -277,6 +277,7 @@ export function BillHistoryWithPayments({
           billId={selectedBill.id}
           patientId={selectedBill.patient_id}
           balanceAmount={Number(selectedBill.balance_amount) || 0}
+          bill={selectedBill}
           onPaymentAdded={handlePaymentAdded}
         />
       )}

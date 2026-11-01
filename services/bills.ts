@@ -133,6 +133,19 @@ export const getPatientByReferenceNumber = async (referenceNumber: string) => {
   }
 };
 
+export const getBillById = async (id: string) => {
+  try {
+    if (!id || typeof id !== 'string') {
+      throw new Error('Invalid bill ID provided');
+    }
+    const data = await convex.query(api.bills.getById, { id: id as any });
+    return data ? ({ ...data, id: data._id } as any as Bill) : null;
+  } catch (e) {
+    console.error('Exception in getBillById:', e);
+    return null;
+  }
+};
+
 export const getAll = async () => {
   try {
     const data = await convex.query(api.bills.list, {});
@@ -146,6 +159,7 @@ export const getAll = async () => {
 export const billService = {
   create: createBill,
   update: updateBill,
+  getById: getBillById,
   getByPrescriptionId: getBillByPrescriptionId,
   getAll: getAll,
 };

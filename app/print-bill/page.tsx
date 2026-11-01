@@ -160,6 +160,7 @@ function PrintBillContent() {
               amount: t.amount,
               payment_date: t.payment_date,
               payment_method: t.payment_method,
+              notes: t.notes,
             })));
           }
         } catch {}

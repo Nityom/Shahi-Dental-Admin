@@ -781,6 +781,7 @@ export default function InstallmentsPage() {
           billId={payingBill.id}
           patientId={payingBill.patient_id}
           balanceAmount={Number(payingBill.balance_amount) || 0}
+          bill={payingBill}
           onPaymentAdded={() => {
             setPayingBill(null);
             loadData();

@@ -79,7 +79,7 @@ export const paymentTransactionService = {
   },
 
   delete: async (id: string): Promise<void> => {
-    // Not implemented 
+    await convex.mutation(api.payment_transactions.remove, { id: id as any });
   },
 };
 

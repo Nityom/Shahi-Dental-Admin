@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { getAllPrescriptions, Prescription as PrescriptionType, deletePrescription } from '@/services/prescription';
 import { deletePatient, getPatients } from '@/services/patients';
-import { getAll as getAllBills } from '@/services/bills';
+import { getAll as getAllBills, billService } from '@/services/bills';
 import { Patient } from '@/types/patient';
 import Link from 'next/link';
 import { Alert } from "@/components/ui/alert";
@@ -23,6 +23,7 @@ interface Bill {
   paid_amount: number;
   balance_amount: number;
   payment_status: 'PENDING' | 'PARTIAL' | 'PAID';
+  items?: any[];
   created_at: string;
 }
 
@@ -62,6 +63,8 @@ const ViewPatients = () => {
   const [submittingInstallment, setSubmittingInstallment] = useState<boolean>(false);
   const [patientTransactions, setPatientTransactions] = useState<PaymentTransaction[]>([]);
   const [showPaymentHistory, setShowPaymentHistory] = useState<boolean>(false);
+  const [selectedInstallmentItemIds, setSelectedInstallmentItemIds] = useState<Set<string | number>>(new Set());
+  const [showPaidInstallmentItems, setShowPaidInstallmentItems] = useState<boolean>(false);
 
   const fetchPatients = useCallback(async () => {
     setLoading(true);
@@ -92,6 +95,7 @@ const ViewPatients = () => {
               ? bill.balance_amount
               : Math.max(0, (Number(bill.total_amount) || 0) - (Number(bill.paid_amount) || 0)),
             payment_status: bill.payment_status || 'PENDING',
+            items: bill.items || [],
             created_at: bill.created_at || (bill._creationTime ? new Date(bill._creationTime).toISOString() : '') || '',
           };
           if (bill.prescription_id) {
@@ -389,7 +393,7 @@ const ViewPatients = () => {
     setSelectedBillForPayment(null);
   };
 
-  const handleOpenInstallment = (bill?: Bill) => {
+  const handleOpenInstallment = async (bill?: Bill) => {
     if (!selectedPatient) return;
     const allBills = (selectedPatient.prescriptions || []).flatMap(p => p.bills || []);
     const pendingBills = allBills.filter(b => {
@@ -403,16 +407,122 @@ const ViewPatients = () => {
       return;
     }
 
-    setSelectedBillForPayment(targetBill);
-    const currentBal = typeof targetBill.balance_amount === 'number'
-      ? targetBill.balance_amount
-      : Math.max(0, (targetBill.total_amount || 0) - (targetBill.paid_amount || 0));
+    // Attempt to fetch fresh bill to get the latest item statuses and items
+    let freshBill: any = targetBill;
+    try {
+      const dbBill = await billService.getById(targetBill.id);
+      if (dbBill) freshBill = dbBill;
+    } catch (e) {
+      console.warn('Could not fetch latest bill for installment dialog:', e);
+    }
 
-    setInstallmentAmount(currentBal > 0 ? currentBal : '');
+    setSelectedBillForPayment(freshBill);
+    const currentBal = typeof freshBill.balance_amount === 'number'
+      ? freshBill.balance_amount
+      : Math.max(0, (freshBill.total_amount || 0) - (freshBill.paid_amount || 0));
+
+    // Identify pending items vs paid items
+    const rawItems: any[] = Array.isArray(freshBill.items) ? freshBill.items : [];
+    const pendingItems = rawItems.filter((it: any) => !it.is_paid);
+    const activeItems = pendingItems.length > 0 ? pendingItems : rawItems;
+
+    // Default: select all pending items
+    const initialItemIds = new Set<string | number>(
+      activeItems.map((it: any, idx: number) => it.id !== undefined && it.id !== null ? it.id : `item-${idx}`)
+    );
+    setSelectedInstallmentItemIds(initialItemIds);
+
+    const initialSum = activeItems.reduce(
+      (sum: number, it: any) => sum + (Number(it.total) || (Number(it.quantity || 1) * Number(it.unit_price || 0))),
+      0
+    );
+    const safeInitialAmt = Math.min(initialSum, currentBal);
+    setInstallmentAmount(safeInitialAmt > 0 ? safeInitialAmt : (currentBal > 0 ? currentBal : ''));
+
     setInstallmentMethod('Cash');
     setInstallmentDate(getTodayStr());
-    setInstallmentNotes('');
+
+    // Generate descriptive notes with treatment names, dates, and amounts
+    const billDateStr = freshBill.created_at ? formatDate(freshBill.created_at) : '';
+    const descList = activeItems.map((it: any) => {
+      const dt = it.date ? formatDate(it.date) : billDateStr;
+      return dt ? `${it.description} (${dt})` : it.description;
+    });
+    setInstallmentNotes(descList.length > 0 ? `Payment for: ${descList.join(', ')}` : 'Installment payment');
+
     setIsInstallmentModalOpen(true);
+  };
+
+  const toggleInstallmentItem = (itemId: string | number) => {
+    if (!selectedBillForPayment) return;
+    const items: any[] = Array.isArray(selectedBillForPayment.items) ? selectedBillForPayment.items : [];
+    const currentBal = typeof selectedBillForPayment.balance_amount === 'number'
+      ? selectedBillForPayment.balance_amount
+      : Math.max(0, (selectedBillForPayment.total_amount || 0) - (selectedBillForPayment.paid_amount || 0));
+
+    const next = new Set(selectedInstallmentItemIds);
+    if (next.has(itemId)) {
+      next.delete(itemId);
+    } else {
+      next.add(itemId);
+    }
+    setSelectedInstallmentItemIds(next);
+
+    const billDateStr = selectedBillForPayment.created_at ? formatDate(selectedBillForPayment.created_at) : '';
+    const selectedItems = items.filter((it: any, idx: number) => {
+      const id = it.id !== undefined && it.id !== null ? it.id : `item-${idx}`;
+      return next.has(id);
+    });
+
+    const sum = selectedItems.reduce(
+      (s, it) => s + (Number(it.total) || (Number(it.quantity || 1) * Number(it.unit_price || 0))),
+      0
+    );
+    const safeAmt = Math.min(sum, currentBal);
+    setInstallmentAmount(safeAmt > 0 ? safeAmt : '');
+
+    const desc = selectedItems.map((it: any) => {
+      const dt = it.date ? formatDate(it.date) : billDateStr;
+      return dt
+        ? `${it.description} (${dt}) - ₹${Number(it.total || it.unit_price || 0).toLocaleString('en-IN')}`
+        : `${it.description} - ₹${Number(it.total || it.unit_price || 0).toLocaleString('en-IN')}`;
+    });
+    setInstallmentNotes(desc.length > 0 ? `Payment for: ${desc.join(', ')}` : '');
+  };
+
+  const toggleSelectAllPendingInstallmentItems = (selectAll: boolean) => {
+    if (!selectedBillForPayment) return;
+    const items: any[] = Array.isArray(selectedBillForPayment.items) ? selectedBillForPayment.items : [];
+    const currentBal = typeof selectedBillForPayment.balance_amount === 'number'
+      ? selectedBillForPayment.balance_amount
+      : Math.max(0, (selectedBillForPayment.total_amount || 0) - (selectedBillForPayment.paid_amount || 0));
+
+    if (selectAll) {
+      const pendingItems = items.filter((it: any) => !it.is_paid);
+      const activeItems = pendingItems.length > 0 ? pendingItems : items;
+      const allIds = new Set<string | number>(
+        activeItems.map((it: any, idx: number) => it.id !== undefined && it.id !== null ? it.id : `item-${idx}`)
+      );
+      setSelectedInstallmentItemIds(allIds);
+
+      const sum = activeItems.reduce(
+        (s, it) => s + (Number(it.total) || (Number(it.quantity || 1) * Number(it.unit_price || 0))),
+        0
+      );
+      const safeAmt = Math.min(sum, currentBal);
+      setInstallmentAmount(safeAmt > 0 ? safeAmt : currentBal);
+
+      const billDateStr = selectedBillForPayment.created_at ? formatDate(selectedBillForPayment.created_at) : '';
+      const desc = activeItems.map((it: any) => {
+        const dt = it.date ? formatDate(it.date) : billDateStr;
+        return dt ? `${it.description} (${dt})` : it.description;
+      });
+      setInstallmentNotes(desc.length > 0 ? `Payment for: ${desc.join(', ')}` : 'Installment payment');
+    } else {
+      setSelectedInstallmentItemIds(new Set());
+      setInstallmentAmount('');
+      setInstallmentNotes('');
+    }
   };
 
   const handleRecordInstallment = async (e: React.FormEvent) => {
@@ -445,6 +555,24 @@ const ViewPatients = () => {
         notes: installmentNotes.trim() || undefined,
       });
 
+      // Update bill items in database to mark selected items as is_paid
+      if (Array.isArray(selectedBillForPayment.items) && selectedBillForPayment.items.length > 0) {
+        try {
+          const updatedItems = selectedBillForPayment.items.map((it: any, idx: number) => {
+            const id = it.id !== undefined && it.id !== null ? it.id : `item-${idx}`;
+            return {
+              ...it,
+              is_paid: selectedInstallmentItemIds.has(id) || it.is_paid,
+            };
+          });
+          await billService.update(selectedBillForPayment.id, {
+            items: updatedItems,
+          });
+        } catch (itemErr) {
+          console.warn("Could not update item paid status on bill:", itemErr);
+        }
+      }
+
       // Update selectedPatient locally
       const updatedPrescriptions = selectedPatient.prescriptions.map(p => ({
         ...p,
@@ -452,11 +580,19 @@ const ViewPatients = () => {
           if (b.id === selectedBillForPayment.id) {
             const newPaid = (b.paid_amount || 0) + amt;
             const newBal = Math.max(0, (b.total_amount || 0) - newPaid);
+            const updatedItems = (b.items || []).map((it: any, idx: number) => {
+              const id = it.id !== undefined && it.id !== null ? it.id : `item-${idx}`;
+              return {
+                ...it,
+                is_paid: selectedInstallmentItemIds.has(id) || it.is_paid,
+              };
+            });
             return {
               ...b,
               paid_amount: newPaid,
               balance_amount: newBal,
               payment_status: (newBal <= 0 ? 'PAID' : 'PARTIAL') as 'PAID' | 'PARTIAL',
+              items: updatedItems,
             };
           }
           return b;
@@ -1118,9 +1254,9 @@ const ViewPatients = () => {
         {/* Installment Payment Modal */}
         {isInstallmentModalOpen && selectedBillForPayment && selectedPatient && (
           <div className="fixed inset-0 z-[60] overflow-y-auto flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <div className="relative bg-white rounded-2xl max-w-md w-full shadow-2xl border border-gray-100 overflow-hidden">
+            <div className="relative bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[92vh]">
               {/* Header */}
-              <div className="bg-emerald-600 px-5 py-4 text-white flex justify-between items-center">
+              <div className="bg-gradient-to-r from-emerald-600 to-teal-700 px-5 py-4 text-white flex justify-between items-center shrink-0">
                 <div>
                   <h3 className="font-bold text-lg flex items-center gap-2">
                     <IndianRupee size={20} />
@@ -1128,6 +1264,7 @@ const ViewPatients = () => {
                   </h3>
                   <p className="text-xs text-emerald-100 mt-0.5">
                     Patient: <span className="font-semibold text-white">{selectedPatient.name}</span>
+                    {selectedPatient.phone_number && <span> • {selectedPatient.phone_number}</span>}
                   </p>
                 </div>
                 <button
@@ -1140,7 +1277,7 @@ const ViewPatients = () => {
               </div>
 
               {/* Form */}
-              <form onSubmit={handleRecordInstallment} className="p-5 space-y-4">
+              <form onSubmit={handleRecordInstallment} className="p-5 space-y-4 overflow-y-auto flex-1">
                 {/* Select Bill if multiple pending bills */}
                 {(() => {
                   const pendingBills = (selectedPatient.prescriptions || [])
@@ -1190,17 +1327,187 @@ const ViewPatients = () => {
                   const currentBal = typeof selectedBillForPayment.balance_amount === 'number'
                     ? selectedBillForPayment.balance_amount
                     : Math.max(0, (selectedBillForPayment.total_amount || 0) - (selectedBillForPayment.paid_amount || 0));
+                  const billDate = selectedBillForPayment.created_at ? formatDate(selectedBillForPayment.created_at) : '';
 
                   return (
-                    <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3.5 flex justify-between items-center text-sm">
+                    <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3.5 flex justify-between items-center text-xs sm:text-sm">
                       <div>
                         <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-800 block">Pending Balance</span>
-                        <span className="text-xl font-black text-emerald-900">₹{currentBal.toFixed(2)}</span>
+                        <span className="text-xl font-black text-emerald-900">₹{currentBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-emerald-700 font-medium">
+                          <span>Total: ₹{Number(selectedBillForPayment.total_amount || 0).toLocaleString('en-IN')}</span>
+                          <span>• Paid: ₹{Number(selectedBillForPayment.paid_amount || 0).toLocaleString('en-IN')}</span>
+                        </div>
                       </div>
-                      {selectedBillForPayment.bill_number && (
-                        <span className="text-xs bg-white text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-md font-semibold">
-                          Invoice #{selectedBillForPayment.bill_number}
+                      <div className="text-right">
+                        {selectedBillForPayment.bill_number && (
+                          <span className="text-xs bg-white text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-md font-semibold inline-block">
+                            Invoice #{selectedBillForPayment.bill_number}
+                          </span>
+                        )}
+                        {billDate && (
+                          <span className="block text-[11px] text-gray-500 mt-1">
+                            Date: {billDate}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Treatment Items Selection with Dates & Checkboxes */}
+                {(() => {
+                  const items: any[] = Array.isArray(selectedBillForPayment.items) ? selectedBillForPayment.items : [];
+                  if (items.length === 0) return null;
+
+                  const pendingItems = items.filter((it: any) => !it.is_paid);
+                  const paidItems = items.filter((it: any) => it.is_paid);
+                  const allPendingSelected = pendingItems.length > 0 && pendingItems.every((it: any, idx: number) => {
+                    const id = it.id !== undefined && it.id !== null ? it.id : `item-${idx}`;
+                    return selectedInstallmentItemIds.has(id);
+                  });
+
+                  return (
+                    <div className="space-y-2.5 pt-1">
+                      {/* Master "Pay All Pending" Toggle */}
+                      {pendingItems.length > 0 && (
+                        <div className="flex items-center justify-between p-2.5 bg-emerald-50/60 border border-emerald-200 rounded-xl">
+                          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={allPendingSelected}
+                              onChange={(e) => toggleSelectAllPendingInstallmentItems(e.target.checked)}
+                              className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                            />
+                            <div>
+                              <span className="text-xs sm:text-sm font-bold text-emerald-950 block">
+                                Pay All Pending Treatments
+                              </span>
+                              <span className="text-[11px] text-emerald-700">
+                                Clear all {pendingItems.length} pending items
+                              </span>
+                            </div>
+                          </label>
+                          <span className="text-xs sm:text-sm font-bold text-emerald-900">
+                            ₹{pendingItems.reduce((s, it) => s + (Number(it.total) || (Number(it.quantity || 1) * Number(it.unit_price || 0))), 0).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Pending Treatments Section */}
+                      <div className="space-y-1.5">
+                        <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block">
+                          Pending Treatments ({pendingItems.length}):
                         </span>
+                        <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                          {pendingItems.map((item: any, idx: number) => {
+                            const itemId = item.id !== undefined && item.id !== null ? item.id : `item-${idx}`;
+                            const isChecked = selectedInstallmentItemIds.has(itemId);
+                            const desc = (item.description || '').toLowerCase();
+                            const icon = item.item_type === 'consultation' || desc.includes('consultation') ? '🩺' :
+                                         item.item_type === 'xray' || desc.includes('iopar') || desc.includes('x-ray') ? '🩻' :
+                                         item.item_type === 'medicine' ? '💊' : '🦷';
+                            const itemDateStr = item.date ? formatDate(item.date) : (selectedBillForPayment.created_at ? formatDate(selectedBillForPayment.created_at) : '');
+                            const itemTotal = Number(item.total) || (Number(item.quantity || 1) * Number(item.unit_price || 0));
+
+                            return (
+                              <label
+                                key={itemId}
+                                className={`flex items-start justify-between p-2.5 rounded-xl border transition cursor-pointer select-none ${
+                                  isChecked
+                                    ? 'bg-emerald-50/70 border-emerald-300 shadow-2xs'
+                                    : 'bg-white border-gray-200 hover:bg-gray-50'
+                                }`}
+                              >
+                                <div className="flex items-start gap-2.5 min-w-0 pr-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => toggleInstallmentItem(itemId)}
+                                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
+                                  />
+                                  <div className="truncate">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className={`text-xs sm:text-sm font-semibold ${isChecked ? 'text-emerald-950 font-bold' : 'text-gray-800'}`}>
+                                        {icon} {item.description}
+                                      </span>
+                                      <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200 px-1.5 py-0.2 rounded">
+                                        Pending
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-500">
+                                      {itemDateStr && (
+                                        <span className="flex items-center gap-1 text-gray-700 font-medium">
+                                          📅 {itemDateStr}
+                                        </span>
+                                      )}
+                                      {item.quantity && item.quantity > 1 && (
+                                        <span>• Qty: {item.quantity}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <span className="font-bold text-xs sm:text-sm text-gray-900 shrink-0">
+                                  ₹{itemTotal.toLocaleString('en-IN')}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Already Paid Treatments Section */}
+                      {paidItems.length > 0 && (
+                        <div className="pt-2 border-t border-gray-200">
+                          <button
+                            type="button"
+                            onClick={() => setShowPaidInstallmentItems(!showPaidInstallmentItems)}
+                            className="w-full flex items-center justify-between text-xs text-gray-600 font-semibold py-1 hover:text-gray-900 transition"
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <span className="text-emerald-700">✓</span> Already Paid Treatments ({paidItems.length})
+                            </span>
+                            <span className="text-[11px] text-gray-500">
+                              {showPaidInstallmentItems ? '▲ Hide' : '▼ Show'}
+                            </span>
+                          </button>
+                          {showPaidInstallmentItems && (
+                            <div className="mt-1.5 space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                              {paidItems.map((item: any, idx: number) => {
+                                const itemId = item.id !== undefined && item.id !== null ? item.id : `paid-${idx}`;
+                                const desc = (item.description || '').toLowerCase();
+                                const icon = item.item_type === 'consultation' || desc.includes('consultation') ? '🩺' :
+                                             item.item_type === 'xray' || desc.includes('iopar') || desc.includes('x-ray') ? '🩻' :
+                                             item.item_type === 'medicine' ? '💊' : '🦷';
+                                const itemDateStr = item.date ? formatDate(item.date) : (selectedBillForPayment.created_at ? formatDate(selectedBillForPayment.created_at) : '');
+                                const itemTotal = Number(item.total) || (Number(item.quantity || 1) * Number(item.unit_price || 0));
+
+                                return (
+                                  <div
+                                    key={itemId}
+                                    className="flex items-center justify-between p-2 rounded-lg bg-gray-50/80 border border-gray-200 text-xs text-gray-600"
+                                  >
+                                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                                      <span className="text-emerald-600 font-bold">✓</span>
+                                      <div className="truncate">
+                                        <span className="font-medium text-gray-700 truncate block">
+                                          {icon} {item.description}
+                                        </span>
+                                        {itemDateStr && (
+                                          <span className="text-[10px] text-gray-500 font-mono">📅 {itemDateStr}</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                      <span className="font-semibold text-gray-800">₹{itemTotal.toLocaleString('en-IN')}</span>
+                                      <span className="block text-[9px] font-bold text-emerald-700 uppercase">Paid ✓</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   );
@@ -1214,7 +1521,10 @@ const ViewPatients = () => {
 
                   return (
                     <div>
-                      <label className="text-xs font-semibold text-gray-700 block mb-1">Installment Amount (₹) *</label>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="text-xs font-semibold text-gray-700 block">Amount Customer is Paying (₹) *</label>
+                        <span className="text-[11px] text-gray-500">Auto-filled from selected treatments</span>
+                      </div>
                       <div className="relative">
                         <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 font-bold text-base">₹</span>
                         <input
@@ -1237,7 +1547,7 @@ const ViewPatients = () => {
                           onClick={() => setInstallmentAmount(currentBal)}
                           className="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-md text-xs font-semibold transition"
                         >
-                          Full (₹{currentBal.toFixed(2)})
+                          Full Balance (₹{currentBal.toFixed(2)})
                         </button>
                         {currentBal > 500 && (
                           <button
@@ -1255,15 +1565,6 @@ const ViewPatients = () => {
                             className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-xs font-medium transition"
                           >
                             ₹1,000
-                          </button>
-                        )}
-                        {currentBal >= 500 && (
-                          <button
-                            type="button"
-                            onClick={() => setInstallmentAmount(500)}
-                            className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-xs font-medium transition"
-                          >
-                            ₹500
                           </button>
                         )}
                       </div>
@@ -1305,7 +1606,7 @@ const ViewPatients = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">Notes / Ref (Optional)</label>
+                    <label className="text-xs font-semibold text-gray-700 block mb-1">Notes / Transaction Reference</label>
                     <input
                       type="text"
                       value={installmentNotes}
@@ -1315,6 +1616,14 @@ const ViewPatients = () => {
                     />
                   </div>
                 </div>
+
+                {/* Allocation Note Preview */}
+                {installmentNotes && (
+                  <div className="p-2.5 bg-emerald-50/70 rounded-lg border border-emerald-200 text-xs text-emerald-950">
+                    <span className="font-semibold block mb-0.5 text-emerald-900">Payment Allocation:</span>
+                    <p className="text-gray-700 leading-relaxed font-mono text-[11px]">{installmentNotes}</p>
+                  </div>
+                )}
 
                 {/* Remaining Balance Preview */}
                 {(() => {
@@ -1347,7 +1656,7 @@ const ViewPatients = () => {
                   <button
                     type="submit"
                     disabled={submittingInstallment || !installmentAmount || Number(installmentAmount) <= 0}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition flex items-center gap-1.5"
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition flex items-center gap-1.5"
                   >
                     {submittingInstallment ? (
                       <>

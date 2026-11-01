@@ -17,6 +17,7 @@ interface PaymentTransaction {
   amount: number;
   payment_date: string;
   payment_method?: string;
+  notes?: string;
 }
 
 interface PrintableBillProps {
@@ -267,6 +268,7 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
                       return `${dd}-${mm}-${yy}`;
                     })()}
                     {txn.payment_method ? ` (${txn.payment_method})` : ''}
+                    {txn.notes ? ` • ${txn.notes}` : ''}
                   </span>
                   <span className="font-medium text-gray-800">{formatCurrency(txn.amount)}</span>
                 </div>

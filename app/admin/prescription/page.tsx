@@ -10,6 +10,7 @@ import { ToothData as TeethChartToothData } from '@/components/TeethChart';
 import DentalArchOdontogram from '@/components/DentalArchOdontogram';
 import { getCurrentUser } from '@/services/adminuser';
 import { createBill, Bill, getBillByPrescriptionId, updateBill } from '@/services/bills';
+import { paymentTransactionService } from '@/services/payment-transactions';
 import { deductInventoryStock } from '@/services/inventory';
 import { getEnabledConsumablesForDeduction } from '@/services/consumables';
 import { deductStockForTreatments } from '@/services/treatmentLinks';
@@ -243,6 +244,10 @@ const PrescriptionPage = () => {
     paymentMethod: 'Cash',
     discountPercent: 0,
   });
+  const [selectedBillItemIds, setSelectedBillItemIds] = useState<Set<string | number>>(new Set());
+  const [isPayAllSelected, setIsPayAllSelected] = useState<boolean>(true);
+  const [billPaymentNotes, setBillPaymentNotes] = useState<string>('');
+  const [submittingBill, setSubmittingBill] = useState<boolean>(false);
 
   // Doctor / signature selector
   const [availableDoctors, setAvailableDoctors] = useState<Doctor[]>([]);
@@ -1194,6 +1199,60 @@ const PrescriptionPage = () => {
     window.open(`/print-prescription?prescriptionId=${prescriptionId}&signature=${encodeURIComponent(sigFile)}&doctorName=${encodeURIComponent(docName)}`, '_blank');
   };
 
+  // Toggle select all items in bill payment modal
+  const toggleSelectAllBillItems = (checked: boolean) => {
+    if (!currentBill || !Array.isArray(currentBill.items)) return;
+    setIsPayAllSelected(checked);
+    if (checked) {
+      const allIds = new Set<string | number>(currentBill.items.map((i: any) => i.id));
+      setSelectedBillItemIds(allIds);
+      const totalCost = currentBill.items.reduce((s: number, i: any) => s + (Number(i.total) || 0), 0);
+      const discAmt = Math.round((totalCost * paymentDetails.discountPercent) / 100);
+      const payable = Math.round(totalCost - discAmt);
+      setPaymentDetails((prev) => ({ ...prev, amountPaid: payable }));
+      setBillPaymentNotes(`Paid for: ${currentBill.items.map((i: any) => i.description).join(', ')}`);
+    } else {
+      setSelectedBillItemIds(new Set());
+      setPaymentDetails((prev) => ({ ...prev, amountPaid: 0 }));
+      setBillPaymentNotes('');
+    }
+  };
+
+  // Toggle individual item in bill payment modal
+  const toggleBillItemSelection = (itemId: string | number) => {
+    if (!currentBill || !Array.isArray(currentBill.items)) return;
+    const next = new Set(selectedBillItemIds);
+    if (next.has(itemId)) {
+      next.delete(itemId);
+    } else {
+      next.add(itemId);
+    }
+    setSelectedBillItemIds(next);
+
+    const isAll = currentBill.items.length > 0 && currentBill.items.every((i: any) => next.has(i.id));
+    setIsPayAllSelected(isAll);
+
+    // Sum of selected items
+    const selectedCost = currentBill.items
+      .filter((i: any) => next.has(i.id))
+      .reduce((s: number, i: any) => s + (Number(i.total) || 0), 0);
+    const discAmt = Math.round((selectedCost * paymentDetails.discountPercent) / 100);
+    const payable = Math.round(selectedCost - discAmt);
+    setPaymentDetails((prev) => ({ ...prev, amountPaid: payable }));
+
+    const paidNames = currentBill.items.filter((i: any) => next.has(i.id)).map((i: any) => i.description);
+    const pendingNames = currentBill.items.filter((i: any) => !next.has(i.id)).map((i: any) => i.description);
+
+    let notes = '';
+    if (paidNames.length > 0) {
+      notes += `Paid for: ${paidNames.join(', ')}`;
+    }
+    if (pendingNames.length > 0) {
+      notes += (notes ? ' | ' : '') + `Pending: ${pendingNames.join(', ')}`;
+    }
+    setBillPaymentNotes(notes);
+  };
+
   // Function to generate and print bill with payment details
   const toggleBillForm = async () => {
     if (!prescriptionId) {
@@ -1209,50 +1268,78 @@ const PrescriptionPage = () => {
     try {
       // Fetch the bill by prescription ID
       const billData = await getBillByPrescriptionId(prescriptionId);
-
-      console.log('Fetched bill data:', billData);
-
-      // getBillByPrescriptionId returns an array, get the first bill
       let bill = Array.isArray(billData) ? billData[0] : billData;
 
-      // If no bill exists yet, create one now from whatever data we have
+      const consultationFee = applyConsultationCharge
+        ? Math.round(consultationCharge * (1 - consultationDiscount / 100) * 100) / 100
+        : 0;
+
+      // If no bill exists yet, create one now from current prescription data
       if (!bill || !bill.id) {
-        if (!patientReferenceNumber) {
-          alert('Patient reference number is missing. Please save the prescription again.');
-          return;
-        }
         try {
-          const planItems = formData.treatmentPlan
-            .filter(tp => tp.cost > 0)
-            .map((tp, i) => ({
-              id: i + 1,
-              description: tp.name + (tp.notes ? ` (${tp.notes})` : ''),
-              quantity: 1,
-              unit_price: tp.cost,
-              total: tp.cost,
-              item_type: 'procedure' as const,
-            }));
-          const doneItems = treatmentItems.map((item, i) => ({
-            id: planItems.length + i + 1,
-            description: item.description,
-            quantity: item.quantity,
-            unit_price: item.unitPrice,
-            total: item.total,
-            item_type: 'procedure' as const,
-            date: item.date,
-          }));
-          const allItems = [...planItems, ...doneItems];
-          if (allItems.length === 0) {
-            alert('Please add at least one item in Treatment Plan or Treatment Done before generating a bill.');
-            return;
-          }
-          const total = allItems.reduce((s, i) => s + i.total, 0);
-          // Find patient id from a fresh patient lookup
           const pt = await getPatientByReference(patientReferenceNumber);
           if (!pt?.id) {
             alert('Patient not found. Please save the prescription first.');
             return;
           }
+
+          const doneItems = treatmentItems.map((item, i) => {
+            const isXray = (item.description || '').toLowerCase().includes('iopar') ||
+              (item.description || '').toLowerCase().includes('x-ray') ||
+              (item.description || '').toLowerCase().includes('xray');
+            return {
+              id: `proc-${i + 1}`,
+              description: item.description,
+              quantity: item.quantity || 1,
+              unit_price: item.unitPrice,
+              total: item.total || ((item.quantity || 1) * item.unitPrice),
+              item_type: isXray ? ('xray' as const) : ('procedure' as const),
+              date: item.date,
+            };
+          });
+
+          const medItems = medicines
+            .filter((m) => m.name && (m.quantity || 0) > 0)
+            .map((med, i) => {
+              const medDetail = medicineOptions.find((mo) => mo.name === med.name);
+              const price = medDetail?.price || 0;
+              const qty = med.quantity || 1;
+              return {
+                id: `med-${i + 1}`,
+                description: `${med.name} (${med.dosage})`,
+                quantity: qty,
+                unit_price: price,
+                total: price * qty,
+                item_type: 'medicine' as const,
+              };
+            });
+
+          const allItems = [
+            ...(consultationFee > 0
+              ? [
+                  {
+                    id: 'consultation',
+                    description:
+                      consultationDiscount > 0
+                        ? `Consultation Fee (${consultationDiscount}% discount)`
+                        : 'Consultation Fee',
+                    quantity: 1,
+                    unit_price: consultationFee,
+                    total: consultationFee,
+                    item_type: 'consultation' as const,
+                  },
+                ]
+              : []),
+            ...doneItems,
+            ...medItems,
+          ];
+
+          if (allItems.length === 0) {
+            alert('Please add Consultation, Treatment Done, or Medicines before generating a bill.');
+            return;
+          }
+
+          const total = allItems.reduce((s, i) => s + i.total, 0);
           const created = await createBill({
             prescription_id: prescriptionId!,
             patient_id: pt.id,
@@ -1270,17 +1357,63 @@ const PrescriptionPage = () => {
         }
       }
 
-      console.log('Using bill:', bill);
+      // Ensure bill items have stable IDs
+      let billItems = (bill && Array.isArray(bill.items) && bill.items.length > 0)
+        ? [...bill.items]
+        : [];
 
-      // Set current bill and payment details
-      setCurrentBill(bill);
+      if (billItems.length === 0) {
+        if (consultationFee > 0) {
+          billItems.push({
+            id: 'consultation',
+            description: consultationDiscount > 0
+              ? `Consultation Fee (${consultationDiscount}% discount)`
+              : 'Consultation Fee',
+            quantity: 1,
+            unit_price: consultationFee,
+            total: consultationFee,
+            item_type: 'consultation' as const,
+          });
+        }
+        treatmentItems.forEach((item, index) => {
+          const isXray = (item.description || '').toLowerCase().includes('iopar') ||
+            (item.description || '').toLowerCase().includes('x-ray') ||
+            (item.description || '').toLowerCase().includes('xray');
+          billItems.push({
+            id: item.id || `proc-${index + 1}`,
+            description: item.description,
+            quantity: item.quantity || 1,
+            unit_price: item.unitPrice,
+            total: item.total || ((item.quantity || 1) * item.unitPrice),
+            item_type: isXray ? ('xray' as const) : ('procedure' as const),
+            date: item.date,
+          });
+        });
+      }
+
+      billItems = billItems.map((item: any, idx: number) => ({
+        ...item,
+        id: item.id !== undefined && item.id !== null ? item.id : `item-${idx + 1}`,
+      }));
+      bill.items = billItems;
+
+      // Pre-select all items by default for "Pay All"
+      const allIds = new Set<string | number>(billItems.map((i: any) => i.id));
+      setSelectedBillItemIds(allIds);
+      setIsPayAllSelected(true);
+
+      const totalCost = billItems.reduce((s: number, i: any) => s + (Number(i.total) || 0), 0);
+      const discAmt = Math.round((totalCost * (bill.discount_percent || 0)) / 100);
+      const payable = Math.round(totalCost - discAmt);
+
       setPaymentDetails({
-        amountPaid: bill.paid_amount || 0,
+        amountPaid: payable,
         paymentMethod: bill.payment_method || 'Cash',
         discountPercent: bill.discount_percent || 0,
       });
 
-      // Show payment modal
+      setBillPaymentNotes(`Paid for: ${billItems.map((i: any) => i.description).join(', ')}`);
+      setCurrentBill(bill);
       setShowPaymentModal(true);
     } catch (error) {
       console.error('Error generating bill:', error);
@@ -1288,25 +1421,83 @@ const PrescriptionPage = () => {
     }
   };
 
-  // Function to update payment and print bill
+  // Function to update payment and print bill with itemized transaction
   const handlePrintBill = async () => {
-    if (!currentBill) return;
+    if (!currentBill || submittingBill) return;
 
     try {
-      const discountAmt = Math.round((Number(currentBill.total_amount) * paymentDetails.discountPercent) / 100);
-      const newTotal = Math.round(Number(currentBill.total_amount) - discountAmt);
+      setSubmittingBill(true);
+      const origTotal = Number(currentBill.total_amount);
+      const discAmt = Math.round((origTotal * paymentDetails.discountPercent) / 100);
+      const newTotal = Math.round(origTotal - discAmt);
       const safePaid = Math.round(Math.min(Math.max(paymentDetails.amountPaid, 0), newTotal));
+      const newBalance = Math.max(newTotal - safePaid, 0);
 
-      await updateBill(currentBill.id, {
-        paid_amount: safePaid,
-        payment_method: paymentDetails.paymentMethod,
-        discount_percent: paymentDetails.discountPercent,
-        discount_amount: discountAmt,
-        total_amount: newTotal,
-        balance_amount: Math.max(newTotal - safePaid, 0),
-      });
+      // Mark items as paid / pending
+      const updatedItems = (currentBill.items || []).map((item: any) => ({
+        ...item,
+        is_paid: selectedBillItemIds.has(item.id),
+      }));
 
-      // Close modal
+      const paidItemNames = (currentBill.items || [])
+        .filter((i: any) => selectedBillItemIds.has(i.id))
+        .map((i: any) => i.description);
+
+      const pendingItemNames = (currentBill.items || [])
+        .filter((i: any) => !selectedBillItemIds.has(i.id))
+        .map((i: any) => i.description);
+
+      let txNotes = billPaymentNotes.trim();
+      if (!txNotes) {
+        if (paidItemNames.length > 0 && pendingItemNames.length > 0) {
+          txNotes = `Paid for: ${paidItemNames.join(', ')} | Pending: ${pendingItemNames.join(', ')}`;
+        } else if (paidItemNames.length > 0) {
+          txNotes = `Paid for: ${paidItemNames.join(', ')}`;
+        } else {
+          txNotes = 'Bill Payment';
+        }
+      }
+
+      // 1. Update bill details (items, notes, discounts, total_amount)
+      // When safePaid === 0, record zero paid and PENDING status.
+      // When safePaid > 0, payment_transactions.create will atomically calculate and set paid_amount, balance_amount, and payment_status.
+      if (safePaid === 0) {
+        await updateBill(currentBill.id, {
+          total_amount: newTotal,
+          items: updatedItems,
+          notes: txNotes,
+          discount_percent: paymentDetails.discountPercent,
+          discount_amount: discAmt,
+          payment_method: paymentDetails.paymentMethod,
+          paid_amount: 0,
+          balance_amount: newTotal,
+          payment_status: 'PENDING',
+        });
+      } else {
+        await updateBill(currentBill.id, {
+          total_amount: newTotal,
+          items: updatedItems,
+          notes: txNotes,
+          discount_percent: paymentDetails.discountPercent,
+          discount_amount: discAmt,
+          payment_method: paymentDetails.paymentMethod,
+        });
+
+        // 2. Record payment in payment_transactions (which atomically updates bill paid_amount, balance_amount, status)
+        try {
+          await paymentTransactionService.create({
+            bill_id: currentBill.id,
+            patient_id: currentBill.patient_id,
+            amount: safePaid,
+            payment_method: paymentDetails.paymentMethod,
+            payment_date: new Date().toISOString().split('T')[0],
+            notes: txNotes,
+          });
+        } catch (txErr) {
+          console.error('Error creating payment transaction for bill:', txErr);
+        }
+      }
+
       setShowPaymentModal(false);
 
       // Build signature params from selected doctor
@@ -1314,11 +1505,13 @@ const PrescriptionPage = () => {
       const docName = docObj?.name || selectedDoctorName || 'Dr. Kautilya Swaroop';
       const sigFile = docObj?.signature_url || (docName.toLowerCase().includes('anjali') ? 'sign1.png' : 'sign.png');
 
-      // Open new printable bill page (fresh fetch ensures updated balance)
+      // Open new printable bill page
       window.open(`/print-bill?billId=${currentBill.id}&signature=${encodeURIComponent(sigFile)}&doctorName=${encodeURIComponent(docName)}`, '_blank');
     } catch (error) {
       console.error('Error updating bill:', error);
       alert('Failed to update bill payment details.');
+    } finally {
+      setSubmittingBill(false);
     }
   };
 
@@ -3141,101 +3334,295 @@ const PrescriptionPage = () => {
             </div>
           )}
 
-          {/* Payment Details Modal */}
+          {/* Payment Details Modal with Itemized Selection */}
           {showPaymentModal && currentBill && (
-            <div className="fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-                <h3 className="text-xl font-bold mb-4 text-gray-800">Payment Details</h3>
-
-                {(() => {
-                  const origTotal = Number(currentBill.total_amount);
-                  const discAmt = Math.round((origTotal * paymentDetails.discountPercent) / 100);
-                  const payable = Math.round(origTotal - discAmt);
-                  const balance = Math.max(payable - Math.round(paymentDetails.amountPaid), 0);
-                  return (
-                    <div className="mb-4">
-                      <p className="text-sm text-gray-600 mb-1">Total Amount: <span className="font-bold text-gray-900">₹{origTotal.toLocaleString('en-IN')}</span></p>
-                      {paymentDetails.discountPercent > 0 && (
-                        <p className="text-sm text-gray-600 mb-1">Discount ({paymentDetails.discountPercent}%): <span className="font-bold text-green-600">- ₹{discAmt.toLocaleString('en-IN')}</span></p>
-                      )}
-                      <p className="text-sm text-gray-600 mb-1">Payable: <span className="font-bold text-gray-900">₹{payable.toLocaleString('en-IN')}</span></p>
-                      <p className="text-sm text-gray-600 mb-4">Balance Due: <span className="font-bold text-red-600">₹{balance.toLocaleString('en-IN')}</span></p>
-                    </div>
-                  );
-                })()}
-
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Discount (%)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="1"
-                    value={paymentDetails.discountPercent}
-                    onChange={(e) => setPaymentDetails({ ...paymentDetails, discountPercent: Math.min(Math.max(parseFloat(e.target.value) || 0, 0), 100) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="0"
-                  />
-                </div>
-
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Amount Paid (₹)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max={Math.round(Number(currentBill.total_amount) - Math.round((Number(currentBill.total_amount) * paymentDetails.discountPercent) / 100))}
-                    step="1"
-                    value={paymentDetails.amountPaid}
-                    onChange={(e) => {
-                      const payable = Math.round(Number(currentBill.total_amount) - Math.round((Number(currentBill.total_amount) * paymentDetails.discountPercent) / 100));
-                      const val = Math.round(Math.min(Math.max(parseFloat(e.target.value) || 0, 0), payable));
-                      setPaymentDetails({ ...paymentDetails, amountPaid: val });
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
-                  <select
-                    value={paymentDetails.paymentMethod}
-                    onChange={(e) => setPaymentDetails({ ...paymentDetails, paymentMethod: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            <div className="fixed inset-0 backdrop-blur-sm bg-black/40 flex items-center justify-center z-50 p-4 overflow-y-auto">
+              <div className="bg-white rounded-xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-gray-200 animate-in fade-in zoom-in-95 duration-150">
+                {/* Header */}
+                <div className="px-5 py-3.5 bg-gradient-to-r from-blue-700 to-indigo-700 text-white flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold flex items-center gap-2">
+                      <span>Generate Bill & Payment</span>
+                    </h3>
+                    <p className="text-xs text-blue-100 mt-0.5">
+                      Select which treatments/services the customer is paying for
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowPaymentModal(false)}
+                    className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition"
                   >
-                    <option value="Cash">Cash</option>
-                    <option value="Card">Card</option>
-                    <option value="UPI">UPI</option>
-                    <option value="Net Banking">Net Banking</option>
-                    <option value="Cheque">Cheque</option>
-                  </select>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
 
-                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm font-medium text-gray-700">
-                    Payment Status:
-                    {(() => {
-                      const payable = Math.round(Number(currentBill.total_amount) - Math.round((Number(currentBill.total_amount) * paymentDetails.discountPercent) / 100));
-                      const status = paymentDetails.amountPaid === 0 ? 'PENDING' : paymentDetails.amountPaid >= payable ? 'PAID' : 'PARTIAL';
-                      const cls = status === 'PENDING' ? 'bg-red-100 text-red-700' : status === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700';
-                      return <span className={`ml-2 px-2 py-1 rounded text-xs font-bold ${cls}`}>{status}</span>;
-                    })()}
-                  </p>
+                {/* Modal Body */}
+                <div className="p-5 overflow-y-auto space-y-4">
+                  {/* "Pay All" Master Checkbox */}
+                  <div className="flex items-center justify-between p-3 bg-blue-50/80 border border-blue-200 rounded-xl">
+                    <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={isPayAllSelected}
+                        onChange={(e) => toggleSelectAllBillItems(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <div>
+                        <span className="text-sm font-bold text-blue-900 block">Pay All (Full Settlement)</span>
+                        <span className="text-[11px] text-blue-700">Select all treatments, xray and consultation</span>
+                      </div>
+                    </label>
+                    <span className="text-sm font-bold text-blue-900">
+                      ₹{Number(currentBill.total_amount).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+
+                  {/* Itemized Checkbox Lists */}
+                  {(() => {
+                    const items: any[] = Array.isArray(currentBill.items) ? currentBill.items : [];
+                    const consultationItems = items.filter(
+                      (i) => i.item_type === 'consultation' || (i.description || '').toLowerCase().includes('consultation')
+                    );
+                    const xrayItems = items.filter(
+                      (i) =>
+                        !consultationItems.includes(i) &&
+                        (i.item_type === 'xray' ||
+                          (i.description || '').toLowerCase().includes('iopar') ||
+                          (i.description || '').toLowerCase().includes('x-ray') ||
+                          (i.description || '').toLowerCase().includes('xray') ||
+                          (i.description || '').toLowerCase().includes('opg') ||
+                          (i.description || '').toLowerCase().includes('cbct'))
+                    );
+                    const medicineItems = items.filter((i) => i.item_type === 'medicine');
+                    const procedureItems = items.filter(
+                      (i) =>
+                        !consultationItems.includes(i) &&
+                        !xrayItems.includes(i) &&
+                        !medicineItems.includes(i)
+                    );
+
+                    const renderItemRow = (item: any) => {
+                      const isSelected = selectedBillItemIds.has(item.id);
+                      const itemDate = item.date ? new Date(item.date).toLocaleDateString('en-GB') : '';
+                      return (
+                        <label
+                          key={item.id}
+                          className={`flex items-start justify-between p-2.5 rounded-lg border transition cursor-pointer select-none ${
+                            isSelected
+                              ? 'bg-blue-50/50 border-blue-300 shadow-2xs'
+                              : 'bg-white border-gray-200 hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-start gap-2.5 min-w-0 pr-2">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleBillItemSelection(item.id)}
+                              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                            />
+                            <div className="truncate">
+                              <span className={`text-xs sm:text-sm font-medium ${isSelected ? 'text-blue-950 font-semibold' : 'text-gray-800'}`}>
+                                {item.description}
+                              </span>
+                              <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-500">
+                                {itemDate && <span className="font-mono">📅 {itemDate}</span>}
+                                {item.quantity && item.quantity > 1 && (
+                                  <span>({item.quantity} × ₹{item.unit_price})</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <span className={`text-xs sm:text-sm font-bold shrink-0 ${isSelected ? 'text-blue-800' : 'text-gray-700'}`}>
+                            ₹{Number(item.total).toLocaleString('en-IN')}
+                          </span>
+                        </label>
+                      );
+                    };
+
+                    return (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-xs font-bold text-gray-500 uppercase tracking-wider">
+                          <span>Treatments & Services ({items.length}):</span>
+                          <span className="text-blue-700 font-semibold lowercase">
+                            {selectedBillItemIds.size} of {items.length} selected
+                          </span>
+                        </div>
+
+                        {/* Consultation */}
+                        {consultationItems.length > 0 && (
+                          <div className="space-y-1.5">
+                            <span className="text-[11px] font-bold text-purple-700 uppercase tracking-wider flex items-center gap-1">
+                              🩺 Consultation Fee
+                            </span>
+                            {consultationItems.map(renderItemRow)}
+                          </div>
+                        )}
+
+                        {/* X-Ray / Investigations */}
+                        {xrayItems.length > 0 && (
+                          <div className="space-y-1.5">
+                            <span className="text-[11px] font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-1">
+                              🩻 X-Ray / Investigations
+                            </span>
+                            {xrayItems.map(renderItemRow)}
+                          </div>
+                        )}
+
+                        {/* Treatment Done List */}
+                        {procedureItems.length > 0 && (
+                          <div className="space-y-1.5">
+                            <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1">
+                              🦷 Treatment Done List ({procedureItems.length})
+                            </span>
+                            {procedureItems.map(renderItemRow)}
+                          </div>
+                        )}
+
+                        {/* Medicines */}
+                        {medicineItems.length > 0 && (
+                          <div className="space-y-1.5">
+                            <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1">
+                              💊 Medicines ({medicineItems.length})
+                            </span>
+                            {medicineItems.map(renderItemRow)}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Payment Breakdown Card */}
+                  {(() => {
+                    const origTotal = Number(currentBill.total_amount);
+                    const discAmt = Math.round((origTotal * paymentDetails.discountPercent) / 100);
+                    const payable = Math.round(origTotal - discAmt);
+                    const safePaid = Math.round(paymentDetails.amountPaid || 0);
+                    const balance = Math.max(payable - safePaid, 0);
+
+                    return (
+                      <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-200 space-y-2.5 text-xs sm:text-sm">
+                        <div className="flex justify-between items-center text-gray-700">
+                          <span>Total Bill:</span>
+                          <span className="font-semibold text-gray-900">₹{origTotal.toLocaleString('en-IN')}</span>
+                        </div>
+
+                        {/* Discount (%) */}
+                        <div className="flex items-center justify-between text-gray-700">
+                          <span>Discount (%):</span>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={paymentDetails.discountPercent}
+                              onChange={(e) => {
+                                const disc = Math.min(Math.max(parseFloat(e.target.value) || 0, 0), 100);
+                                const selectedSum = (currentBill.items || [])
+                                  .filter((i: any) => selectedBillItemIds.has(i.id))
+                                  .reduce((s: number, i: any) => s + (Number(i.total) || 0), 0);
+                                const newDiscAmt = Math.round((selectedSum * disc) / 100);
+                                setPaymentDetails((prev) => ({
+                                  ...prev,
+                                  discountPercent: disc,
+                                  amountPaid: Math.round(selectedSum - newDiscAmt),
+                                }));
+                              }}
+                              className="w-16 px-2 py-1 text-right text-xs border border-gray-300 rounded font-semibold focus:ring-2 focus:ring-blue-500"
+                              placeholder="0"
+                            />
+                            <span>%</span>
+                            {discAmt > 0 && (
+                              <span className="text-emerald-700 text-xs font-semibold ml-1">
+                                (-₹{discAmt.toLocaleString('en-IN')})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Amount Customer is Paying */}
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                          <div>
+                            <span className="font-bold text-gray-900 block">Amount Customer is Paying:</span>
+                            <span className="text-[11px] text-gray-500">Auto-filled from selected treatments</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="font-bold text-emerald-700 text-base">₹</span>
+                            <input
+                              type="number"
+                              min="0"
+                              max={payable}
+                              value={paymentDetails.amountPaid}
+                              onChange={(e) => {
+                                const val = Math.max(0, parseFloat(e.target.value) || 0);
+                                setPaymentDetails((prev) => ({ ...prev, amountPaid: val }));
+                              }}
+                              className="w-28 px-2 py-1.5 text-right font-bold text-sm text-emerald-700 border-2 border-emerald-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Remaining Pending Dues */}
+                        <div className="flex justify-between items-center pt-1 text-xs">
+                          <span className="text-gray-600">Pending Dues After Payment:</span>
+                          <span className={`font-bold ${balance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            ₹{balance.toLocaleString('en-IN')} {balance === 0 ? '(Fully Paid ✓)' : ''}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Payment Method Selector */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Payment Method</label>
+                    <select
+                      value={paymentDetails.paymentMethod}
+                      onChange={(e) => setPaymentDetails({ ...paymentDetails, paymentMethod: e.target.value })}
+                      className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    >
+                      <option value="Cash">Cash</option>
+                      <option value="UPI">UPI / QR (Google Pay / PhonePe / Paytm)</option>
+                      <option value="Card">Debit / Credit Card</option>
+                      <option value="Net Banking">Net Banking</option>
+                      <option value="Cheque">Cheque</option>
+                    </select>
+                  </div>
+
+                  {/* Allocation Notes Preview */}
+                  {billPaymentNotes && (
+                    <div className="p-2.5 bg-blue-50/70 rounded-lg border border-blue-100 text-xs text-blue-900">
+                      <span className="font-semibold block mb-0.5 text-blue-950">Payment Allocation:</span>
+                      <p className="text-gray-700 leading-relaxed">{billPaymentNotes}</p>
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex gap-3">
+                {/* Footer Actions */}
+                <div className="px-5 py-3 bg-gray-50 border-t border-gray-200 flex justify-end gap-2.5">
                   <button
                     type="button"
                     onClick={() => setShowPaymentModal(false)}
-                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 text-xs sm:text-sm font-medium transition"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
+                    disabled={submittingBill}
                     onClick={handlePrintBill}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                    className="px-5 py-2 bg-blue-600 disabled:bg-blue-400 disabled:cursor-not-allowed text-white rounded-lg hover:bg-blue-700 text-xs sm:text-sm font-semibold shadow-sm transition flex items-center gap-1.5"
                   >
-                    Print Bill
+                    {submittingBill ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      <span>Confirm & Print Bill</span>
+                    )}
                   </button>
                 </div>
               </div>

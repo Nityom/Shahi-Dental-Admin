@@ -310,6 +310,7 @@ export const PrintableExtractionDues: React.FC<PrintableExtractionDuesProps> = (
                     <div>
                       <span className="font-semibold text-gray-800">{formatCurrency(tx.amount)}</span>
                       <span className="text-gray-500 ml-1.5">via {tx.payment_method || 'Cash'}</span>
+                      {tx.notes && <span className="text-gray-600 ml-1.5">• {tx.notes}</span>}
                     </div>
                     <div className="text-gray-500">{tx.payment_date}</div>
                   </div>
