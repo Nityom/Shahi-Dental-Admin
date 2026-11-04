@@ -50,7 +50,7 @@ export const list = query({
       );
 
       // Outstanding Advance Balance
-      const advanceBalance = Math.max(0, totalAdvances - totalAdvanceDeductions);
+      const rawAdvanceBalance = Math.max(0, totalAdvances - totalAdvanceDeductions);
 
       // Payments for the queried month
       const monthPayments = memberPayments.filter((p) => p.salary_month === currentMonth);
@@ -69,10 +69,20 @@ export const list = query({
 
       const totalPaidThisMonth = monthPayments.reduce((sum, p) => sum + p.amount_paid, 0);
 
+      // Total advance applicable to debit from this month's salary:
+      // Either already explicitly recorded as deducted, or any outstanding advance balance up to remaining capacity
+      const remainingBeforeAdvance = Math.max(0, member.fixed_salary - salaryPaidThisMonth);
+      const autoAdvanceToDeduct = Math.min(rawAdvanceBalance, remainingBeforeAdvance);
+      const effectiveAdvanceDeduction = Math.max(advanceDeductedThisMonth, autoAdvanceToDeduct);
+
+      // Remaining salary payable this month after deducting salary already paid and advance
       const pendingSalaryThisMonth = Math.max(
         0,
-        member.fixed_salary - salaryPaidThisMonth - advanceDeductedThisMonth
+        member.fixed_salary - salaryPaidThisMonth - effectiveAdvanceDeduction
       );
+
+      // Effective advance balance remaining
+      const advanceBalance = Math.max(0, rawAdvanceBalance - (effectiveAdvanceDeduction - advanceDeductedThisMonth));
 
       return {
         ...member,
@@ -82,7 +92,7 @@ export const list = query({
         total_advances_settled: totalAdvanceDeductions,
         salary_paid_this_month: salaryPaidThisMonth,
         advance_paid_this_month: advancePaidThisMonth,
-        advance_deducted_this_month: advanceDeductedThisMonth,
+        advance_deducted_this_month: effectiveAdvanceDeduction,
         total_paid_this_month: totalPaidThisMonth,
         pending_salary_this_month: pendingSalaryThisMonth,
         payments_count: memberPayments.length,
@@ -246,6 +256,29 @@ export const recordPayment = mutation({
 
     const baseSalary = args.base_salary ?? (staffMember ? staffMember.fixed_salary : 0);
 
+    // Auto-calculate advance deduction if payment_type is Salary and staff has an advance balance
+    let autoAdvanceDeducted = args.advance_deducted;
+    if (staffMember && args.payment_type === "Salary" && (autoAdvanceDeducted === undefined || autoAdvanceDeducted === 0)) {
+      const allPrevPayments = await ctx.db
+        .query("staff_payments")
+        .withIndex("by_staff_name", (q) => q.eq("staff_name", staffMember!.name))
+        .collect();
+
+      const totalAdvances = allPrevPayments
+        .filter((p) => p.payment_type === "Advance")
+        .reduce((sum, p) => sum + p.amount_paid, 0);
+
+      const totalDeductions = allPrevPayments.reduce(
+        (sum, p) => sum + (p.advance_deducted || (p.payment_type === "Deduction" ? p.amount_paid : 0)),
+        0
+      );
+
+      const currentAdvBalance = Math.max(0, totalAdvances - totalDeductions);
+      if (currentAdvBalance > 0) {
+        autoAdvanceDeducted = currentAdvBalance;
+      }
+    }
+
     const paymentId = await ctx.db.insert("staff_payments", {
       staff_id: (staffMember ? staffMember._id : staffId) as any,
       staff_name: args.staff_name.trim(),
@@ -256,7 +289,7 @@ export const recordPayment = mutation({
       payment_type: args.payment_type,
       base_salary: baseSalary,
       amount_paid: Number(args.amount_paid) || 0,
-      advance_deducted: args.advance_deducted ? Number(args.advance_deducted) : undefined,
+      advance_deducted: autoAdvanceDeducted ? Number(autoAdvanceDeducted) : undefined,
       previous_payments_total: args.previous_payments_total ? Number(args.previous_payments_total) : undefined,
       pending_balance: args.pending_balance,
       payment_mode: args.payment_mode,

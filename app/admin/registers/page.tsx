@@ -359,6 +359,7 @@ function RegistersContent() {
   const openPayStaffModal = (staff: StaffMember, type: 'Salary' | 'Advance' = 'Salary') => {
     setIsEditMode(false);
     setEditingId(null);
+    const pendingSalary = staff.pending_salary_this_month !== undefined ? staff.pending_salary_this_month : staff.fixed_salary;
     setStaffPaymentForm({
       staff_id: staff.id || (staff as any)._id,
       staff_name: staff.name,
@@ -368,14 +369,14 @@ function RegistersContent() {
       payment_date: todayStr,
       payment_type: type,
       base_salary: staff.fixed_salary,
-      amount_paid: type === 'Salary' ? (staff.pending_salary_this_month && staff.pending_salary_this_month > 0 ? staff.pending_salary_this_month : staff.fixed_salary) : 0,
-      advance_deducted: 0,
+      amount_paid: type === 'Salary' ? (pendingSalary > 0 ? pendingSalary : 0) : 0,
+      advance_deducted: type === 'Salary' ? (staff.advance_balance || 0) : 0,
       previous_payments_total: 0,
       pending_balance: 0,
       payment_mode: 'Cash',
       transaction_reference: '',
       paid_by: 'Dr. Kautilya Swaroop',
-      notes: '',
+      notes: type === 'Salary' && (staff.advance_balance || 0) > 0 ? `Auto-deducted ₹${staff.advance_balance} advance from salary` : '',
     });
     setIsModalOpen(true);
   };
@@ -686,11 +687,15 @@ function RegistersContent() {
                               hasAdvance ? 'text-amber-700' : 'text-gray-500 font-normal'
                             }`}>
                               ₹{(member.advance_balance || 0).toLocaleString('en-IN')}
-                              {hasAdvance && (
+                              {hasAdvance ? (
                                 <span className="px-1 py-0.5 bg-amber-100 text-amber-800 text-[9px] font-bold rounded">
                                   Due
                                 </span>
-                              )}
+                              ) : (member.advance_deducted_this_month && member.advance_deducted_this_month > 0) ? (
+                                <span className="px-1 py-0.5 bg-emerald-100 text-emerald-800 text-[9px] font-bold rounded">
+                                  Deducted
+                                </span>
+                              ) : null}
                             </div>
                           </div>
 
@@ -703,7 +708,7 @@ function RegistersContent() {
 
                           <div>
                             <span className="text-[10px] uppercase font-semibold text-gray-500">Remaining</span>
-                            <div className="font-medium text-gray-700">
+                            <div className={`font-medium ${(member.pending_salary_this_month || 0) > 0 ? 'text-gray-900 font-bold' : 'text-emerald-700'}`}>
                               ₹{(member.pending_salary_this_month || 0).toLocaleString('en-IN')}
                             </div>
                           </div>
@@ -1306,37 +1311,26 @@ function RegistersContent() {
                     </div>
                   </div>
 
-                  {/* Advance deduction if staff has existing advance */}
+                  {/* Automatic advance debit info */}
                   {(() => {
                     const currentStaff = staffMembers.find(
                       (m) => m.name.toLowerCase() === (staffPaymentForm.staff_name || '').toLowerCase()
                     );
                     if (currentStaff && (currentStaff.advance_balance || 0) > 0 && staffPaymentForm.payment_type === 'Salary') {
                       return (
-                        <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1">
-                          <div className="flex items-center justify-between">
-                            <label className="block font-semibold text-amber-900 text-xs">
-                              Deduct from Advance Balance (Optional)
-                            </label>
-                            <span className="text-[10px] text-amber-700 font-medium">
-                              Current Balance: ₹{(currentStaff.advance_balance || 0).toLocaleString('en-IN')}
-                            </span>
+                        <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl flex items-center justify-between text-xs text-amber-900">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">💼</span>
+                            <div>
+                              <span className="font-bold block">Advance Auto-Debited from Salary</span>
+                              <span className="text-[11px] text-amber-700">
+                                Outstanding advance of ₹{(currentStaff.advance_balance || 0).toLocaleString('en-IN')} is automatically deducted from this salary.
+                              </span>
+                            </div>
                           </div>
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">₹</span>
-                            <input
-                              type="number"
-                              min="0"
-                              max={currentStaff.advance_balance || 0}
-                              value={staffPaymentForm.advance_deducted === 0 ? '' : staffPaymentForm.advance_deducted}
-                              onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, advance_deducted: Number(e.target.value) })}
-                              placeholder="0"
-                              className="w-full pl-7 pr-3 py-1.5 border border-amber-300 rounded-lg text-xs font-semibold text-amber-900 bg-white"
-                            />
-                          </div>
-                          <p className="text-[10px] text-amber-700">
-                            Entering an amount here will automatically reduce the staff member&apos;s advance balance.
-                          </p>
+                          <span className="font-black text-sm text-amber-900 shrink-0">
+                            -₹{(currentStaff.advance_balance || 0).toLocaleString('en-IN')}
+                          </span>
                         </div>
                       );
                     }
