@@ -1040,12 +1040,36 @@ const PrescriptionPage = () => {
             console.log('No existing bill found or error fetching it, proceeding to create.');
           }
 
+          let existingConsultationWasPaid = Boolean(
+            existingBill?.items?.some(
+              (item: any) => item.item_type === 'consultation' && item.is_paid === true
+            )
+          );
+          if (existingBill?.id && !existingConsultationWasPaid) {
+            try {
+              const priorPayments = await paymentTransactionService.getByBillId(existingBill.id);
+              existingConsultationWasPaid = priorPayments.some((payment) =>
+                payment.notes?.toLowerCase().includes('consultation fee')
+              );
+            } catch (paymentLookupError) {
+              console.error('Failed to check prior consultation payments:', paymentLookupError);
+            }
+          }
+          const consultationItems = billItems.filter((item) => item.item_type === 'consultation');
+          const updatedBillItems = billItems.map((item) =>
+            item.item_type === 'consultation'
+              ? { ...item, is_paid: existingConsultationWasPaid }
+              : item
+          );
+
+          let billId: string | undefined;
           if (existingBill && existingBill.id) {
             // Update existing bill with new items and amounts
             await updateBill(existingBill.id, {
               total_amount: totalAmount,
-              items: billItems
+              items: updatedBillItems
             });
+            billId = existingBill.id;
             console.log('Bill updated successfully with consultation fee, treatments, and medicines');
           } else {
             // Create new bill
@@ -1056,15 +1080,37 @@ const PrescriptionPage = () => {
               total_amount: totalAmount,
               paid_amount: 0,
               payment_status: 'PENDING',
-              items: billItems
+              items: updatedBillItems
             };
 
-            await createBill(billData);
+            const createdBill = await createBill(billData);
+            billId = createdBill.id;
             console.log('Bill auto-created successfully with consultation fee, treatments, and medicines');
+          }
+
+          // Consultation is collected when the prescription is completed. The
+          // discounted consultation amount is already represented by its item total.
+          if (billId && consultationItems.length > 0 && !existingConsultationWasPaid) {
+            await paymentTransactionService.create({
+              bill_id: billId,
+              patient_id: patient.id,
+              amount: consultationItems.reduce((sum, item) => sum + item.total, 0),
+              payment_method: 'Cash',
+              payment_date: formData.date,
+              notes: 'Paid for: Consultation Fee',
+              created_by: userEmail || undefined,
+            });
+
+            await updateBill(billId, {
+              items: updatedBillItems.map((item) =>
+                item.item_type === 'consultation' ? { ...item, is_paid: true } : item
+              ),
+            });
+            console.log('Consultation fee marked as paid successfully');
           }
         } catch (billError) {
           console.error('Failed to auto-create or update bill:', billError);
-          // Don't throw error - prescription is saved, bill creation is secondary
+          alert('Prescription saved, but the consultation payment could not be recorded. Please check the bill and record the payment manually.');
         }
       }
 
