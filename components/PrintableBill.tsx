@@ -341,7 +341,7 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
           <p className="text-xs text-gray-800 font-medium">
             Juran Chhapra Main Rd, in front of Road Number 2, Juran Chapra, Brahmapura, Muzaffarpur, Bihar 842001
           </p>
-          <p className="text-xs text-gray-700 mt-0.5">Mobile: 9525048993 &nbsp;|&nbsp; Reg. No. 7329/A</p>
+          <p className="text-xs text-gray-700 mt-0.5">Mobile: 9525050250 &nbsp;|&nbsp; Reg. No. 5821/A</p>
         </div>
       </div>
 

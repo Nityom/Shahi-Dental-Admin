@@ -185,6 +185,7 @@ const PrescriptionPage = () => {
   const [xrayCount, setXrayCount] = useState<number>(1);
   const [bloodCount, setBloodCount] = useState<number>(1);
   const [sugarCount, setSugarCount] = useState<number>(1);
+  const [cbctCount, setCbctCount] = useState<number>(1);
   const XRAY_PRICE = 200;
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -1841,7 +1842,7 @@ const PrescriptionPage = () => {
                       <span className="text-[11px] text-blue-600 font-medium">Included in Final Bill & Diagnostics Report</span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
                       {/* 1. IOPAR (₹200) */}
                       <div className="bg-white p-2.5 rounded-lg border border-blue-200 flex flex-col justify-between gap-2 shadow-2xs">
                         <div className="flex items-center justify-between">
@@ -1899,7 +1900,64 @@ const PrescriptionPage = () => {
                         </button>
                       </div>
 
-                      {/* 2. Dental X-Ray (₹200) */}
+                      {/* 2. CBCT (₹1500) */}
+                      <div className="bg-white p-2.5 rounded-lg border border-blue-200 flex flex-col justify-between gap-2 shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-xs font-bold text-gray-900 block">CBCT</span>
+                            <span className="text-[11px] font-semibold text-blue-700">₹1500 / scan</span>
+                          </div>
+                          <input
+                            type="number"
+                            min="1"
+                            value={cbctCount}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              setCbctCount(isNaN(val) || val < 1 ? 1 : val);
+                            }}
+                            onBlur={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              if (isNaN(val) || val < 1) setCbctCount(1);
+                            }}
+                            className="w-14 p-1 text-center border border-gray-300 rounded text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const count = Math.max(1, cbctCount || 1);
+                            const existingIndex = treatmentItems.findIndex(i => i.description.toUpperCase() === 'CBCT');
+                            if (existingIndex >= 0) {
+                              const newItems = [...treatmentItems];
+                              newItems[existingIndex] = {
+                                ...newItems[existingIndex],
+                                description: 'CBCT',
+                                quantity: count,
+                                unitPrice: 1500,
+                                total: count * 1500,
+                              };
+                              setTreatmentItems(newItems);
+                            } else {
+                              setTreatmentItems([...treatmentItems, {
+                                id: treatmentItems.length + 1,
+                                description: 'CBCT',
+                                quantity: count,
+                                unitPrice: 1500,
+                                total: count * 1500,
+                                date: new Date().toISOString().slice(0, 10),
+                              }]);
+                            }
+                            const current = (formData.investigation || '').trim();
+                            if (!current) setFormData(prev => ({ ...prev, investigation: 'CBCT' }));
+                            else if (!current.toUpperCase().includes('CBCT')) setFormData(prev => ({ ...prev, investigation: `${current}, CBCT` }));
+                          }}
+                          className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1"
+                        >
+                          + Add CBCT (₹{Math.max(1, cbctCount || 1) * 1500})
+                        </button>
+                      </div>
+
+                      {/* 3. Dental X-Ray (₹200) */}
                       <div className="bg-white p-2.5 rounded-lg border border-blue-200 flex flex-col justify-between gap-2 shadow-2xs">
                         <div className="flex items-center justify-between">
                           <div>
@@ -1956,7 +2014,7 @@ const PrescriptionPage = () => {
                         </button>
                       </div>
 
-                      {/* 3. Blood Test (₹50) */}
+                      {/* 4. Blood Test (₹50) */}
                       <div className="bg-white p-2.5 rounded-lg border border-blue-200 flex flex-col justify-between gap-2 shadow-2xs">
                         <div className="flex items-center justify-between">
                           <div>
@@ -2013,7 +2071,7 @@ const PrescriptionPage = () => {
                         </button>
                       </div>
 
-                      {/* 4. Sugar Test (₹50) */}
+                      {/* 5. Sugar Test (₹50) */}
                       <div className="bg-white p-2.5 rounded-lg border border-blue-200 flex flex-col justify-between gap-2 shadow-2xs">
                         <div className="flex items-center justify-between">
                           <div>
