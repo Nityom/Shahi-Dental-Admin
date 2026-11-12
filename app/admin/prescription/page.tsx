@@ -1067,6 +1067,7 @@ const PrescriptionPage = () => {
           if (existingBill && existingBill.id) {
             // Update existing bill with new items and amounts
             await updateBill(existingBill.id, {
+              bill_date: formData.date,
               total_amount: totalAmount,
               items: updatedBillItems
             });
@@ -1078,6 +1079,7 @@ const PrescriptionPage = () => {
               prescription_id: savedPrescription.id,
               patient_id: patient.id,
               reference_number: patient.reference_number || '',
+              bill_date: formData.date,
               total_amount: totalAmount,
               paid_amount: 0,
               payment_status: 'PENDING',

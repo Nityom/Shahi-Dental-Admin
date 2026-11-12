@@ -6,6 +6,7 @@ export const create = mutation({
         prescription_id: v.string(),
         patient_id: v.string(),
         reference_number: v.string(),
+        bill_date: v.optional(v.string()),
         total_amount: v.number(),
         paid_amount: v.number(),
         items: v.any(),
@@ -41,6 +42,7 @@ export const create = mutation({
             patient_id: args.patient_id,
             reference_number: args.reference_number,
             bill_number,
+            bill_date: args.bill_date,
             total_amount: args.total_amount,
             paid_amount: args.paid_amount,
             balance_amount,
@@ -88,6 +90,7 @@ export const getByPrescriptionId = query({
 export const update = mutation({
     args: {
         id: v.id("bills"),
+        bill_date: v.optional(v.string()),
         total_amount: v.optional(v.number()),
         paid_amount: v.optional(v.number()),
         balance_amount: v.optional(v.number()),

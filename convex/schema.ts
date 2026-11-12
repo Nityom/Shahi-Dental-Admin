@@ -90,6 +90,7 @@ export default defineSchema({
     patient_id: v.string(),
     reference_number: v.string(),
     bill_number: v.optional(v.string()),
+    bill_date: v.optional(v.string()), // YYYY-MM-DD
     total_amount: v.number(),
     paid_amount: v.number(),
     balance_amount: v.number(),

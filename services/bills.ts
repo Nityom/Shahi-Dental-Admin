@@ -63,6 +63,7 @@ export const createBill = async (bill: Bill) => {
       prescription_id: String(bill.prescription_id),
       patient_id: String(bill.patient_id),
       reference_number: String(bill.reference_number),
+      bill_date: bill.bill_date,
       total_amount: Number(bill.total_amount),
       paid_amount: Number(bill.paid_amount),
       items: bill.items,
@@ -86,6 +87,7 @@ export const updateBill = async (id: string, bill: Partial<Bill>) => {
     if (bill.total_amount !== undefined) validUpdate.total_amount = bill.total_amount;
     if (bill.paid_amount !== undefined) validUpdate.paid_amount = bill.paid_amount;
     if (bill.balance_amount !== undefined) validUpdate.balance_amount = bill.balance_amount;
+    if (bill.bill_date !== undefined) validUpdate.bill_date = bill.bill_date;
     if (bill.items !== undefined) validUpdate.items = bill.items;
     if (bill.notes !== undefined) validUpdate.notes = bill.notes;
     if (bill.payment_status !== undefined) validUpdate.payment_status = bill.payment_status;
