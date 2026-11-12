@@ -28,7 +28,34 @@ export const create = mutation({
             return recentTx._id;
         }
 
-        const transactionId = await ctx.db.insert("payment_transactions", args);
+        // Validate against bill total to prevent over-collection
+        let safeAmount = args.amount;
+        try {
+            const bill = await ctx.db.get(args.bill_id as any);
+            if (bill && typeof (bill as any).total_amount === "number") {
+                const existingTx = await ctx.db
+                    .query("payment_transactions")
+                    .withIndex("by_bill", (q) => q.eq("bill_id", args.bill_id))
+                    .collect();
+                const existingPaid = existingTx.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+                const remainingBal = Math.max(0, (bill as any).total_amount - existingPaid);
+
+                if (remainingBal <= 0) {
+                    console.warn("Bill is already fully paid, skipping redundant payment transaction");
+                    return recentTx?._id || ("already_paid" as any);
+                }
+                if (safeAmount > remainingBal) {
+                    safeAmount = remainingBal;
+                }
+            }
+        } catch (checkErr) {
+            console.warn("Could not pre-validate bill remaining balance:", checkErr);
+        }
+
+        const transactionId = await ctx.db.insert("payment_transactions", {
+            ...args,
+            amount: safeAmount,
+        });
 
         // Update the bill's paid_amount, balance_amount, and payment_status based on all recorded transactions
         try {

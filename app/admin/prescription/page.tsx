@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { getAllMedicines, deductMedicineStock } from '@/services/medicine';
 import { Medicine } from '@/services/medicine';
 import { addPrescription, Prescription, getPrescriptionById, updatePrescription } from '@/services/prescription';
-import { getOrCreatePatient, getPatientByPhoneNumber, getPatientByReference } from '@/services/patients';
+import { getOrCreatePatient, getPatientByPhoneNumber, getPatientByReference, updatePatient } from '@/services/patients';
 import { Patient } from '@/types/patient';
 import { ToothData as TeethChartToothData } from '@/components/TeethChart';
 import DentalArchOdontogram from '@/components/DentalArchOdontogram';
@@ -735,6 +735,10 @@ const PrescriptionPage = () => {
         throw new Error('Patient creation returned null or undefined');
       }
 
+      if (patient.id && formData.patientName.trim() && patient.name.trim() !== formData.patientName.trim()) {
+        patient = await updatePatient(patient.id, { name: formData.patientName.trim() });
+      }
+
       // Check if reference_number exists, if not try to fetch the patient again
       if (!patient.reference_number) {
         console.warn('Patient missing reference_number on first creation, attempting to fetch by phone...');
@@ -1253,13 +1257,25 @@ const PrescriptionPage = () => {
     if (!currentBill || !Array.isArray(currentBill.items)) return;
     setIsPayAllSelected(checked);
     if (checked) {
-      const allIds = new Set<string | number>(currentBill.items.map((i: any) => i.id));
-      setSelectedBillItemIds(allIds);
-      const totalCost = currentBill.items.reduce((s: number, i: any) => s + (Number(i.total) || 0), 0);
+      // Only select items that are not already paid
+      const unpaidItems = currentBill.items.filter((i: any) => !i.is_paid);
+      const targetItems = unpaidItems.length > 0 ? unpaidItems : currentBill.items;
+      const targetIds = new Set<string | number>(targetItems.map((i: any) => i.id));
+      setSelectedBillItemIds(targetIds);
+
+      const totalCost = targetItems.reduce((s: number, i: any) => s + (Number(i.total) || 0), 0);
       const discAmt = Math.round((totalCost * paymentDetails.discountPercent) / 100);
       const payable = Math.round(totalCost - discAmt);
-      setPaymentDetails((prev) => ({ ...prev, amountPaid: payable }));
-      setBillPaymentNotes(`Paid for: ${currentBill.items.map((i: any) => i.description).join(', ')}`);
+
+      const existingPaid = Number(currentBill.paid_amount || 0);
+      const billTotal = Number(currentBill.total_amount || 0);
+      const remainingBalance = Math.max(0, billTotal - existingPaid);
+
+      setPaymentDetails((prev) => ({
+        ...prev,
+        amountPaid: remainingBalance > 0 ? Math.min(payable, remainingBalance) : payable,
+      }));
+      setBillPaymentNotes(`Paid for: ${targetItems.map((i: any) => i.description).join(', ')}`);
     } else {
       setSelectedBillItemIds(new Set());
       setPaymentDetails((prev) => ({ ...prev, amountPaid: 0 }));
@@ -1278,19 +1294,30 @@ const PrescriptionPage = () => {
     }
     setSelectedBillItemIds(next);
 
-    const isAll = currentBill.items.length > 0 && currentBill.items.every((i: any) => next.has(i.id));
+    const unpaidItems = currentBill.items.filter((i: any) => !i.is_paid);
+    const isAll = unpaidItems.length > 0
+      ? unpaidItems.every((i: any) => next.has(i.id))
+      : currentBill.items.every((i: any) => next.has(i.id));
     setIsPayAllSelected(isAll);
 
-    // Sum of selected items
+    // Sum of newly selected items
     const selectedCost = currentBill.items
       .filter((i: any) => next.has(i.id))
       .reduce((s: number, i: any) => s + (Number(i.total) || 0), 0);
     const discAmt = Math.round((selectedCost * paymentDetails.discountPercent) / 100);
     const payable = Math.round(selectedCost - discAmt);
-    setPaymentDetails((prev) => ({ ...prev, amountPaid: payable }));
+
+    const existingPaid = Number(currentBill.paid_amount || 0);
+    const billTotal = Number(currentBill.total_amount || 0);
+    const remainingBalance = Math.max(0, billTotal - existingPaid);
+
+    setPaymentDetails((prev) => ({
+      ...prev,
+      amountPaid: remainingBalance > 0 ? Math.min(payable, remainingBalance) : payable,
+    }));
 
     const paidNames = currentBill.items.filter((i: any) => next.has(i.id)).map((i: any) => i.description);
-    const pendingNames = currentBill.items.filter((i: any) => !next.has(i.id)).map((i: any) => i.description);
+    const pendingNames = currentBill.items.filter((i: any) => !next.has(i.id) && !i.is_paid).map((i: any) => i.description);
 
     let notes = '';
     if (paidNames.length > 0) {
@@ -1446,22 +1473,43 @@ const PrescriptionPage = () => {
       }));
       bill.items = billItems;
 
-      // Pre-select all items by default for "Pay All"
-      const allIds = new Set<string | number>(billItems.map((i: any) => i.id));
-      setSelectedBillItemIds(allIds);
-      setIsPayAllSelected(true);
-
       const totalCost = billItems.reduce((s: number, i: any) => s + (Number(i.total) || 0), 0);
       const discAmt = Math.round((totalCost * (bill.discount_percent || 0)) / 100);
       const payable = Math.round(totalCost - discAmt);
+      const existingPaid = Number(bill.paid_amount || 0);
+      const remainingBalance = Math.max(0, payable - existingPaid);
 
-      setPaymentDetails({
-        amountPaid: payable,
-        paymentMethod: bill.payment_method || 'Cash',
-        discountPercent: bill.discount_percent || 0,
-      });
+      // Pre-select unpaid items only (prevents double-billing already paid items)
+      const unpaidItems = billItems.filter((i: any) => !i.is_paid);
+      const unpaidIds = new Set<string | number>(unpaidItems.map((i: any) => i.id));
 
-      setBillPaymentNotes(`Paid for: ${billItems.map((i: any) => i.description).join(', ')}`);
+      if (unpaidItems.length > 0 && remainingBalance > 0) {
+        setSelectedBillItemIds(unpaidIds);
+        setIsPayAllSelected(unpaidItems.length === billItems.length);
+
+        const unpaidCost = unpaidItems.reduce((s: number, i: any) => s + (Number(i.total) || 0), 0);
+        const unpaidDiscAmt = Math.round((unpaidCost * (bill.discount_percent || 0)) / 100);
+        const unpaidPayable = Math.round(unpaidCost - unpaidDiscAmt);
+        const safeAmt = Math.min(unpaidPayable, remainingBalance);
+
+        setPaymentDetails({
+          amountPaid: safeAmt,
+          paymentMethod: bill.payment_method || 'Cash',
+          discountPercent: bill.discount_percent || 0,
+        });
+        setBillPaymentNotes(`Paid for: ${unpaidItems.map((i: any) => i.description).join(', ')}`);
+      } else {
+        // Bill is already fully paid or no unpaid items
+        setSelectedBillItemIds(new Set());
+        setIsPayAllSelected(false);
+        setPaymentDetails({
+          amountPaid: 0,
+          paymentMethod: bill.payment_method || 'Cash',
+          discountPercent: bill.discount_percent || 0,
+        });
+        setBillPaymentNotes('');
+      }
+
       setCurrentBill(bill);
       setShowPaymentModal(true);
     } catch (error) {
@@ -1479,21 +1527,25 @@ const PrescriptionPage = () => {
       const origTotal = Number(currentBill.total_amount);
       const discAmt = Math.round((origTotal * paymentDetails.discountPercent) / 100);
       const newTotal = Math.round(origTotal - discAmt);
-      const safePaid = Math.round(Math.min(Math.max(paymentDetails.amountPaid, 0), newTotal));
-      const newBalance = Math.max(newTotal - safePaid, 0);
 
-      // Mark items as paid / pending
+      const existingPaid = Number(currentBill.paid_amount || 0);
+      const remainingBalance = Math.max(0, newTotal - existingPaid);
+      // Ensure payment cannot exceed the remaining balance on this bill
+      const safePaid = Math.round(Math.min(Math.max(paymentDetails.amountPaid, 0), remainingBalance));
+      const newBalance = Math.max(remainingBalance - safePaid, 0);
+
+      // Mark items as paid / pending (preserves already paid items)
       const updatedItems = (currentBill.items || []).map((item: any) => ({
         ...item,
-        is_paid: selectedBillItemIds.has(item.id),
+        is_paid: Boolean(item.is_paid || selectedBillItemIds.has(item.id)),
       }));
 
       const paidItemNames = (currentBill.items || [])
-        .filter((i: any) => selectedBillItemIds.has(i.id))
+        .filter((i: any) => selectedBillItemIds.has(i.id) || i.is_paid)
         .map((i: any) => i.description);
 
       const pendingItemNames = (currentBill.items || [])
-        .filter((i: any) => !selectedBillItemIds.has(i.id))
+        .filter((i: any) => !selectedBillItemIds.has(i.id) && !i.is_paid)
         .map((i: any) => i.description);
 
       let txNotes = billPaymentNotes.trim();
@@ -1508,8 +1560,7 @@ const PrescriptionPage = () => {
       }
 
       // 1. Update bill details (items, notes, discounts, total_amount)
-      // When safePaid === 0, record zero paid and PENDING status.
-      // When safePaid > 0, payment_transactions.create will atomically calculate and set paid_amount, balance_amount, and payment_status.
+      // When safePaid === 0, keep existing paid_amount and do not create empty transaction
       if (safePaid === 0) {
         await updateBill(currentBill.id, {
           total_amount: newTotal,
@@ -1518,9 +1569,9 @@ const PrescriptionPage = () => {
           discount_percent: paymentDetails.discountPercent,
           discount_amount: discAmt,
           payment_method: paymentDetails.paymentMethod,
-          paid_amount: 0,
-          balance_amount: newTotal,
-          payment_status: 'PENDING',
+          paid_amount: existingPaid,
+          balance_amount: remainingBalance,
+          payment_status: existingPaid >= newTotal && newTotal > 0 ? 'PAID' : (existingPaid > 0 ? 'PARTIAL' : 'PENDING'),
         });
       } else {
         await updateBill(currentBill.id, {
@@ -3510,28 +3561,45 @@ const PrescriptionPage = () => {
                     );
 
                     const renderItemRow = (item: any) => {
+                      const isAlreadyPaid = Boolean(item.is_paid);
                       const isSelected = selectedBillItemIds.has(item.id);
                       const itemDate = item.date ? new Date(item.date).toLocaleDateString('en-GB') : '';
                       return (
                         <label
                           key={item.id}
-                          className={`flex items-start justify-between p-2.5 rounded-lg border transition cursor-pointer select-none ${
-                            isSelected
-                              ? 'bg-blue-50/50 border-blue-300 shadow-2xs'
-                              : 'bg-white border-gray-200 hover:bg-gray-50'
+                          className={`flex items-start justify-between p-2.5 rounded-lg border transition select-none ${
+                            isAlreadyPaid
+                              ? 'bg-emerald-50/40 border-emerald-200 opacity-90 cursor-default'
+                              : isSelected
+                              ? 'bg-blue-50/50 border-blue-300 shadow-2xs cursor-pointer'
+                              : 'bg-white border-gray-200 hover:bg-gray-50 cursor-pointer'
                           }`}
                         >
                           <div className="flex items-start gap-2.5 min-w-0 pr-2">
                             <input
                               type="checkbox"
-                              checked={isSelected}
-                              onChange={() => toggleBillItemSelection(item.id)}
-                              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                              checked={isAlreadyPaid ? true : isSelected}
+                              disabled={isAlreadyPaid}
+                              onChange={() => {
+                                if (!isAlreadyPaid) {
+                                  toggleBillItemSelection(item.id);
+                                }
+                              }}
+                              className={`mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 shrink-0 ${
+                                isAlreadyPaid ? 'cursor-not-allowed accent-emerald-600' : 'cursor-pointer'
+                              }`}
                             />
                             <div className="truncate">
-                              <span className={`text-xs sm:text-sm font-medium ${isSelected ? 'text-blue-950 font-semibold' : 'text-gray-800'}`}>
-                                {item.description}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs sm:text-sm font-medium ${isAlreadyPaid ? 'text-emerald-950 font-semibold' : isSelected ? 'text-blue-950 font-semibold' : 'text-gray-800'}`}>
+                                  {item.description}
+                                </span>
+                                {isAlreadyPaid && (
+                                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full shrink-0">
+                                    ✓ Already Paid
+                                  </span>
+                                )}
+                              </div>
                               <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-500">
                                 {itemDate && <span className="font-mono">📅 {itemDate}</span>}
                                 {item.quantity && item.quantity > 1 && (
@@ -3540,7 +3608,7 @@ const PrescriptionPage = () => {
                               </div>
                             </div>
                           </div>
-                          <span className={`text-xs sm:text-sm font-bold shrink-0 ${isSelected ? 'text-blue-800' : 'text-gray-700'}`}>
+                          <span className={`text-xs sm:text-sm font-bold shrink-0 ${isAlreadyPaid ? 'text-emerald-800' : isSelected ? 'text-blue-800' : 'text-gray-700'}`}>
                             ₹{Number(item.total).toLocaleString('en-IN')}
                           </span>
                         </label>
@@ -3604,8 +3672,10 @@ const PrescriptionPage = () => {
                     const origTotal = Number(currentBill.total_amount);
                     const discAmt = Math.round((origTotal * paymentDetails.discountPercent) / 100);
                     const payable = Math.round(origTotal - discAmt);
+                    const existingPaid = Number(currentBill.paid_amount || 0);
+                    const remainingBefore = Math.max(0, payable - existingPaid);
                     const safePaid = Math.round(paymentDetails.amountPaid || 0);
-                    const balance = Math.max(payable - safePaid, 0);
+                    const balance = Math.max(remainingBefore - safePaid, 0);
 
                     return (
                       <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-200 space-y-2.5 text-xs sm:text-sm">
@@ -3630,10 +3700,13 @@ const PrescriptionPage = () => {
                                   .filter((i: any) => selectedBillItemIds.has(i.id))
                                   .reduce((s: number, i: any) => s + (Number(i.total) || 0), 0);
                                 const newDiscAmt = Math.round((selectedSum * disc) / 100);
+                                const newPayable = Math.round(selectedSum - newDiscAmt);
+                                const curPaid = Number(currentBill.paid_amount || 0);
+                                const curRem = Math.max(0, (origTotal - Math.round((origTotal * disc) / 100)) - curPaid);
                                 setPaymentDetails((prev) => ({
                                   ...prev,
                                   discountPercent: disc,
-                                  amountPaid: Math.round(selectedSum - newDiscAmt),
+                                  amountPaid: curRem > 0 ? Math.min(newPayable, curRem) : newPayable,
                                 }));
                               }}
                               className="w-16 px-2 py-1 text-right text-xs border border-gray-300 rounded font-semibold focus:ring-2 focus:ring-blue-500"
@@ -3648,6 +3721,20 @@ const PrescriptionPage = () => {
                           </div>
                         </div>
 
+                        {existingPaid > 0 && (
+                          <div className="flex justify-between items-center text-xs text-emerald-800 bg-emerald-50/70 px-2.5 py-1.5 rounded-lg border border-emerald-200">
+                            <span className="font-medium">Already Paid Earlier:</span>
+                            <span className="font-bold">₹{existingPaid.toLocaleString('en-IN')}</span>
+                          </div>
+                        )}
+
+                        {existingPaid > 0 && (
+                          <div className="flex justify-between items-center text-xs text-purple-900 bg-purple-50/60 px-2.5 py-1.5 rounded-lg border border-purple-200">
+                            <span className="font-medium">Remaining Balance to Pay:</span>
+                            <span className="font-bold">₹{remainingBefore.toLocaleString('en-IN')}</span>
+                          </div>
+                        )}
+
                         {/* Amount Customer is Paying */}
                         <div className="flex items-center justify-between pt-2 border-t border-gray-200">
                           <div>
@@ -3659,10 +3746,12 @@ const PrescriptionPage = () => {
                             <input
                               type="number"
                               min="0"
-                              max={payable}
+                              max={remainingBefore > 0 ? remainingBefore : payable}
                               value={paymentDetails.amountPaid}
                               onChange={(e) => {
-                                const val = Math.max(0, parseFloat(e.target.value) || 0);
+                                const entered = parseFloat(e.target.value) || 0;
+                                const maxAllowed = remainingBefore > 0 ? remainingBefore : payable;
+                                const val = Math.min(Math.max(0, entered), maxAllowed);
                                 setPaymentDetails((prev) => ({ ...prev, amountPaid: val }));
                               }}
                               className="w-28 px-2 py-1.5 text-right font-bold text-sm text-emerald-700 border-2 border-emerald-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
