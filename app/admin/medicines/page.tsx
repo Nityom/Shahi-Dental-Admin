@@ -554,45 +554,45 @@ export default function AddMedicinePage() {
                 <>
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
+                      <thead className="bg-slate-50/75 border-b border-slate-200/80">
                         <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('name')}>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('name')}>
                             <div className="flex items-center space-x-1">
                               <span>Name</span>
                               {renderSortIcon('name')}
                             </div>
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('company')}>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('company')}>
                             <div className="flex items-center space-x-1">
                               <span>Company</span>
                               {renderSortIcon('company')}
                             </div>
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('quantity')}>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('quantity')}>
                             <div className="flex items-center space-x-1">
                               <span>Quantity</span>
                               {renderSortIcon('quantity')}
                             </div>
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('cost_price')}>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('cost_price')}>
                             <div className="flex items-center space-x-1">
-                              <span>Cost Price</span>
+                              <span>Cost price</span>
                               {renderSortIcon('cost_price')}
                             </div>
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('selling_price')}>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('selling_price')}>
                             <div className="flex items-center space-x-1">
-                              <span>Selling Price</span>
+                              <span>Selling price</span>
                               {renderSortIcon('selling_price')}
                             </div>
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('profit_margin')}>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('profit_margin')}>
                             <div className="flex items-center space-x-1">
                               <span>Profit %</span>
                               {renderSortIcon('profit_margin')}
                             </div>
                           </th>
-                          <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-right text-xs font-semibold text-slate-600">
                             Actions
                           </th>
                         </tr>

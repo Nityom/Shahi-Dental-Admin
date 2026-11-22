@@ -213,7 +213,7 @@ export default function AppointmentsPage() {
     const weekDaysMobile = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
     for (let i = 0; i < 7; i++) {
       days.push(
-        <div key={`header-${i}`} className="font-semibold text-center text-gray-500 py-2 uppercase tracking-wider">
+        <div key={`header-${i}`} className="font-medium text-center text-slate-500 py-2 text-xs">
           <span className="hidden sm:inline text-sm">{weekDays[i]}</span>
           <span className="sm:hidden text-xs">{weekDaysMobile[i]}</span>
         </div>
@@ -333,7 +333,7 @@ export default function AppointmentsPage() {
             ) : (
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-[#176e56] mb-0.5">Schedule</p>
+                  <p className="text-xs font-medium text-slate-500 mb-0.5">Schedule</p>
                   <div className="flex items-center gap-2">
                     <h3 className="text-base font-bold text-gray-900 leading-tight">{formatDateForDisplay(selectedDate)}</h3>
                     {appointmentsForDate && appointmentsForDate.length > 0 && (

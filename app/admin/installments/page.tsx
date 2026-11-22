@@ -455,55 +455,55 @@ export default function InstallmentsPage() {
       {/* Stats Cards: Cash, Online, Collected, Pending, Count */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         {/* Total Cash Received */}
-        <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200/80 shadow-xs">
+        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
           <div className="flex items-center justify-between mb-1">
-            <h4 className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">Total Cash Received</h4>
+            <h4 className="text-xs font-medium text-slate-500">Total cash received</h4>
             <Banknote className="h-4 w-4 text-emerald-600" />
           </div>
-          <p className="text-2xl font-bold text-emerald-700">₹{totalCashReceived.toLocaleString('en-IN')}</p>
-          <p className="text-xs text-emerald-600/90 mt-1">
+          <p className="text-2xl font-bold text-slate-900 tabular-nums">₹{totalCashReceived.toLocaleString('en-IN')}</p>
+          <p className="text-xs text-slate-400 mt-1">
             {dateFilterMode === 'ALL' ? 'All-time cash' : 'Cash for selected period'}
           </p>
         </div>
 
         {/* Total Online Received */}
-        <div className="bg-purple-50 p-4 rounded-xl border border-purple-200/80 shadow-xs">
+        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
           <div className="flex items-center justify-between mb-1">
-            <h4 className="text-xs font-semibold text-purple-800 uppercase tracking-wider">Total Online Received</h4>
+            <h4 className="text-xs font-medium text-slate-500">Total online received</h4>
             <Smartphone className="h-4 w-4 text-purple-600" />
           </div>
-          <p className="text-2xl font-bold text-purple-700">₹{totalOnlineReceived.toLocaleString('en-IN')}</p>
-          <p className="text-xs text-purple-600/90 mt-1">UPI, Card & Net Banking</p>
+          <p className="text-2xl font-bold text-slate-900 tabular-nums">₹{totalOnlineReceived.toLocaleString('en-IN')}</p>
+          <p className="text-xs text-slate-400 mt-1">UPI, card & net banking</p>
         </div>
 
         {/* Total Collected */}
-        <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200/80 shadow-xs">
+        <div className="bg-white p-4 rounded-xl border border-emerald-200/80 shadow-xs">
           <div className="flex items-center justify-between mb-1">
-            <h4 className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">Total Collected</h4>
+            <h4 className="text-xs font-medium text-emerald-800">Total collected</h4>
             <IndianRupee className="h-4 w-4 text-emerald-600" />
           </div>
-          <p className="text-2xl font-bold text-emerald-700">₹{totalCollected.toLocaleString('en-IN')}</p>
-          <p className="text-xs text-emerald-600/90 mt-1">Cash + Online total</p>
+          <p className="text-2xl font-bold text-emerald-800 tabular-nums">₹{totalCollected.toLocaleString('en-IN')}</p>
+          <p className="text-xs text-emerald-600/90 mt-1">Cash + online total</p>
         </div>
 
         {/* Total Pending */}
-        <div className="bg-rose-50 p-4 rounded-xl border border-rose-200/80 shadow-xs">
+        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
           <div className="flex items-center justify-between mb-1">
-            <h4 className="text-xs font-semibold text-rose-800 uppercase tracking-wider">Total Pending Dues</h4>
+            <h4 className="text-xs font-medium text-slate-500">Total pending dues</h4>
             <AlertCircle className="h-4 w-4 text-rose-600" />
           </div>
-          <p className="text-2xl font-bold text-rose-700">₹{totalPending.toLocaleString('en-IN')}</p>
-          <p className="text-xs text-rose-600/90 mt-1">Outstanding balance</p>
+          <p className="text-2xl font-bold text-rose-700 tabular-nums">₹{totalPending.toLocaleString('en-IN')}</p>
+          <p className="text-xs text-slate-400 mt-1">Outstanding balance</p>
         </div>
 
         {/* Pending Bills */}
-        <div className="bg-amber-50 p-4 rounded-xl border border-amber-200/80 shadow-xs">
+        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
           <div className="flex items-center justify-between mb-1">
-            <h4 className="text-xs font-semibold text-amber-800 uppercase tracking-wider">Pending Bills</h4>
-            <Receipt className="h-4 w-4 text-amber-600" />
+            <h4 className="text-xs font-medium text-slate-500">Pending bills</h4>
+            <Receipt className="h-4 w-4 text-slate-600" />
           </div>
-          <p className="text-2xl font-bold text-amber-700">{filteredBills.length}</p>
-          <p className="text-xs text-amber-600/90 mt-1">Active bills with balance</p>
+          <p className="text-2xl font-bold text-slate-900 tabular-nums">{filteredBills.length}</p>
+          <p className="text-xs text-slate-400 mt-1">Active bills with balance</p>
         </div>
       </div>
 

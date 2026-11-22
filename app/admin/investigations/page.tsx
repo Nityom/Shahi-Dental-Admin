@@ -150,14 +150,14 @@ export default function InvestigationsPage() {
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className={`text-xs font-semibold uppercase tracking-wider ${typeFilter === 'OPG' ? 'text-emerald-100' : 'text-gray-500'}`}>
-              OPG Count
+            <p className={`text-xs font-medium ${typeFilter === 'OPG' ? 'text-emerald-100' : 'text-slate-500'}`}>
+              OPG count
             </p>
             <span className={`text-xs px-2 py-0.5 rounded font-bold ${typeFilter === 'OPG' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'}`}>
-              Full Mouth
+              Full mouth
             </span>
           </div>
-          <p className={`text-3xl font-black mt-3 ${typeFilter === 'OPG' ? 'text-white' : 'text-gray-900'}`}>
+          <p className={`text-3xl font-bold mt-3 tabular-nums ${typeFilter === 'OPG' ? 'text-white' : 'text-gray-900'}`}>
             {reportData.totalOpg}
           </p>
           <p className={`text-xs mt-1 ${typeFilter === 'OPG' ? 'text-emerald-100' : 'text-gray-400'}`}>
@@ -175,14 +175,14 @@ export default function InvestigationsPage() {
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className={`text-xs font-semibold uppercase tracking-wider ${typeFilter === 'IOPAR' ? 'text-emerald-100' : 'text-gray-500'}`}>
-              IOPAR Count
+            <p className={`text-xs font-medium ${typeFilter === 'IOPAR' ? 'text-emerald-100' : 'text-slate-500'}`}>
+              IOPAR count
             </p>
             <span className={`text-xs px-2 py-0.5 rounded font-bold ${typeFilter === 'IOPAR' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'}`}>
               Periapical
             </span>
           </div>
-          <p className={`text-3xl font-black mt-3 ${typeFilter === 'IOPAR' ? 'text-white' : 'text-gray-900'}`}>
+          <p className={`text-3xl font-bold mt-3 tabular-nums ${typeFilter === 'IOPAR' ? 'text-white' : 'text-gray-900'}`}>
             {reportData.totalIopar}
           </p>
           <p className={`text-xs mt-1 ${typeFilter === 'IOPAR' ? 'text-emerald-100' : 'text-gray-400'}`}>
@@ -221,7 +221,7 @@ export default function InvestigationsPage() {
         {/* Date Presets Chips */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mr-1 flex items-center gap-1">
+            <span className="text-xs font-medium text-slate-500 mr-1 flex items-center gap-1">
               <Calendar size={14} /> Period:
             </span>
             {[
@@ -364,15 +364,15 @@ export default function InvestigationsPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-gray-600">
-              <thead className="bg-gray-50 text-gray-700 uppercase text-xs border-b border-gray-200">
+              <thead className="bg-slate-50/75 text-slate-700 font-semibold text-xs border-b border-slate-200/80">
                 <tr>
-                  <th className="px-5 py-3.5">Date</th>
-                  <th className="px-5 py-3.5">Patient Details</th>
-                  <th className="px-4 py-3.5">Ref No.</th>
-                  <th className="px-4 py-3.5">Doctor</th>
-                  <th className="px-4 py-3.5">Prescription Investigation Text</th>
-                  <th className="px-4 py-3.5 text-center">Detected Type</th>
-                  <th className="px-5 py-3.5 text-right">Prescription</th>
+                  <th className="px-5 py-3.5 font-semibold">Date</th>
+                  <th className="px-5 py-3.5 font-semibold">Patient details</th>
+                  <th className="px-4 py-3.5 font-semibold">Ref no.</th>
+                  <th className="px-4 py-3.5 font-semibold">Doctor</th>
+                  <th className="px-4 py-3.5 font-semibold">Prescription investigation text</th>
+                  <th className="px-4 py-3.5 text-center font-semibold">Detected type</th>
+                  <th className="px-5 py-3.5 text-right font-semibold">Prescription</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">

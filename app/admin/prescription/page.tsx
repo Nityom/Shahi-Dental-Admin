@@ -18,6 +18,7 @@ import { materialTransactionService } from '@/services/registers';
 import { doctorService } from '@/services/doctors';
 import { Doctor } from '@/types/doctor';
 import { ConvexHttpClient } from 'convex/browser';
+import { Stethoscope, Activity, Pill, Sparkles, Layers, ListFilter, Trash2, Plus, Calendar, Check, Printer, Download } from 'lucide-react';
 // @ts-ignore
 import { api } from '@/convex/_generated/api';
 
@@ -1891,8 +1892,8 @@ const PrescriptionPage = () => {
                   {/* Diagnostic Test Charges to Bill */}
                   <div className="mt-3 p-3.5 bg-emerald-50/50 rounded-xl border border-emerald-100 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-950">Add Tests & Investigations to Bill</span>
-                      <span className="text-[11px] text-emerald-700 font-medium">Included in Final Bill & Diagnostics Report</span>
+                      <span className="text-xs font-semibold text-emerald-950">Add tests & investigations to bill</span>
+                      <span className="text-[11px] text-emerald-700 font-medium">Included in final bill & diagnostics report</span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
@@ -2201,8 +2202,10 @@ const PrescriptionPage = () => {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
                 <div>
                   <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                    <span className="p-1.5 bg-emerald-100 text-emerald-800 rounded-lg">🦷</span>
-                    Diagnosis &amp; Teeth Chart
+                    <span className="p-1.5 bg-emerald-100 text-emerald-800 rounded-lg">
+                      <Layers size={18} />
+                    </span>
+                    Diagnosis &amp; teeth chart
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
                     Click teeth directly on the dental arch below to assign conditions or treatments
@@ -2221,7 +2224,7 @@ const PrescriptionPage = () => {
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      🦷 Anatomical Arch
+                      Anatomical arch
                     </button>
                     <button
                       type="button"
@@ -2232,7 +2235,7 @@ const PrescriptionPage = () => {
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      📋 Dropdown List
+                      Dropdown list
                     </button>
                   </div>
 
@@ -2255,8 +2258,8 @@ const PrescriptionPage = () => {
               {showAddDiseaseForm && (
                 <div className="p-4 bg-white rounded-xl border border-emerald-200 shadow-sm flex flex-col sm:flex-row gap-3 items-end">
                   <div className="flex-1 w-full">
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                      New Dental Condition / Disease Name
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      New dental condition / disease name
                     </label>
                     <input
                       type="text"
@@ -2301,8 +2304,8 @@ const PrescriptionPage = () => {
                   {/* Right Column: Disease Selector & Quick Pills */}
                   <div className="lg:col-span-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                     <div>
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                        Step 1: Selected Teeth
+                      <span className="text-xs font-medium text-slate-500 block mb-1">
+                        Step 1: Selected teeth
                       </span>
                       {selectedTeethNumbers.length === 0 ? (
                         <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
@@ -2324,8 +2327,8 @@ const PrescriptionPage = () => {
                     </div>
 
                     <div>
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">
-                        Step 2: Pick Condition / Disease
+                      <span className="text-xs font-medium text-slate-500 block mb-2">
+                        Step 2: Pick condition / disease
                       </span>
 
                       {/* Quick Common Disease Pills */}
@@ -2359,7 +2362,7 @@ const PrescriptionPage = () => {
                       </div>
 
                       {/* Full Dropdown for all other diseases */}
-                      <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                      <label className="block text-xs font-medium text-slate-500 mb-1">
                         Or select from all conditions:
                       </label>
                       <select
@@ -2465,12 +2468,12 @@ const PrescriptionPage = () => {
                   <h4 className="font-medium text-indigo-800 mb-2">Selected Teeth Summary:</h4>
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
-                      <thead>
+                      <thead className="bg-slate-50/75 border-b border-slate-200/80">
                         <tr>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tooth Number</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quadrant</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Disease</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Tooth number</th>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Quadrant</th>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Condition</th>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -2812,16 +2815,16 @@ const PrescriptionPage = () => {
               {/* Treatment Items Table */}
               {treatmentItems.length > 0 && (
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200 border">
-                    <thead className="bg-gray-50">
+                  <table className="min-w-full divide-y divide-gray-200 border border-slate-200/80 rounded-lg overflow-hidden">
+                    <thead className="bg-slate-50/75 border-b border-slate-200/80">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price (₹)</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total (₹)</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">S.No</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Description</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Qty</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Unit price (₹)</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Total (₹)</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -3617,9 +3620,9 @@ const PrescriptionPage = () => {
 
                     return (
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between text-xs font-bold text-gray-500 uppercase tracking-wider">
-                          <span>Treatments & Services ({items.length}):</span>
-                          <span className="text-emerald-700 font-semibold lowercase">
+                        <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                          <span>Treatments & services ({items.length})</span>
+                          <span className="text-emerald-700 font-medium">
                             {selectedBillItemIds.size} of {items.length} selected
                           </span>
                         </div>
@@ -3627,8 +3630,9 @@ const PrescriptionPage = () => {
                         {/* Consultation */}
                         {consultationItems.length > 0 && (
                           <div className="space-y-1.5">
-                            <span className="text-[11px] font-bold text-purple-700 uppercase tracking-wider flex items-center gap-1">
-                              🩺 Consultation Fee
+                            <span className="text-xs font-semibold text-purple-800 flex items-center gap-1.5">
+                              <Stethoscope size={13} className="text-purple-600" />
+                              <span>Consultation fee</span>
                             </span>
                             {consultationItems.map(renderItemRow)}
                           </div>
@@ -3637,8 +3641,9 @@ const PrescriptionPage = () => {
                         {/* X-Ray / Investigations */}
                         {xrayItems.length > 0 && (
                           <div className="space-y-1.5">
-                            <span className="text-[11px] font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-1">
-                              🩻 X-Ray / Investigations
+                            <span className="text-xs font-semibold text-indigo-800 flex items-center gap-1.5">
+                              <Activity size={13} className="text-indigo-600" />
+                              <span>X-Ray / investigations</span>
                             </span>
                             {xrayItems.map(renderItemRow)}
                           </div>
@@ -3647,8 +3652,9 @@ const PrescriptionPage = () => {
                         {/* Treatment Done List */}
                         {procedureItems.length > 0 && (
                           <div className="space-y-1.5">
-                            <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1">
-                              🦷 Treatment Done List ({procedureItems.length})
+                            <span className="text-xs font-semibold text-emerald-800 flex items-center gap-1.5">
+                              <Sparkles size={13} className="text-emerald-600" />
+                              <span>Treatments ({procedureItems.length})</span>
                             </span>
                             {procedureItems.map(renderItemRow)}
                           </div>
@@ -3657,8 +3663,9 @@ const PrescriptionPage = () => {
                         {/* Medicines */}
                         {medicineItems.length > 0 && (
                           <div className="space-y-1.5">
-                            <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1">
-                              💊 Medicines ({medicineItems.length})
+                            <span className="text-xs font-semibold text-amber-800 flex items-center gap-1.5">
+                              <Pill size={13} className="text-amber-600" />
+                              <span>Medicines ({medicineItems.length})</span>
                             </span>
                             {medicineItems.map(renderItemRow)}
                           </div>

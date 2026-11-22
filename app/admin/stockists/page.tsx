@@ -832,14 +832,14 @@ export default function StockistBillsPage() {
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-gray-50 text-gray-600 text-xs uppercase border-b border-gray-100">
+                  <thead className="bg-slate-50/75 text-slate-700 text-xs border-b border-slate-200/80">
                     <tr>
-                      <th className="py-3.5 px-4 font-semibold">Bill Details</th>
-                      <th className="py-3.5 px-4 font-semibold">Stockist / Supplier</th>
-                      <th className="py-3.5 px-4 font-semibold">Medicines / Items</th>
-                      <th className="py-3.5 px-4 font-semibold text-right">Total Amount</th>
-                      <th className="py-3.5 px-4 font-semibold text-right">Paid Amount</th>
-                      <th className="py-3.5 px-4 font-semibold text-right">Balance Due</th>
+                      <th className="py-3.5 px-4 font-semibold">Bill details</th>
+                      <th className="py-3.5 px-4 font-semibold">Stockist / supplier</th>
+                      <th className="py-3.5 px-4 font-semibold">Medicines / items</th>
+                      <th className="py-3.5 px-4 font-semibold text-right">Total amount</th>
+                      <th className="py-3.5 px-4 font-semibold text-right">Paid amount</th>
+                      <th className="py-3.5 px-4 font-semibold text-right">Balance due</th>
                       <th className="py-3.5 px-4 font-semibold text-center">Status</th>
                       <th className="py-3.5 px-4 font-semibold text-center">Actions</th>
                     </tr>
@@ -1045,18 +1045,18 @@ export default function StockistBillsPage() {
                   </div>
 
                   {/* Financial Stats for this Stockist */}
-                  <div className="grid grid-cols-3 gap-2 mt-4 p-3 bg-gray-50 rounded-xl text-center">
+                  <div className="grid grid-cols-3 gap-2 mt-4 p-3 bg-slate-50/75 border border-slate-100 rounded-xl text-center">
                     <div>
-                      <span className="text-[10px] text-gray-500 uppercase font-semibold block">Total Billed</span>
-                      <span className="text-sm font-bold text-gray-900">₹{(s.total_billed || 0).toLocaleString('en-IN')}</span>
+                      <span className="text-[11px] text-slate-500 font-medium block">Total billed</span>
+                      <span className="text-sm font-semibold text-slate-900 tabular-nums">₹{(s.total_billed || 0).toLocaleString('en-IN')}</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-emerald-600 uppercase font-semibold block">Total Paid</span>
-                      <span className="text-sm font-bold text-emerald-700">₹{(s.total_paid || 0).toLocaleString('en-IN')}</span>
+                      <span className="text-[11px] text-emerald-700 font-medium block">Total paid</span>
+                      <span className="text-sm font-semibold text-emerald-700 tabular-nums">₹{(s.total_paid || 0).toLocaleString('en-IN')}</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-rose-600 uppercase font-semibold block">Balance Due</span>
-                      <span className="text-sm font-bold text-rose-600">₹{(s.total_balance || 0).toLocaleString('en-IN')}</span>
+                      <span className="text-[11px] text-rose-700 font-medium block">Balance due</span>
+                      <span className="text-sm font-semibold text-rose-600 tabular-nums">₹{(s.total_balance || 0).toLocaleString('en-IN')}</span>
                     </div>
                   </div>
 
@@ -1113,15 +1113,15 @@ export default function StockistBillsPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="bg-gray-50 text-gray-600 text-xs uppercase border-b border-gray-100">
+                <thead className="bg-slate-50/75 text-slate-700 text-xs border-b border-slate-200/80">
                   <tr>
-                    <th className="py-3 px-4 font-semibold">Payment Date</th>
+                    <th className="py-3 px-4 font-semibold">Payment date</th>
                     <th className="py-3 px-4 font-semibold">Stockist</th>
                     <th className="py-3 px-4 font-semibold">Bill #</th>
-                    <th className="py-3 px-4 font-semibold">Payment Mode</th>
-                    <th className="py-3 px-4 font-semibold text-right">Amount Paid</th>
-                    <th className="py-3 px-4 font-semibold">Noted on 2 Copies</th>
-                    <th className="py-3 px-4 font-semibold">Collected / Paid By</th>
+                    <th className="py-3 px-4 font-semibold">Payment mode</th>
+                    <th className="py-3 px-4 font-semibold text-right">Amount paid</th>
+                    <th className="py-3 px-4 font-semibold">Noted on 2 copies</th>
+                    <th className="py-3 px-4 font-semibold">Collected / paid by</th>
                     <th className="py-3 px-4 font-semibold text-center">Actions</th>
                   </tr>
                 </thead>

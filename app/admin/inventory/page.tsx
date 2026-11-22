@@ -532,7 +532,7 @@ export default function AddInventoryPage() {
                     : 'bg-white border-gray-200 hover:border-gray-300 shadow-sm'
                 }`}
               >
-                <div className="text-xs font-bold text-gray-500 uppercase tracking-wider truncate mb-1">
+                <div className="text-xs font-medium text-slate-500 truncate mb-1">
                   {sub}
                 </div>
                 <div className="flex items-baseline justify-between">
@@ -816,7 +816,7 @@ export default function AddInventoryPage() {
             {/* Today's Sales Summary */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
               <div className="flex justify-between items-center mb-3">
-                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Today's Direct Sales</h4>
+                <h4 className="text-xs font-semibold text-slate-700">Today's direct sales</h4>
                 <button
                   onClick={fetchTodaySales}
                   className="text-[11px] text-emerald-600 hover:text-emerald-800 flex items-center gap-1"
@@ -890,23 +890,23 @@ export default function AddInventoryPage() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
-                    <thead className="bg-gray-50 border-y border-gray-200 text-gray-600 uppercase font-semibold">
+                    <thead className="bg-slate-50/75 border-y border-slate-200/80 text-slate-700 font-semibold">
                       <tr>
-                        <th className="py-2.5 px-3 text-left cursor-pointer" onClick={() => handleSort('name')}>
+                        <th className="py-2.5 px-3 text-left cursor-pointer font-semibold" onClick={() => handleSort('name')}>
                           <div className="flex items-center gap-1">Name {renderSortIcon('name')}</div>
                         </th>
-                        <th className="py-2.5 px-3 text-left">Subdivision</th>
-                        <th className="py-2.5 px-3 text-left cursor-pointer" onClick={() => handleSort('company')}>
+                        <th className="py-2.5 px-3 text-left font-semibold">Subdivision</th>
+                        <th className="py-2.5 px-3 text-left cursor-pointer font-semibold" onClick={() => handleSort('company')}>
                           <div className="flex items-center gap-1">Company {renderSortIcon('company')}</div>
                         </th>
-                        <th className="py-2.5 px-3 text-center cursor-pointer" onClick={() => handleSort('quantity')}>
+                        <th className="py-2.5 px-3 text-center cursor-pointer font-semibold" onClick={() => handleSort('quantity')}>
                           <div className="flex items-center justify-center gap-1">Stock {renderSortIcon('quantity')}</div>
                         </th>
-                        <th className="py-2.5 px-3 text-right cursor-pointer" onClick={() => handleSort('rate')}>
+                        <th className="py-2.5 px-3 text-right cursor-pointer font-semibold" onClick={() => handleSort('rate')}>
                           <div className="flex items-center justify-end gap-1">Rate {renderSortIcon('rate')}</div>
                         </th>
-                        <th className="py-2.5 px-3 text-center">Quick Stock</th>
-                        <th className="py-2.5 px-3 text-right">Actions</th>
+                        <th className="py-2.5 px-3 text-center font-semibold">Quick stock</th>
+                        <th className="py-2.5 px-3 text-right font-semibold">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -1164,17 +1164,17 @@ export default function AddInventoryPage() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs text-left">
-                    <thead className="bg-gray-50 text-gray-600 uppercase font-semibold border-y border-gray-200">
+                    <thead className="bg-slate-50/75 text-slate-700 font-semibold border-y border-slate-200/80">
                       <tr>
-                        <th className="py-2.5 px-3">Date</th>
-                        <th className="py-2.5 px-3">Material Name</th>
-                        <th className="py-2.5 px-3">Subdivision</th>
-                        <th className="py-2.5 px-3">Type</th>
-                        <th className="py-2.5 px-3 text-center">Quantity</th>
-                        <th className="py-2.5 px-3 text-right">Rate</th>
-                        <th className="py-2.5 px-3 text-right">Total</th>
-                        <th className="py-2.5 px-3">Vendor / Info</th>
-                        <th className="py-2.5 px-3">Notes</th>
+                        <th className="py-2.5 px-3 font-semibold">Date</th>
+                        <th className="py-2.5 px-3 font-semibold">Material name</th>
+                        <th className="py-2.5 px-3 font-semibold">Subdivision</th>
+                        <th className="py-2.5 px-3 font-semibold">Type</th>
+                        <th className="py-2.5 px-3 text-center font-semibold">Quantity</th>
+                        <th className="py-2.5 px-3 text-right font-semibold">Rate</th>
+                        <th className="py-2.5 px-3 text-right font-semibold">Total</th>
+                        <th className="py-2.5 px-3 font-semibold">Vendor / info</th>
+                        <th className="py-2.5 px-3 font-semibold">Notes</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">

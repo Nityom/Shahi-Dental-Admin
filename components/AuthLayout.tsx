@@ -77,7 +77,7 @@ export default function AuthLayout({
           </div>
 
           <div className="relative z-10 max-w-[570px] py-4 xl:py-8">
-            <div className="mb-6 flex items-center gap-2.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#89ddc4]">
+            <div className="mb-6 flex items-center gap-2.5 text-xs font-medium text-[#89ddc4]">
               <span className="h-1.5 w-1.5 rounded-full bg-[#83dfc0] shadow-[0_0_12px_rgba(131,223,192,.8)]" />
               Private clinic workspace
             </div>
@@ -105,7 +105,7 @@ export default function AuthLayout({
                 />
               </span>
               <div className="relative min-w-0">
-                <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#8adcc2]">Designed around care</p>
+                <p className="text-[11px] font-medium text-[#8adcc2]">Designed around care</p>
                 <p className="mt-2 text-lg font-semibold tracking-tight text-white">Svaasth HMS</p>
                 <p className="mt-1 max-w-[190px] text-xs leading-5 text-white/55">
                   A considered workspace for {clinicConfig.name}.
@@ -138,7 +138,7 @@ export default function AuthLayout({
               <BrandLockup compact />
             </div>
             <div className="mb-8">
-              <div className="mb-4 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.22em] text-[#12816f]">
+              <div className="mb-4 flex items-center gap-2 text-xs font-semibold text-[#12816f]">
                 <span className="h-px w-6 bg-[#12816f]/55" /> Staff sign-in <span className="text-slate-300">·</span> {clinicConfig.name}
               </div>
               <h2 className="text-[34px] font-semibold tracking-[-0.045em] text-[#142a25] sm:text-[38px]">{title}</h2>

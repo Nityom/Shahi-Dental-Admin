@@ -115,6 +115,7 @@ export async function sendAuthEmail(options: {
   subject: string;
   text: string;
   html: string;
+  attachments?: any[];
 }) {
   const from = process.env.SMTP_FROM;
   if (!from) {
@@ -123,10 +124,11 @@ export async function sendAuthEmail(options: {
 
   const transporter = buildTransporter();
   await transporter.sendMail({
-    from,
+    from: `"Shahi Dental Admin" <${from}>`,
     to: options.to,
     subject: options.subject,
     text: options.text,
     html: options.html,
+    attachments: options.attachments,
   });
 }

@@ -351,14 +351,14 @@ export default function CrownManagementPage() {
         {/* Financial & Status KPI Cards (Single Crown Revenue & 4 Statuses) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
           {/* Total Crown Revenue */}
-          <div className="bg-emerald-600 text-white p-4.5 rounded-2xl shadow-sm">
+          <div className="bg-emerald-700 text-white p-4.5 rounded-xl shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-100">Crown Revenue</span>
+              <span className="text-xs font-medium text-emerald-100">Crown revenue</span>
               <span className="p-1.5 bg-white/20 text-white rounded-lg">
                 <IndianRupee size={16} />
               </span>
             </div>
-            <div className="text-2xl md:text-3xl font-black text-white mt-2">
+            <div className="text-2xl md:text-3xl font-bold text-white mt-2 tabular-nums">
               ₹{metrics.totalRevenue.toLocaleString('en-IN')}
             </div>
             <p className="text-[11px] text-emerald-100 mt-1">From {metrics.totalRecords} crown records</p>
@@ -367,49 +367,49 @@ export default function CrownManagementPage() {
           {/* 1. Crown Cutting */}
           <div
             onClick={() => setStatusFilter(statusFilter === 'Crown Cutting' ? 'ALL' : 'Crown Cutting')}
-            className={`p-4.5 rounded-2xl border cursor-pointer transition-all shadow-sm ${
+            className={`p-4.5 rounded-xl border cursor-pointer transition-all shadow-xs ${
               statusFilter === 'Crown Cutting'
-                ? 'bg-emerald-500 text-white border-emerald-500 ring-2 ring-emerald-500'
+                ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-500'
                 : 'bg-white border-gray-200 hover:border-emerald-300'
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className={`text-[11px] font-bold uppercase tracking-wider ${statusFilter === 'Crown Cutting' ? 'text-emerald-100' : 'text-gray-500'}`}>
-                1. Crown Cutting
+              <span className={`text-xs font-medium ${statusFilter === 'Crown Cutting' ? 'text-emerald-100' : 'text-slate-600'}`}>
+                1. Crown cutting
               </span>
               <span className={`p-1.5 rounded-lg ${statusFilter === 'Crown Cutting' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'}`}>
                 <Clock size={16} />
               </span>
             </div>
-            <div className={`text-2xl md:text-3xl font-black mt-2 ${statusFilter === 'Crown Cutting' ? 'text-white' : 'text-gray-900'}`}>
+            <div className={`text-2xl md:text-3xl font-bold mt-2 tabular-nums ${statusFilter === 'Crown Cutting' ? 'text-white' : 'text-slate-900'}`}>
               {metrics.countCutting}
             </div>
-            <p className={`text-[11px] mt-1 ${statusFilter === 'Crown Cutting' ? 'text-emerald-100' : 'text-gray-400'}`}>
-              In Progress / Cutting
+            <p className={`text-[11px] mt-1 ${statusFilter === 'Crown Cutting' ? 'text-emerald-100' : 'text-slate-400'}`}>
+              In progress / cutting
             </p>
           </div>
 
           {/* 2. Crown Received */}
           <div
             onClick={() => setStatusFilter(statusFilter === 'Crown Received' ? 'ALL' : 'Crown Received')}
-            className={`p-4.5 rounded-2xl border cursor-pointer transition-all shadow-sm ${
+            className={`p-4.5 rounded-xl border cursor-pointer transition-all shadow-xs ${
               statusFilter === 'Crown Received'
                 ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-600'
                 : 'bg-white border-gray-200 hover:border-emerald-300'
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className={`text-[11px] font-bold uppercase tracking-wider ${statusFilter === 'Crown Received' ? 'text-emerald-100' : 'text-gray-500'}`}>
-                2. Crown Received
+              <span className={`text-xs font-medium ${statusFilter === 'Crown Received' ? 'text-emerald-100' : 'text-slate-600'}`}>
+                2. Crown received
               </span>
               <span className={`p-1.5 rounded-lg ${statusFilter === 'Crown Received' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'}`}>
                 <CheckCircle2 size={16} />
               </span>
             </div>
-            <div className={`text-2xl md:text-3xl font-black mt-2 ${statusFilter === 'Crown Received' ? 'text-white' : 'text-gray-900'}`}>
+            <div className={`text-2xl md:text-3xl font-bold mt-2 tabular-nums ${statusFilter === 'Crown Received' ? 'text-white' : 'text-slate-900'}`}>
               {metrics.countReceived}
             </div>
-            <p className={`text-[11px] mt-1 ${statusFilter === 'Crown Received' ? 'text-emerald-100' : 'text-gray-400'}`}>
+            <p className={`text-[11px] mt-1 ${statusFilter === 'Crown Received' ? 'text-emerald-100' : 'text-slate-400'}`}>
               Received from lab
             </p>
           </div>
@@ -417,24 +417,24 @@ export default function CrownManagementPage() {
           {/* 3. Crown Fixed */}
           <div
             onClick={() => setStatusFilter(statusFilter === 'Crown Fixed' ? 'ALL' : 'Crown Fixed')}
-            className={`p-4.5 rounded-2xl border cursor-pointer transition-all shadow-sm ${
+            className={`p-4.5 rounded-xl border cursor-pointer transition-all shadow-xs ${
               statusFilter === 'Crown Fixed'
                 ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-600'
                 : 'bg-white border-gray-200 hover:border-emerald-300'
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className={`text-[11px] font-bold uppercase tracking-wider ${statusFilter === 'Crown Fixed' ? 'text-emerald-100' : 'text-gray-500'}`}>
-                3. Crown Fixed
+              <span className={`text-xs font-medium ${statusFilter === 'Crown Fixed' ? 'text-emerald-100' : 'text-slate-600'}`}>
+                3. Crown fixed
               </span>
               <span className={`p-1.5 rounded-lg ${statusFilter === 'Crown Fixed' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'}`}>
                 <CheckCircle2 size={16} />
               </span>
             </div>
-            <div className={`text-2xl md:text-3xl font-black mt-2 ${statusFilter === 'Crown Fixed' ? 'text-white' : 'text-gray-900'}`}>
+            <div className={`text-2xl md:text-3xl font-bold mt-2 tabular-nums ${statusFilter === 'Crown Fixed' ? 'text-white' : 'text-slate-900'}`}>
               {metrics.countFixed}
             </div>
-            <p className={`text-[11px] mt-1 ${statusFilter === 'Crown Fixed' ? 'text-emerald-100' : 'text-gray-400'}`}>
+            <p className={`text-[11px] mt-1 ${statusFilter === 'Crown Fixed' ? 'text-emerald-100' : 'text-slate-400'}`}>
               Fitted on patient
             </p>
           </div>
@@ -442,25 +442,25 @@ export default function CrownManagementPage() {
           {/* 4. Crown Not Required */}
           <div
             onClick={() => setStatusFilter(statusFilter === 'Crown Not Required' ? 'ALL' : 'Crown Not Required')}
-            className={`p-4.5 rounded-2xl border cursor-pointer transition-all shadow-sm ${
+            className={`p-4.5 rounded-xl border cursor-pointer transition-all shadow-xs ${
               statusFilter === 'Crown Not Required'
                 ? 'bg-slate-800 text-white border-slate-800 ring-2 ring-slate-800'
                 : 'bg-white border-gray-200 hover:border-gray-400'
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className={`text-[11px] font-bold uppercase tracking-wider ${statusFilter === 'Crown Not Required' ? 'text-slate-300' : 'text-gray-500'}`}>
-                4. Crown Not Req.
+              <span className={`text-xs font-medium ${statusFilter === 'Crown Not Required' ? 'text-slate-300' : 'text-slate-600'}`}>
+                4. Crown not req.
               </span>
               <span className={`p-1.5 rounded-lg ${statusFilter === 'Crown Not Required' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'}`}>
                 <Ban size={16} />
               </span>
             </div>
-            <div className={`text-2xl md:text-3xl font-black mt-2 ${statusFilter === 'Crown Not Required' ? 'text-white' : 'text-gray-900'}`}>
+            <div className={`text-2xl md:text-3xl font-bold mt-2 tabular-nums ${statusFilter === 'Crown Not Required' ? 'text-white' : 'text-slate-900'}`}>
               {metrics.countNotRequired}
             </div>
-            <p className={`text-[11px] mt-1 ${statusFilter === 'Crown Not Required' ? 'text-slate-300' : 'text-gray-400'}`}>
-              Crown No. / Not req.
+            <p className={`text-[11px] mt-1 ${statusFilter === 'Crown Not Required' ? 'text-slate-300' : 'text-slate-400'}`}>
+              Crown no. / not req.
             </p>
           </div>
         </div>
@@ -634,17 +634,17 @@ export default function CrownManagementPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs text-gray-600">
-                <thead className="bg-gray-50 text-gray-700 uppercase font-bold text-[11px] border-b border-gray-200">
+                <thead className="bg-slate-50/75 text-slate-700 font-semibold text-xs border-b border-slate-200/80">
                   <tr>
-                    <th className="py-3.5 px-4">Treatment Date</th>
-                    <th className="py-3.5 px-4">Patient Details</th>
-                    <th className="py-3.5 px-4">Tooth #</th>
-                    <th className="py-3.5 px-4">Treatment Ref</th>
-                    <th className="py-3.5 px-4">Crown Status</th>
-                    <th className="py-3.5 px-4">Fixed Date</th>
-                    <th className="py-3.5 px-4 text-right">Crown Price</th>
-                    <th className="py-3.5 px-4">Crown Type</th>
-                    <th className="py-3.5 px-4 text-right">Actions</th>
+                    <th className="py-3 px-4 font-semibold">Treatment date</th>
+                    <th className="py-3 px-4 font-semibold">Patient details</th>
+                    <th className="py-3 px-4 font-semibold">Tooth #</th>
+                    <th className="py-3 px-4 font-semibold">Treatment ref</th>
+                    <th className="py-3 px-4 font-semibold">Crown status</th>
+                    <th className="py-3 px-4 font-semibold">Fixed date</th>
+                    <th className="py-3 px-4 text-right font-semibold">Crown price</th>
+                    <th className="py-3 px-4 font-semibold">Crown type</th>
+                    <th className="py-3 px-4 text-right font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">

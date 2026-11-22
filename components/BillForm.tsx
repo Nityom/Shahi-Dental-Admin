@@ -675,14 +675,14 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
           {/* Items Table */}
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 border">
-              <thead className="bg-gray-50">
+              <thead className="bg-slate-50/75 border-b border-slate-200/80">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price (₹)</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total (₹)</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">S.No</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Description</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Qty</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Unit price (₹)</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Total (₹)</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">

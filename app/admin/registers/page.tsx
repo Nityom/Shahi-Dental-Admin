@@ -541,55 +541,55 @@ function RegistersContent() {
           <div className="space-y-4">
             {/* 1. Overall Staff KPI Summary */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-              <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
-                <div className="flex items-center justify-between text-gray-500 text-xs font-semibold uppercase">
-                  <span>Staff Members</span>
+              <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
+                <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+                  <span>Staff members</span>
                   <Users size={16} className="text-emerald-600" />
                 </div>
-                <div className="text-2xl font-black text-gray-900 mt-1">{staffMembers.length}</div>
-                <p className="text-[11px] text-gray-500 mt-0.5">Active clinic personnel</p>
+                <div className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">{staffMembers.length}</div>
+                <p className="text-[11px] text-slate-400 mt-0.5">Active clinic personnel</p>
               </div>
 
-              <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
-                <div className="flex items-center justify-between text-gray-500 text-xs font-semibold uppercase">
-                  <span>Fixed Monthly Payroll</span>
+              <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
+                <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+                  <span>Fixed monthly payroll</span>
                   <IndianRupee size={16} className="text-emerald-600" />
                 </div>
-                <div className="text-2xl font-black text-emerald-900 mt-1">
+                <div className="text-2xl font-bold text-emerald-800 mt-1 tabular-nums">
                   ₹{staffTotals.totalFixedSalary.toLocaleString('en-IN')}
                 </div>
-                <p className="text-[11px] text-gray-500 mt-0.5">Total base salary commitment</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Total base salary commitment</p>
               </div>
 
-              <div className={`p-4 rounded-2xl border shadow-sm transition ${
+              <div className={`p-4 rounded-xl border shadow-xs transition ${
                 staffTotals.totalAdvanceBalance > 0
                   ? 'bg-amber-50/70 border-amber-200'
-                  : 'bg-white border-gray-200'
+                  : 'bg-white border-slate-200/80'
               }`}>
-                <div className="flex items-center justify-between text-xs font-semibold uppercase">
-                  <span className={staffTotals.totalAdvanceBalance > 0 ? 'text-amber-800' : 'text-gray-500'}>
-                    Advance Balance
+                <div className="flex items-center justify-between text-xs font-medium">
+                  <span className={staffTotals.totalAdvanceBalance > 0 ? 'text-amber-800' : 'text-slate-500'}>
+                    Advance balance
                   </span>
-                  <Wallet size={16} className={staffTotals.totalAdvanceBalance > 0 ? 'text-amber-600' : 'text-gray-400'} />
+                  <Wallet size={16} className={staffTotals.totalAdvanceBalance > 0 ? 'text-amber-600' : 'text-slate-400'} />
                 </div>
-                <div className={`text-2xl font-black mt-1 ${
-                  staffTotals.totalAdvanceBalance > 0 ? 'text-amber-900' : 'text-gray-900'
+                <div className={`text-2xl font-bold mt-1 tabular-nums ${
+                  staffTotals.totalAdvanceBalance > 0 ? 'text-amber-900' : 'text-slate-900'
                 }`}>
                   ₹{staffTotals.totalAdvanceBalance.toLocaleString('en-IN')}
                 </div>
                 <p className={`text-[11px] mt-0.5 ${
-                  staffTotals.totalAdvanceBalance > 0 ? 'text-amber-700 font-medium' : 'text-gray-500'
+                  staffTotals.totalAdvanceBalance > 0 ? 'text-amber-700 font-medium' : 'text-slate-400'
                 }`}>
-                  {staffTotals.totalAdvanceBalance > 0 ? '⚠️ Total advance outstanding' : 'No advance outstanding'}
+                  {staffTotals.totalAdvanceBalance > 0 ? 'Total advance outstanding' : 'No advance outstanding'}
                 </p>
               </div>
 
-              <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
-                <div className="flex items-center justify-between text-gray-500 text-xs font-semibold uppercase">
-                  <span>Paid This Month</span>
+              <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
+                <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+                  <span>Paid this month</span>
                   <CheckCircle2 size={16} className="text-emerald-600" />
                 </div>
-                <div className="text-2xl font-black text-emerald-700 mt-1">
+                <div className="text-2xl font-bold text-emerald-800 mt-1 tabular-nums">
                   ₹{staffTotals.totalPaidThisMonth.toLocaleString('en-IN')}
                 </div>
                 <p className="text-[11px] text-gray-500 mt-0.5">
@@ -669,21 +669,21 @@ function RegistersContent() {
                         {/* Salary & Advance Metrics */}
                         <div className="grid grid-cols-2 gap-2 pt-1 border-t border-gray-200/80 text-xs">
                           <div>
-                            <span className="text-[10px] uppercase font-semibold text-gray-500">Fixed Salary</span>
-                            <div className="font-bold text-gray-900 text-sm">
+                            <span className="text-[11px] font-medium text-slate-500">Fixed salary</span>
+                            <div className="font-semibold text-slate-900 text-sm tabular-nums">
                               ₹{(member.fixed_salary || 0).toLocaleString('en-IN')}
-                              <span className="text-[10px] text-gray-500 font-normal"> /mo</span>
+                              <span className="text-[10px] text-slate-400 font-normal"> /mo</span>
                             </div>
                           </div>
 
                           <div>
-                            <span className="text-[10px] uppercase font-semibold text-gray-500">Advance Balance</span>
-                            <div className={`font-bold text-sm flex items-center gap-1 ${
-                              hasAdvance ? 'text-amber-700' : 'text-gray-500 font-normal'
+                            <span className="text-[11px] font-medium text-slate-500">Advance balance</span>
+                            <div className={`font-semibold text-sm flex items-center gap-1 tabular-nums ${
+                              hasAdvance ? 'text-amber-700' : 'text-slate-500 font-normal'
                             }`}>
                               ₹{(member.advance_balance || 0).toLocaleString('en-IN')}
                               {hasAdvance && (
-                                <span className="px-1 py-0.5 bg-amber-100 text-amber-800 text-[9px] font-bold rounded">
+                                <span className="px-1 py-0.5 bg-amber-100 text-amber-800 text-[9px] font-medium rounded">
                                   Due
                                 </span>
                               )}
@@ -691,15 +691,15 @@ function RegistersContent() {
                           </div>
 
                           <div>
-                            <span className="text-[10px] uppercase font-semibold text-gray-500">Paid This Month</span>
-                            <div className="font-medium text-emerald-700">
+                            <span className="text-[11px] font-medium text-slate-500">Paid this month</span>
+                            <div className="font-medium text-emerald-700 tabular-nums">
                               ₹{(member.salary_paid_this_month || 0).toLocaleString('en-IN')}
                             </div>
                           </div>
 
                           <div>
-                            <span className="text-[10px] uppercase font-semibold text-gray-500">Remaining</span>
-                            <div className="font-medium text-gray-700">
+                            <span className="text-[11px] font-medium text-slate-500">Remaining</span>
+                            <div className="font-medium text-slate-700 tabular-nums">
                               ₹{(member.pending_salary_this_month || 0).toLocaleString('en-IN')}
                             </div>
                           </div>
@@ -762,15 +762,15 @@ function RegistersContent() {
               {/* 1. REVIEW REGISTER TABLE */}
               {activeTab === 'REVIEW' && (
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase font-semibold">
+                  <thead className="bg-slate-50/75 border-b border-slate-200/80 text-slate-700 font-semibold text-xs">
                     <tr>
-                      <th className="py-2.5 px-3">Review Date</th>
-                      <th className="py-2.5 px-3">Patient Details</th>
-                      <th className="py-2.5 px-3">Treatment / Purpose</th>
-                      <th className="py-2.5 px-3">Doctor</th>
-                      <th className="py-2.5 px-3">Status</th>
-                      <th className="py-2.5 px-3">Findings & Notes</th>
-                      <th className="py-2.5 px-3 text-right">Actions</th>
+                      <th className="py-2.5 px-3 font-semibold">Review date</th>
+                      <th className="py-2.5 px-3 font-semibold">Patient details</th>
+                      <th className="py-2.5 px-3 font-semibold">Treatment / purpose</th>
+                      <th className="py-2.5 px-3 font-semibold">Doctor</th>
+                      <th className="py-2.5 px-3 font-semibold">Status</th>
+                      <th className="py-2.5 px-3 font-semibold">Findings & notes</th>
+                      <th className="py-2.5 px-3 text-right font-semibold">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -810,15 +810,15 @@ function RegistersContent() {
               {/* 2. RECALL REGISTER TABLE */}
               {activeTab === 'RECALL' && (
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase font-semibold">
+                  <thead className="bg-slate-50/75 border-b border-slate-200/80 text-slate-700 font-semibold text-xs">
                     <tr>
-                      <th className="py-2.5 px-3">Due Date</th>
-                      <th className="py-2.5 px-3">Patient Details</th>
-                      <th className="py-2.5 px-3">Recall Reason / Type</th>
-                      <th className="py-2.5 px-3">Status</th>
-                      <th className="py-2.5 px-3">Contacted Date</th>
-                      <th className="py-2.5 px-3">Notes</th>
-                      <th className="py-2.5 px-3 text-right">Actions</th>
+                      <th className="py-2.5 px-3 font-semibold">Due date</th>
+                      <th className="py-2.5 px-3 font-semibold">Patient details</th>
+                      <th className="py-2.5 px-3 font-semibold">Recall reason / type</th>
+                      <th className="py-2.5 px-3 font-semibold">Status</th>
+                      <th className="py-2.5 px-3 font-semibold">Contacted date</th>
+                      <th className="py-2.5 px-3 font-semibold">Notes</th>
+                      <th className="py-2.5 px-3 text-right font-semibold">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -858,15 +858,15 @@ function RegistersContent() {
               {/* 3. FOLLOWUP REGISTER TABLE */}
               {activeTab === 'FOLLOWUP' && (
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase font-semibold">
+                  <thead className="bg-slate-50/75 border-b border-slate-200/80 text-slate-700 font-semibold text-xs">
                     <tr>
-                      <th className="py-2.5 px-3">Follow-up Date</th>
-                      <th className="py-2.5 px-3">Patient Details</th>
-                      <th className="py-2.5 px-3">Treatment Performed</th>
-                      <th className="py-2.5 px-3">Calling Status</th>
-                      <th className="py-2.5 px-3">Next Date</th>
-                      <th className="py-2.5 px-3">Notes</th>
-                      <th className="py-2.5 px-3 text-right">Actions</th>
+                      <th className="py-2.5 px-3 font-semibold">Follow-up date</th>
+                      <th className="py-2.5 px-3 font-semibold">Patient details</th>
+                      <th className="py-2.5 px-3 font-semibold">Treatment performed</th>
+                      <th className="py-2.5 px-3 font-semibold">Calling status</th>
+                      <th className="py-2.5 px-3 font-semibold">Next date</th>
+                      <th className="py-2.5 px-3 font-semibold">Notes</th>
+                      <th className="py-2.5 px-3 text-right font-semibold">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -905,17 +905,17 @@ function RegistersContent() {
               {/* 4. STAFF PAYMENT HISTORY TABLE */}
               {activeTab === 'STAFF_PAYMENTS' && (
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase font-semibold">
+                  <thead className="bg-slate-50/75 border-b border-slate-200/80 text-slate-700 font-semibold text-xs">
                     <tr>
-                      <th className="py-2.5 px-3">Date</th>
-                      <th className="py-2.5 px-3">Staff Details</th>
-                      <th className="py-2.5 px-3">Month</th>
-                      <th className="py-2.5 px-3">Payment Type</th>
-                      <th className="py-2.5 px-3 text-right">Amount Paid</th>
-                      <th className="py-2.5 px-3 text-right">Advance Deducted</th>
-                      <th className="py-2.5 px-3">Mode</th>
-                      <th className="py-2.5 px-3">Paid By / Ref</th>
-                      <th className="py-2.5 px-3 text-right">Actions</th>
+                      <th className="py-2.5 px-3 font-semibold">Date</th>
+                      <th className="py-2.5 px-3 font-semibold">Staff details</th>
+                      <th className="py-2.5 px-3 font-semibold">Month</th>
+                      <th className="py-2.5 px-3 font-semibold">Payment type</th>
+                      <th className="py-2.5 px-3 text-right font-semibold">Amount paid</th>
+                      <th className="py-2.5 px-3 text-right font-semibold">Advance deducted</th>
+                      <th className="py-2.5 px-3 font-semibold">Mode</th>
+                      <th className="py-2.5 px-3 font-semibold">Paid by / ref</th>
+                      <th className="py-2.5 px-3 text-right font-semibold">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">

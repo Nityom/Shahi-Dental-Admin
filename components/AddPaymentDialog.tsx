@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { paymentTransactionService, CreatePaymentData } from "@/services/payment-transactions";
 import { billService, Bill } from "@/services/bills";
+import { Calendar, Stethoscope, Activity, Sparkles, Pill } from "lucide-react";
 
 interface AddPaymentDialogProps {
   open: boolean;
@@ -238,7 +239,7 @@ export default function AddPaymentDialog({
     });
   };
 
-  const renderItemRow = (item: any, bgActive: string, borderActive: string, textActive: string, icon: string) => {
+  const renderItemRow = (item: any, bgActive: string, borderActive: string, textActive: string, IconComponent: any) => {
     const isChecked = selectedItemIds.has(item.id);
     const itemDateStr = item.date ? formatDate(item.date) : (bill?.created_at ? formatDate(bill.created_at) : "");
 
@@ -260,25 +261,29 @@ export default function AddPaymentDialog({
           />
           <div className="truncate">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="truncate">{icon} {item.description}</span>
+              <span className="truncate flex items-center gap-1.5">
+                <IconComponent size={13} className="shrink-0 opacity-75" />
+                <span>{item.description}</span>
+              </span>
               {item.is_paid ? (
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded">
-                  PAID ✓
+                <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded">
+                  Paid
                 </span>
               ) : (
-                <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded">
-                  PENDING
+                <span className="text-[10px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded">
+                  Pending
                 </span>
               )}
             </div>
             {itemDateStr && (
-              <span className="block text-[11px] text-gray-500 font-mono mt-0.5">
-                📅 {itemDateStr}
+              <span className="flex items-center gap-1 text-[11px] text-gray-500 font-mono mt-0.5">
+                <Calendar size={11} className="text-gray-400" />
+                <span>{itemDateStr}</span>
               </span>
             )}
           </div>
         </div>
-        <span className="font-bold shrink-0">₹{Number(item.total).toLocaleString("en-IN")}</span>
+        <span className="font-semibold shrink-0 tabular-nums">₹{Number(item.total).toLocaleString("en-IN")}</span>
       </label>
     );
   };
@@ -329,28 +334,28 @@ export default function AddPaymentDialog({
 
               {/* Items List */}
               <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                  Or Select Treatment Customer is Paying For:
+                <p className="text-xs font-semibold text-slate-700">
+                  Or select treatment customer is paying for:
                 </p>
 
                 {/* Consultation */}
                 {consultationItems.map((item) =>
-                  renderItemRow(item, "bg-purple-50/50", "border-purple-300", "text-purple-950", "🩺")
+                  renderItemRow(item, "bg-purple-50/50", "border-purple-300", "text-purple-950", Stethoscope)
                 )}
 
                 {/* X-Ray / Investigations */}
                 {xrayItems.map((item) =>
-                  renderItemRow(item, "bg-indigo-50/50", "border-indigo-300", "text-indigo-950", "🩻")
+                  renderItemRow(item, "bg-indigo-50/50", "border-indigo-300", "text-indigo-950", Activity)
                 )}
 
                 {/* Treatment Done (Procedures) */}
                 {procedureItems.map((item) =>
-                  renderItemRow(item, "bg-emerald-50/50", "border-emerald-300", "text-emerald-950", "🦷")
+                  renderItemRow(item, "bg-emerald-50/50", "border-emerald-300", "text-emerald-950", Sparkles)
                 )}
 
                 {/* Medicines */}
                 {medicineItems.map((item) =>
-                  renderItemRow(item, "bg-amber-50/50", "border-amber-300", "text-amber-950", "💊")
+                  renderItemRow(item, "bg-amber-50/50", "border-amber-300", "text-amber-950", Pill)
                 )}
               </div>
             </div>

@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { Alert } from "@/components/ui/alert";
 import PrescriptionHistory from "@/components/PrescriptionHistory";
 import { useIsAdmin } from '@/hooks/use-is-admin';
-import { Calendar as CalendarIcon, X, Search, RefreshCw, UserPlus, Filter, IndianRupee, Printer, History, CheckCircle2, Eye, Trash2, FilePlus } from 'lucide-react';
+import { Calendar as CalendarIcon, X, Search, RefreshCw, UserPlus, Filter, IndianRupee, Printer, History, CheckCircle2, Eye, Trash2, FilePlus, ChevronDown, ChevronUp, Stethoscope, Pill, Activity } from 'lucide-react';
 import { paymentTransactionService, PaymentTransaction } from '@/services/payment-transactions';
 
 // Group prescriptions by patient name to create a patient list
@@ -813,37 +813,37 @@ const ViewPatients = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-emerald-50 p-5 rounded-xl border border-emerald-100 shadow-sm">
-            <h4 className="text-xs font-semibold text-emerald-800 uppercase tracking-wider mb-1">Total Patients</h4>
-            <p className="text-2xl md:text-3xl font-bold text-emerald-700">{patients.length}</p>
+          <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs">
+            <h4 className="text-xs font-medium text-slate-500 mb-1">Total patients</h4>
+            <p className="text-2xl md:text-3xl font-semibold text-slate-900 tabular-nums">{patients.length}</p>
           </div>
 
-          <div className="bg-purple-50 p-5 rounded-xl border border-purple-100 shadow-sm">
-            <h4 className="text-xs font-semibold text-purple-800 uppercase tracking-wider mb-1">Total Consultations</h4>
-            <p className="text-2xl md:text-3xl font-bold text-purple-700">
+          <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs">
+            <h4 className="text-xs font-medium text-slate-500 mb-1">Total consultations</h4>
+            <p className="text-2xl md:text-3xl font-semibold text-slate-900 tabular-nums">
               {patients.reduce((sum, patient) => sum + patient.totalVisits, 0)}
             </p>
           </div>
 
-          <div className="bg-emerald-50 p-5 rounded-xl border border-emerald-100 shadow-sm">
-            <h4 className="text-xs font-semibold text-emerald-800 uppercase tracking-wider mb-1">Patients Today</h4>
-            <p className="text-2xl md:text-3xl font-bold text-emerald-700">
+          <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs">
+            <h4 className="text-xs font-medium text-slate-500 mb-1">Patients today</h4>
+            <p className="text-2xl md:text-3xl font-semibold text-emerald-700 tabular-nums">
               {patients.filter(p => isPatientOnDate(p, getTodayStr())).length}
             </p>
           </div>
 
-          <div className="bg-amber-50 p-5 rounded-xl border border-amber-100 shadow-sm">
-            <h4 className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-1">
-              {dateFilterMode !== 'ALL' ? 'Filtered Patients' : 'Patients This Month'}
+          <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs">
+            <h4 className="text-xs font-medium text-slate-500 mb-1">
+              {dateFilterMode !== 'ALL' ? 'Filtered patients' : 'Patients this month'}
             </h4>
-            <p className="text-2xl md:text-3xl font-bold text-amber-700">
+            <p className="text-2xl md:text-3xl font-semibold text-slate-900 tabular-nums">
               {dateFilterMode !== 'ALL' ? filteredPatients.length : patients.filter(p => isPatientInCurrentMonth(p)).length}
             </p>
           </div>
         </div>
 
         {/* Patients Table */}
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden">
           {loading ? (
             <div className="p-10 text-center">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-[#176e56] border-t-transparent"></div>
@@ -885,16 +885,16 @@ const ViewPatients = () => {
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+                <thead className="bg-slate-50/75 border-b border-slate-200/80">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference No.</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone Number</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sex</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Visit</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Visits</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">Reference no.</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">Patient name</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">Phone number</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">Age</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">Sex</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">Last visit</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">Total visits</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -918,21 +918,21 @@ const ViewPatients = () => {
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#176e56] text-white rounded-lg text-xs font-semibold hover:bg-[#155944] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition shadow-xs cursor-pointer"
                           >
                             <Eye size={14} className="shrink-0" />
-                            <span>View Details</span>
+                            <span>View details</span>
                           </button>
                           {isAdmin && (
                             <button
                               onClick={() => handleDelete(patient)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition shadow-xs cursor-pointer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-rose-700 border border-rose-200 rounded-lg text-xs font-semibold hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 transition shadow-2xs cursor-pointer"
                             >
                               <Trash2 size={14} className="shrink-0" />
                               <span>Delete</span>
                             </button>
                           )}
                           <Link href={`/admin/prescription?patientName=${encodeURIComponent(patient.name)}&phone=${encodeURIComponent(patient.phone_number)}&age=${patient.age}&sex=${patient.sex}&medicalHistory=${encodeURIComponent(patient.prescriptions[0]?.medical_history || '')}`}>
-                            <button className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition shadow-xs cursor-pointer">
+                            <button className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-semibold hover:bg-emerald-100/70 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition shadow-2xs cursor-pointer">
                               <FilePlus size={14} className="shrink-0" />
-                              <span>New Prescription</span>
+                              <span>New prescription</span>
                             </button>
                           </Link>
                         </div>
@@ -1335,9 +1335,9 @@ const ViewPatients = () => {
                   return (
                     <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3.5 flex justify-between items-center text-xs sm:text-sm">
                       <div>
-                        <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-800 block">Pending Balance</span>
-                        <span className="text-xl font-black text-emerald-900">₹{currentBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-emerald-700 font-medium">
+                        <span className="text-xs font-medium text-slate-500 block">Pending balance</span>
+                        <span className="text-xl font-bold text-slate-900 tabular-nums">₹{currentBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-600 font-medium">
                           <span>Total: ₹{Number(selectedBillForPayment.total_amount || 0).toLocaleString('en-IN')}</span>
                           <span>• Paid: ₹{Number(selectedBillForPayment.paid_amount || 0).toLocaleString('en-IN')}</span>
                         </div>
@@ -1399,17 +1399,13 @@ const ViewPatients = () => {
 
                       {/* Pending Treatments Section */}
                       <div className="space-y-1.5">
-                        <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block">
-                          Pending Treatments ({pendingItems.length}):
+                        <span className="text-xs font-semibold text-slate-700 block">
+                          Pending treatments ({pendingItems.length})
                         </span>
                         <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                           {pendingItems.map((item: any, idx: number) => {
                             const itemId = item.id !== undefined && item.id !== null ? item.id : `item-${idx}`;
                             const isChecked = selectedInstallmentItemIds.has(itemId);
-                            const desc = (item.description || '').toLowerCase();
-                            const icon = item.item_type === 'consultation' || desc.includes('consultation') ? '🩺' :
-                                         item.item_type === 'xray' || desc.includes('iopar') || desc.includes('x-ray') ? '🩻' :
-                                         item.item_type === 'medicine' ? '💊' : '🦷';
                             const itemDateStr = item.date ? formatDate(item.date) : (selectedBillForPayment.created_at ? formatDate(selectedBillForPayment.created_at) : '');
                             const itemTotal = Number(item.total) || (Number(item.quantity || 1) * Number(item.unit_price || 0));
 
@@ -1432,16 +1428,16 @@ const ViewPatients = () => {
                                   <div className="truncate">
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                       <span className={`text-xs sm:text-sm font-semibold ${isChecked ? 'text-emerald-950 font-bold' : 'text-gray-800'}`}>
-                                        {icon} {item.description}
+                                        {item.description}
                                       </span>
-                                      <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200 px-1.5 py-0.2 rounded">
+                                      <span className="text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded">
                                         Pending
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-500">
                                       {itemDateStr && (
                                         <span className="flex items-center gap-1 text-gray-700 font-medium">
-                                          📅 {itemDateStr}
+                                          <CalendarIcon size={12} className="text-gray-400" /> {itemDateStr}
                                         </span>
                                       )}
                                       {item.quantity && item.quantity > 1 && (
@@ -1450,7 +1446,7 @@ const ViewPatients = () => {
                                     </div>
                                   </div>
                                 </div>
-                                <span className="font-bold text-xs sm:text-sm text-gray-900 shrink-0">
+                                <span className="font-semibold text-xs sm:text-sm text-gray-900 shrink-0 tabular-nums">
                                   ₹{itemTotal.toLocaleString('en-IN')}
                                 </span>
                               </label>
@@ -1468,20 +1464,20 @@ const ViewPatients = () => {
                             className="w-full flex items-center justify-between text-xs text-gray-600 font-semibold py-1 hover:text-gray-900 transition"
                           >
                             <span className="flex items-center gap-1.5">
-                              <span className="text-emerald-700">✓</span> Already Paid Treatments ({paidItems.length})
+                              <span className="text-emerald-700">✓</span> Already paid treatments ({paidItems.length})
                             </span>
-                            <span className="text-[11px] text-gray-500">
-                              {showPaidInstallmentItems ? '▲ Hide' : '▼ Show'}
+                            <span className="text-[11px] text-gray-500 flex items-center gap-1">
+                              {showPaidInstallmentItems ? (
+                                <><span>Hide</span><ChevronUp size={12} /></>
+                              ) : (
+                                <><span>Show</span><ChevronDown size={12} /></>
+                              )}
                             </span>
                           </button>
                           {showPaidInstallmentItems && (
                             <div className="mt-1.5 space-y-1.5 max-h-36 overflow-y-auto pr-1">
                               {paidItems.map((item: any, idx: number) => {
                                 const itemId = item.id !== undefined && item.id !== null ? item.id : `paid-${idx}`;
-                                const desc = (item.description || '').toLowerCase();
-                                const icon = item.item_type === 'consultation' || desc.includes('consultation') ? '🩺' :
-                                             item.item_type === 'xray' || desc.includes('iopar') || desc.includes('x-ray') ? '🩻' :
-                                             item.item_type === 'medicine' ? '💊' : '🦷';
                                 const itemDateStr = item.date ? formatDate(item.date) : (selectedBillForPayment.created_at ? formatDate(selectedBillForPayment.created_at) : '');
                                 const itemTotal = Number(item.total) || (Number(item.quantity || 1) * Number(item.unit_price || 0));
 
@@ -1494,16 +1490,18 @@ const ViewPatients = () => {
                                       <span className="text-emerald-600 font-bold">✓</span>
                                       <div className="truncate">
                                         <span className="font-medium text-gray-700 truncate block">
-                                          {icon} {item.description}
+                                          {item.description}
                                         </span>
                                         {itemDateStr && (
-                                          <span className="text-[10px] text-gray-500 font-mono">📅 {itemDateStr}</span>
+                                          <span className="text-[10px] text-gray-500 font-mono flex items-center gap-1">
+                                            <CalendarIcon size={10} className="text-gray-400" /> {itemDateStr}
+                                          </span>
                                         )}
                                       </div>
                                     </div>
                                     <div className="text-right shrink-0">
-                                      <span className="font-semibold text-gray-800">₹{itemTotal.toLocaleString('en-IN')}</span>
-                                      <span className="block text-[9px] font-bold text-emerald-700 uppercase">Paid ✓</span>
+                                      <span className="font-semibold text-gray-800 tabular-nums">₹{itemTotal.toLocaleString('en-IN')}</span>
+                                      <span className="block text-[9px] font-medium text-emerald-700">Paid ✓</span>
                                     </div>
                                   </div>
                                 );

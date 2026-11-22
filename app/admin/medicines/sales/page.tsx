@@ -671,7 +671,7 @@ export default function SalesReportPage() {
               </div>
               
               <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-gray-100">
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mr-1">Quick Select:</span>
+                <span className="text-xs font-medium text-slate-500 mr-1">Quick select:</span>
                 {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((p) => {
                   const labels = {
                     daily: 'Daily (Today)',
@@ -859,34 +859,34 @@ export default function SalesReportPage() {
                 <thead className="bg-gray-50">
                   <tr>
                     {groupBy === 'medicine' && (
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                         Medicine Name
                       </th>
                     )}
                     {groupBy === 'company' && (
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                         Company
                       </th>
                     )}
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                       Period
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                       Transactions
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                       Quantity
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                       Cost (₹)
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                       Revenue (₹)
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                       Profit (₹)
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                       Margin %
                     </th>
                   </tr>
@@ -1010,7 +1010,7 @@ export default function SalesReportPage() {
               </div>
               
               <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-gray-100">
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mr-1">Quick Select:</span>
+                <span className="text-xs font-medium text-slate-500 mr-1">Quick select:</span>
                 {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((p) => {
                   const labels = {
                     daily: 'Daily (Today)',
@@ -1124,25 +1124,25 @@ export default function SalesReportPage() {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                           Patient Name
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                           Phone Number
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                           Total Bills
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                           Total Amount (₹)
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                           Paid Amount (₹)
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                           Balance (₹)
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                           Payment Status
                         </th>
                       </tr>
@@ -1247,7 +1247,7 @@ export default function SalesReportPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-gray-100">
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mr-1">Quick Select:</span>
+                <span className="text-xs font-medium text-slate-500 mr-1">Quick select:</span>
                 {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((p) => {
                   const labels = {
                     daily: 'Daily (Today)',
@@ -1407,25 +1407,25 @@ export default function SalesReportPage() {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                           Date
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                           Item Name
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                           Subdivision / Type
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                           Quantity
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                           Rate (₹)
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                           Total Amount (₹)
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                           Notes / Treatment
                         </th>
                       </tr>
@@ -1467,16 +1467,16 @@ export default function SalesReportPage() {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                           Date
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                           Transactions / Items
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                           Total Quantity
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">
                           Total Amount (₹)
                         </th>
                       </tr>
@@ -1597,7 +1597,7 @@ export default function SalesReportPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-gray-100">
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mr-1">Quick Select:</span>
+                <span className="text-xs font-medium text-slate-500 mr-1">Quick select:</span>
                 {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((p) => {
                   const labels = {
                     daily: 'Daily (Today)',
@@ -1653,9 +1653,9 @@ export default function SalesReportPage() {
               <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-emerald-600">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">IOPAR / X-Rays (₹200)</p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">{diagnosticData?.totalIopar || 0} Tests</p>
-                    <p className="text-sm font-semibold text-emerald-800 mt-1">₹{Number(diagnosticData?.totalIoparRevenue || 0).toLocaleString('en-IN')}</p>
+                    <p className="text-xs font-medium text-slate-500">IOPAR / X-Rays (₹200)</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1 tabular-nums">{diagnosticData?.totalIopar || 0} Tests</p>
+                    <p className="text-sm font-semibold text-emerald-800 mt-1 tabular-nums">₹{Number(diagnosticData?.totalIoparRevenue || 0).toLocaleString('en-IN')}</p>
                   </div>
                   <div className="p-3 bg-emerald-50 rounded-full">
                     <Activity className="text-emerald-600" size={24} />
@@ -1666,9 +1666,9 @@ export default function SalesReportPage() {
               <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-rose-500">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-semibold text-rose-600 uppercase tracking-wider">Blood Tests (₹50)</p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">{diagnosticData?.totalBlood || 0} Tests</p>
-                    <p className="text-sm font-semibold text-rose-700 mt-1">₹{Number(diagnosticData?.totalBloodRevenue || 0).toLocaleString('en-IN')}</p>
+                    <p className="text-xs font-medium text-slate-500">Blood Tests (₹50)</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1 tabular-nums">{diagnosticData?.totalBlood || 0} Tests</p>
+                    <p className="text-sm font-semibold text-rose-700 mt-1 tabular-nums">₹{Number(diagnosticData?.totalBloodRevenue || 0).toLocaleString('en-IN')}</p>
                   </div>
                   <div className="p-3 bg-rose-50 rounded-full">
                     <Activity className="text-rose-500" size={24} />
@@ -1679,9 +1679,9 @@ export default function SalesReportPage() {
               <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-amber-500">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Sugar Tests (₹50)</p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">{diagnosticData?.totalSugar || 0} Tests</p>
-                    <p className="text-sm font-semibold text-amber-700 mt-1">₹{Number(diagnosticData?.totalSugarRevenue || 0).toLocaleString('en-IN')}</p>
+                    <p className="text-xs font-medium text-slate-500">Sugar Tests (₹50)</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1 tabular-nums">{diagnosticData?.totalSugar || 0} Tests</p>
+                    <p className="text-sm font-semibold text-amber-700 mt-1 tabular-nums">₹{Number(diagnosticData?.totalSugarRevenue || 0).toLocaleString('en-IN')}</p>
                   </div>
                   <div className="p-3 bg-amber-50 rounded-full">
                     <Activity className="text-amber-500" size={24} />
@@ -1692,8 +1692,8 @@ export default function SalesReportPage() {
               <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-emerald-500">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Total Diagnostic Revenue</p>
-                    <p className="text-2xl font-bold text-emerald-700 mt-1">₹{Number(diagnosticData?.totalRevenue || 0).toLocaleString('en-IN')}</p>
+                    <p className="text-xs font-medium text-emerald-800">Total Diagnostic Revenue</p>
+                    <p className="text-2xl font-bold text-emerald-700 mt-1 tabular-nums">₹{Number(diagnosticData?.totalRevenue || 0).toLocaleString('en-IN')}</p>
                     <p className="text-xs text-gray-500 mt-1">{diagnosticData?.totalCount || 0} total tests performed</p>
                   </div>
                   <div className="p-3 bg-emerald-50 rounded-full">
@@ -1731,14 +1731,14 @@ export default function SalesReportPage() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-slate-50/75 border-b border-slate-200/80">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Patient Name</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Phone</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Doctor</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tests Performed</th>
-                        <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Billed Amount</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">Patient name</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">Phone</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">Doctor</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600">Tests performed</th>
+                        <th className="px-6 py-3 text-right text-xs font-semibold text-slate-600">Billed amount</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">

@@ -227,7 +227,7 @@ export const PrintableExtractionDues: React.FC<PrintableExtractionDuesProps> = (
 
         {/* Patient Details Card */}
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-3.5 mb-5">
-          <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Patient Details</div>
+          <div className="text-xs font-semibold text-slate-600 mb-2">Patient details</div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
             <div>
               <div className="text-xs text-gray-500">Patient Name</div>
@@ -252,14 +252,14 @@ export const PrintableExtractionDues: React.FC<PrintableExtractionDuesProps> = (
 
         {/* Treatment & Extraction Details Table */}
         <div className="mb-5">
-          <div className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-            Treatment / Extraction Details & Charges
+          <div className="text-xs font-semibold text-slate-700 mb-2">
+            Treatment / extraction details & charges
           </div>
           <table className="w-full border-collapse border border-gray-300 text-sm">
             <thead>
-              <tr className="bg-gray-100 border-b border-gray-300 text-xs font-bold text-gray-700 uppercase">
+              <tr className="bg-gray-100 border-b border-gray-300 text-xs font-semibold text-gray-700">
                 <th className="py-2.5 px-3 text-left w-12">#</th>
-                <th className="py-2.5 px-3 text-left">Treatment / Procedure Description</th>
+                <th className="py-2.5 px-3 text-left">Treatment / procedure description</th>
                 <th className="py-2.5 px-3 text-center w-24">Date</th>
                 <th className="py-2.5 px-3 text-center w-16">Qty</th>
                 <th className="py-2.5 px-3 text-right w-24">Rate</th>
@@ -300,8 +300,8 @@ export const PrintableExtractionDues: React.FC<PrintableExtractionDuesProps> = (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
           {/* Payment History Log */}
           <div className="border border-gray-200 rounded-lg p-3">
-            <div className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
-              Payment Installments Log
+            <div className="text-xs font-semibold text-slate-700 mb-2">
+              Payment installments log
             </div>
             {paymentTransactions && paymentTransactions.length > 0 ? (
               <div className="space-y-1.5">

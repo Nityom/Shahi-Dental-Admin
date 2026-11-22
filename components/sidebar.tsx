@@ -149,7 +149,7 @@ export function AppSidebar({ children }: { children?: React.ReactNode }): React.
     { id: "treatment-links", title: "Treatment Auto-Link", url: "/admin/treatment-links", icon: Link2 },
     ...(isAdmin ? [{ id: "sales-report", title: "Sales Report", url: "/admin/medicines/sales", icon: TrendingUp }] : []),
     { id: "installments", title: "Payment Installments", url: "/admin/installments", icon: CreditCard },
-    { id: "generate-prescription", title: "Generate Prescription", url: "/admin/prescription", icon: FileText },
+    // { id: "generate-prescription", title: "Generate Prescription", url: "/admin/prescription", icon: FileText },
   ];
 
   useEffect(() => {

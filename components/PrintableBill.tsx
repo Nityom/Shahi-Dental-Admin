@@ -202,11 +202,11 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
     <table className="w-full border-collapse">
       <thead>
         <tr className="border-t-2 border-b-2 border-gray-800 bg-gray-50/50">
-          <th className="text-left py-1.5 px-2 text-xs font-bold uppercase tracking-wider text-gray-800">ITEMS/SERVICES</th>
-          <th className="text-center py-1.5 px-2 text-xs font-bold uppercase tracking-wider text-gray-800 w-24">DATE</th>
-          <th className="text-center py-1.5 px-2 text-xs font-bold uppercase tracking-wider text-gray-800 w-20">QTY</th>
-          <th className="text-right py-1.5 px-2 text-xs font-bold uppercase tracking-wider text-gray-800 w-24">RATE</th>
-          <th className="text-right py-1.5 px-2 text-xs font-bold uppercase tracking-wider text-gray-800 w-28">AMOUNT</th>
+          <th className="text-left py-1.5 px-2 text-xs font-semibold text-gray-800">Items / Services</th>
+          <th className="text-center py-1.5 px-2 text-xs font-semibold text-gray-800 w-24">Date</th>
+          <th className="text-center py-1.5 px-2 text-xs font-semibold text-gray-800 w-20">Qty</th>
+          <th className="text-right py-1.5 px-2 text-xs font-semibold text-gray-800 w-24">Rate</th>
+          <th className="text-right py-1.5 px-2 text-xs font-semibold text-gray-800 w-28">Amount</th>
         </tr>
       </thead>
       <tbody>
@@ -232,7 +232,7 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
       {/* Totals Section */}
       <div className="flex justify-between items-start gap-4 mb-2">
         <div className="w-1/2 pt-1">
-          <div className="text-[11px] font-bold text-gray-800 uppercase tracking-wider mb-1">TERMS AND CONDITIONS</div>
+          <div className="text-xs font-semibold text-gray-800 mb-1">Terms and conditions</div>
           <div className="text-[10px] text-gray-600 leading-relaxed">{termsAndConditions}</div>
         </div>
 
@@ -360,7 +360,7 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
 
         {/* Bill To Section */}
         <div className="bg-white p-2.5 rounded border border-gray-300">
-          <div className="text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">BILL TO</div>
+          <div className="text-xs font-semibold text-gray-700 mb-1">Bill to</div>
           <div className="text-sm">
             <div className="font-bold text-gray-900">{patientName}</div>
             <div className="flex flex-wrap gap-x-3 text-xs text-gray-600 mt-0.5">

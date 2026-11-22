@@ -538,7 +538,7 @@ export default function DoctorManagementPage() {
               {/* Month Picker */}
               <div className="flex items-center gap-2">
                 <Calendar size={18} className="text-gray-400" />
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Month:</label>
+                <label className="text-xs font-medium text-slate-500">Month</label>
                 <select
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
@@ -555,7 +555,7 @@ export default function DoctorManagementPage() {
               {/* Doctor Selector */}
               <div className="flex items-center gap-2">
                 <UserCheck size={18} className="text-gray-400" />
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Doctor View:</label>
+                <label className="text-xs font-medium text-slate-500">Doctor view</label>
                 <select
                   value={selectedDoctorId}
                   onChange={(e) => setSelectedDoctorId(e.target.value)}
@@ -603,29 +603,29 @@ export default function DoctorManagementPage() {
               {/* Doctor Summary Header Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Revenue</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-2">
+                  <p className="text-xs font-medium text-slate-500">Total revenue</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-2 tabular-nums">
                     ₹{individualDoctorRevenue.totalRevenue.toLocaleString()}
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
-                    {individualDoctorRevenue.totalPrescriptionsCount} Prescriptions / Cases
+                    {individualDoctorRevenue.totalPrescriptionsCount} prescriptions / cases
                   </p>
                 </div>
 
-                <div className="bg-red-50/70 p-5 rounded-2xl border border-red-100 shadow-sm">
-                  <p className="text-xs font-semibold text-red-600 uppercase tracking-wider">Total Excluded</p>
-                  <p className="text-2xl font-bold text-red-700 mt-2">
+                <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+                  <p className="text-xs font-medium text-slate-500">Total excluded</p>
+                  <p className="text-2xl font-bold text-slate-700 mt-2 tabular-nums">
                     -₹{individualDoctorRevenue.totalExcluded.toLocaleString()}
                   </p>
-                  <p className="text-xs text-red-500 mt-1">Meds, Crowns, X-ray, OPD, Braces</p>
+                  <p className="text-xs text-slate-400 mt-1">Meds, crowns, x-ray, OPD, braces</p>
                 </div>
 
-                <div className="bg-emerald-50/70 p-5 rounded-2xl border border-emerald-100 shadow-sm">
-                  <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Eligible Revenue</p>
-                  <p className="text-2xl font-bold text-emerald-800 mt-2">
+                <div className="bg-white p-5 rounded-2xl border border-emerald-200 shadow-sm">
+                  <p className="text-xs font-medium text-emerald-800">Eligible revenue</p>
+                  <p className="text-2xl font-bold text-emerald-800 mt-2 tabular-nums">
                     ₹{individualDoctorRevenue.eligibleRevenue.toLocaleString()}
                   </p>
-                  <p className="text-xs text-emerald-600 mt-1">Treatment Commission Base</p>
+                  <p className="text-xs text-emerald-600 mt-1">Treatment commission base</p>
                 </div>
 
                 <div className="bg-emerald-50/70 p-4 rounded-xl border border-emerald-100 shadow-2xs">
@@ -672,10 +672,10 @@ export default function DoctorManagementPage() {
                 <div className="p-6">
                   <div className="max-w-xl mx-auto border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                     <table className="w-full text-sm">
-                      <thead className="bg-gray-50 text-gray-700 uppercase text-xs border-b border-gray-200">
+                      <thead className="bg-slate-50/75 text-slate-700 font-semibold text-xs border-b border-slate-200/80">
                         <tr>
-                          <th className="px-5 py-3 text-left font-bold">Particular</th>
-                          <th className="px-5 py-3 text-right font-bold">Amount</th>
+                          <th className="px-5 py-3 text-left font-semibold">Particular</th>
+                          <th className="px-5 py-3 text-right font-semibold">Amount</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -761,20 +761,20 @@ export default function DoctorManagementPage() {
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm text-gray-600">
-                      <thead className="bg-gray-50 text-gray-700 uppercase text-xs border-b border-gray-200">
+                      <thead className="bg-slate-50/75 text-slate-700 font-semibold text-xs border-b border-slate-200/80">
                         <tr>
-                          <th className="px-4 py-3">Date</th>
-                          <th className="px-4 py-3">Patient</th>
-                          <th className="px-4 py-3">Ref No.</th>
-                          <th className="px-4 py-3 text-right">Total Rev</th>
-                          <th className="px-4 py-3 text-right text-red-600">Meds</th>
-                          <th className="px-4 py-3 text-right text-red-600">Crown</th>
-                          <th className="px-4 py-3 text-right text-red-600">X-Ray</th>
-                          <th className="px-4 py-3 text-right text-red-600">Consult</th>
-                          <th className="px-4 py-3 text-right text-red-600">Braces</th>
-                          <th className="px-4 py-3 text-right text-red-600">RPD/FPD/Impl.</th>
-                          <th className="px-4 py-3 text-right font-bold text-emerald-700">Eligible</th>
-                          <th className="px-4 py-3 text-right font-bold text-emerald-700">Payout</th>
+                          <th className="px-4 py-3 font-semibold">Date</th>
+                          <th className="px-4 py-3 font-semibold">Patient</th>
+                          <th className="px-4 py-3 font-semibold">Ref no.</th>
+                          <th className="px-4 py-3 text-right font-semibold">Total rev</th>
+                          <th className="px-4 py-3 text-right font-semibold text-slate-600">Meds</th>
+                          <th className="px-4 py-3 text-right font-semibold text-slate-600">Crown</th>
+                          <th className="px-4 py-3 text-right font-semibold text-slate-600">X-ray</th>
+                          <th className="px-4 py-3 text-right font-semibold text-slate-600">Consult</th>
+                          <th className="px-4 py-3 text-right font-semibold text-slate-600">Braces</th>
+                          <th className="px-4 py-3 text-right font-semibold text-slate-600">RPD/FPD/Impl.</th>
+                          <th className="px-4 py-3 text-right font-semibold text-emerald-800">Eligible</th>
+                          <th className="px-4 py-3 text-right font-semibold text-emerald-800">Payout</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -849,15 +849,15 @@ export default function DoctorManagementPage() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm text-gray-600">
-                    <thead className="bg-gray-50 text-gray-700 uppercase text-xs border-b border-gray-200">
+                    <thead className="bg-slate-50/75 text-slate-700 font-semibold text-xs border-b border-slate-200/80">
                       <tr>
-                        <th className="px-5 py-3">Doctor Name</th>
+                        <th className="px-5 py-3">Doctor name</th>
                         <th className="px-4 py-3 text-center">Comm. %</th>
-                        <th className="px-4 py-3 text-right">Total Revenue</th>
-                        <th className="px-4 py-3 text-right text-red-600">Meds Excluded</th>
-                        <th className="px-4 py-3 text-right text-red-600">Other Exclusions</th>
-                        <th className="px-4 py-3 text-right font-bold text-emerald-700">Eligible Revenue</th>
-                        <th className="px-4 py-3 text-right font-black text-emerald-700">Payable Amount</th>
+                        <th className="px-4 py-3 text-right">Total revenue</th>
+                        <th className="px-4 py-3 text-right text-slate-600">Meds excluded</th>
+                        <th className="px-4 py-3 text-right text-slate-600">Other exclusions</th>
+                        <th className="px-4 py-3 text-right font-semibold text-emerald-800">Eligible revenue</th>
+                        <th className="px-4 py-3 text-right font-semibold text-emerald-800">Payable amount</th>
                         <th className="px-4 py-3 text-center">Status</th>
                         <th className="px-5 py-3 text-right">Action</th>
                       </tr>
@@ -974,16 +974,16 @@ export default function DoctorManagementPage() {
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm text-gray-600">
-                <thead className="bg-gray-50 text-gray-700 uppercase text-xs border-b border-gray-200">
+                <thead className="bg-slate-50/75 text-slate-700 font-semibold text-xs border-b border-slate-200/80">
                   <tr>
-                    <th className="px-5 py-3.5">Doctor Name</th>
-                    <th className="px-4 py-3.5">Doctor Type</th>
-                    <th className="px-4 py-3.5 text-center">Commission %</th>
-                    <th className="px-4 py-3.5">Phone / Contact</th>
-                    <th className="px-4 py-3.5">Joining Date</th>
-                    <th className="px-4 py-3.5 text-center">Signature</th>
-                    <th className="px-4 py-3.5 text-center">Status</th>
-                    <th className="px-5 py-3.5 text-right">Actions</th>
+                    <th className="px-5 py-3.5 font-semibold">Doctor name</th>
+                    <th className="px-4 py-3.5 font-semibold">Doctor type</th>
+                    <th className="px-4 py-3.5 text-center font-semibold">Commission %</th>
+                    <th className="px-4 py-3.5 font-semibold">Phone / contact</th>
+                    <th className="px-4 py-3.5 font-semibold">Joining date</th>
+                    <th className="px-4 py-3.5 text-center font-semibold">Signature</th>
+                    <th className="px-4 py-3.5 text-center font-semibold">Status</th>
+                    <th className="px-5 py-3.5 text-right font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -1106,18 +1106,18 @@ export default function DoctorManagementPage() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm text-gray-600">
-                  <thead className="bg-gray-50 text-gray-700 uppercase text-xs border-b border-gray-200">
+                  <thead className="bg-slate-50/75 text-slate-700 font-semibold text-xs border-b border-slate-200/80">
                     <tr>
-                      <th className="px-5 py-3">Month</th>
-                      <th className="px-5 py-3">Doctor Name</th>
-                      <th className="px-4 py-3 text-right">Eligible Revenue</th>
-                      <th className="px-4 py-3 text-center">Comm. %</th>
-                      <th className="px-4 py-3 text-right font-bold text-gray-900">Amount Paid</th>
-                      <th className="px-4 py-3">Payment Date</th>
-                      <th className="px-4 py-3">Mode</th>
-                      <th className="px-4 py-3">Txn Reference</th>
-                      <th className="px-4 py-3 text-center">Status</th>
-                      <th className="px-5 py-3 text-right">Action</th>
+                      <th className="px-5 py-3 font-semibold">Month</th>
+                      <th className="px-5 py-3 font-semibold">Doctor name</th>
+                      <th className="px-4 py-3 text-right font-semibold">Eligible revenue</th>
+                      <th className="px-4 py-3 text-center font-semibold">Comm. %</th>
+                      <th className="px-4 py-3 text-right font-semibold text-gray-900">Amount paid</th>
+                      <th className="px-4 py-3 font-semibold">Payment date</th>
+                      <th className="px-4 py-3 font-semibold">Mode</th>
+                      <th className="px-4 py-3 font-semibold">Txn reference</th>
+                      <th className="px-4 py-3 text-center font-semibold">Status</th>
+                      <th className="px-5 py-3 text-right font-semibold">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -1317,8 +1317,8 @@ export default function DoctorManagementPage() {
                         className="max-h-16 w-auto object-contain"
                       />
                       <div className="w-44 border-t border-gray-400 mt-2 pt-1 text-center">
-                        <span className="text-[10px] text-gray-500 font-bold tracking-wider uppercase block">
-                          Authorized Signature & Seal
+                        <span className="text-[11px] text-slate-500 font-medium block">
+                          Authorized signature & seal
                         </span>
                       </div>
                     </div>

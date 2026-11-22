@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import {
   convex,
   convexAuthFns,
@@ -21,13 +23,26 @@ export type AuthUser = {
   is_active?: boolean;
 };
 
+function getEmailAttachments() {
+  const logoPath = path.join(process.cwd(), "public", "Svaasth_logo.png");
+  if (fs.existsSync(logoPath)) {
+    return [
+      {
+        filename: "Svaasth_logo.png",
+        path: logoPath,
+        cid: "svaasth_logo",
+      },
+    ];
+  }
+  return [];
+}
+
 function buildOtpEmailHtml(otpCode: string, deliveryEmail: string, validityLabel: string, portalLabel: string): string {
-  const logoSrc = "https://portal.shahidentalclinic.com/dental_logo_email.png";
   const digitBoxStyle =
-    "display:inline-block;width:52px;height:62px;line-height:62px;" +
-    "background:#ffffff;border:1.5px solid rgba(0,119,182,0.18);border-radius:12px;" +
-    "font-family:Georgia,serif;font-size:30px;font-weight:700;color:#023E8A;" +
-    "text-align:center;box-shadow:0 4px 12px rgba(2,62,138,0.08);margin:0 4px;";
+    "display:inline-block;width:52px;height:60px;line-height:60px;" +
+    "background:#ffffff;border:1.5px solid #176e56;border-radius:10px;" +
+    "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:32px;font-weight:700;color:#176e56;" +
+    "text-align:center;box-shadow:0 2px 8px rgba(23,110,86,0.1);margin:0 4px;";
 
   const digitBoxes = otpCode
     .split("")
@@ -39,82 +54,102 @@ function buildOtpEmailHtml(otpCode: string, deliveryEmail: string, validityLabel
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>Shahi Dental Admin OTP</title>
+  <title>Shahi Dental Clinic OTP</title>
 </head>
-<body style="margin:0;padding:40px 20px;background:#e8f4fd;font-family:Arial,sans-serif;">
+<body style="margin:0;padding:40px 16px;background:#f4f7f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
 
-  <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 16px 48px rgba(2,62,138,0.14);">
+  <div style="max-width:540px;margin:0 auto;background:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #e2eae3;box-shadow:0 12px 36px rgba(15,23,42,0.07);">
 
-    <div style="height:5px;background:linear-gradient(90deg,#00C9A7,#00B4D8,#0077B6);"></div>
+    <!-- Top green gradient strip -->
+    <div style="height:5px;background:linear-gradient(90deg,#0d382c 0%,#176e56 50%,#369568 100%);"></div>
 
-    <div style="background:linear-gradient(150deg,#023E8A 0%,#0077B6 60%,#0096C7 100%);padding:36px 48px;text-align:center;">
-      <div style="display:inline-block;background:#ffffff;border-radius:14px;padding:12px 20px;margin:0 0 16px;">
-        <img
-          src="${logoSrc}"
-          alt="Shahi Dental Clinic"
-          width="130"
-          height="auto"
-          style="display:block;max-width:130px;height:auto;"
-        />
+    <!-- Header -->
+    <div style="background:linear-gradient(150deg,#0d382c 0%,#176e56 60%,#1f8569 100%);padding:36px 32px 32px;text-align:center;">
+      <div style="display:inline-block;background:#ffffff;border-radius:12px;padding:8px 18px;margin:0 0 16px;box-shadow:0 4px 14px rgba(0,0,0,0.1);">
+        <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+          <tr>
+            <td style="vertical-align:middle;padding-right:10px;">
+              <img
+                src="cid:svaasth_logo"
+                alt="Svaasth"
+                width="34"
+                height="44"
+                style="display:block;width:34px;height:44px;object-fit:contain;"
+              />
+            </td>
+            <td style="vertical-align:middle;text-align:left;">
+              <div style="font-size:16px;font-weight:800;color:#176e56;letter-spacing:0.08em;line-height:1.2;">SVAASTH</div>
+              <div style="font-size:9.5px;font-weight:600;color:#64748b;letter-spacing:0.12em;text-transform:uppercase;">HMS Portal</div>
+            </td>
+          </tr>
+        </table>
       </div>
-      <p style="margin:0 0 10px;font-size:11px;color:rgba(255,255,255,0.88);letter-spacing:0.18em;text-transform:uppercase;font-weight:700;">
+      <p style="margin:0 0 6px;font-size:11px;color:rgba(255,255,255,0.82);letter-spacing:0.18em;text-transform:uppercase;font-weight:700;">
         Secure Access
       </p>
-      <p style="margin:0 0 8px;font-size:12px;color:rgba(255,255,255,0.62);letter-spacing:0.1em;text-transform:uppercase;font-weight:500;">
+      <p style="margin:0 0 4px;font-size:14px;color:#ffffff;letter-spacing:0.04em;font-weight:600;">
         Shahi Dental Clinic
       </p>
-      <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.6);letter-spacing:0.1em;text-transform:uppercase;font-weight:500;">
-        ${portalLabel} Portal - Secure Login
+      <p style="margin:0;font-size:11.5px;color:rgba(255,255,255,0.72);letter-spacing:0.08em;text-transform:uppercase;font-weight:500;">
+        ${portalLabel} Portal • Secure Login
       </p>
     </div>
 
-    <div style="padding:40px 48px;">
-      <p style="margin:0 0 6px;font-size:12px;color:#6b8299;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">
+    <!-- Main Content -->
+    <div style="padding:36px 36px 28px;">
+      <p style="margin:0 0 6px;font-size:11px;color:#176e56;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">
         One-Time Password
       </p>
-      <h2 style="margin:0 0 20px;font-family:Georgia,'Times New Roman',serif;font-size:22px;color:#1a2e44;font-weight:700;">
+      <h2 style="margin:0 0 16px;font-size:22px;color:#0f172a;font-weight:700;line-height:1.3;">
         Your login OTP is ready
       </h2>
 
-      <p style="margin:0 0 28px;font-size:14.5px;color:#4a6070;line-height:1.7;">
+      <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.65;">
         Someone (hopefully you) requested access to the Shahi Dental Clinic ${portalLabel.toLowerCase()} dashboard.
         Use the code below to complete your sign-in.
-        <strong>Do not share this code with anyone.</strong>
+        <strong style="color:#0f172a;">Do not share this code with anyone.</strong>
       </p>
 
-      <div style="text-align:center;margin:0 0 28px;">
-        <div style="display:inline-block;background:linear-gradient(135deg,#F0F7FF 0%,#e0f0ff 100%);border:1.5px solid rgba(0,119,182,0.15);border-radius:16px;padding:28px 40px;">
-          <p style="margin:0 0 14px;font-size:11px;color:#6b8299;letter-spacing:0.12em;text-transform:uppercase;">Your OTP Code</p>
+      <!-- OTP Box -->
+      <div style="text-align:center;margin:0 0 26px;">
+        <div style="display:inline-block;background:#f0f7f4;border:1.5px solid rgba(23,110,86,0.18);border-radius:14px;padding:24px 32px;">
+          <p style="margin:0 0 14px;font-size:11px;color:#437265;letter-spacing:0.12em;text-transform:uppercase;font-weight:600;">Your OTP Code</p>
           <div style="white-space:nowrap;">${digitBoxes}</div>
-          <p style="margin:14px 0 0;font-size:12px;color:#6b8299;">
-            Valid for <strong style="color:#0077B6;">${validityLabel}</strong>
+          <p style="margin:14px 0 0;font-size:12px;color:#52796f;">
+            Valid for <strong style="color:#176e56;">${validityLabel}</strong>
           </p>
         </div>
       </div>
 
-      <div style="background:#fff8f0;border:1px solid rgba(255,150,50,0.2);border-left:3px solid #f0933a;border-radius:10px;padding:14px 18px;margin-bottom:28px;">
-        <p style="margin:0;font-size:13px;color:#8a5a2a;line-height:1.6;">
-          <strong>Never share this OTP.</strong> Shahi Dental Clinic staff will never ask you for this code.
-          If you did not request this, please ignore this email - your account remains secure.
+      <!-- Security Notice -->
+      <div style="background:#fafafa;border:1px solid #e5e7eb;border-left:3.5px solid #176e56;border-radius:8px;padding:12px 16px;margin-bottom:24px;">
+        <p style="margin:0;font-size:12.5px;color:#475569;line-height:1.55;">
+          <strong style="color:#1e293b;">Never share this OTP.</strong> Shahi Dental Clinic staff will never ask you for this code.
+          If you did not request this, please ignore this email — your account remains secure.
         </p>
       </div>
 
-      <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(0,119,182,0.12),transparent);margin:0 0 24px;"></div>
+      <div style="height:1px;background:#e5e7eb;margin:0 0 20px;"></div>
 
-      <p style="margin:0;font-size:13px;color:#6b8299;line-height:1.7;">
-        This OTP was sent to <strong>${deliveryEmail}</strong>.
-        This is an automated message - please do not reply.
+      <p style="margin:0;font-size:12.5px;color:#64748b;line-height:1.6;">
+        This OTP was sent to <strong style="color:#334155;">${deliveryEmail}</strong>.<br />
+        This is an automated message — please do not reply.
       </p>
     </div>
 
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(90deg,#f7fbff,#f0f7ff);border-top:1px solid rgba(0,119,182,0.08);">
+    <!-- Footer -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8faf9;border-top:1px solid #e5e7eb;">
       <tr>
-        <td style="padding:18px 48px;font-size:11.5px;color:#afc5d9;">Developed by Nityom Tikhe</td>
-        <td style="padding:18px 48px;font-size:11.5px;color:#afc5d9;text-align:right;">© 2026 Shahi Dental Clinic</td>
+        <td style="padding:16px 36px;font-size:11.5px;color:#64748b;font-weight:500;">
+          Powered by <strong style="color:#176e56;">Svaasth</strong> • Developed by Nityom Tikhe
+        </td>
+        <td style="padding:16px 36px;font-size:11.5px;color:#64748b;text-align:right;">
+          © 2026 Shahi Dental Clinic
+        </td>
       </tr>
     </table>
 
-    <div style="height:3px;background:linear-gradient(90deg,#00C9A7,#0077B6);"></div>
+    <div style="height:3px;background:linear-gradient(90deg,#0d382c,#176e56,#369568);"></div>
 
   </div>
 </body>
@@ -211,6 +246,101 @@ export async function getUserForLogin(email: string, password: string): Promise<
   return user;
 }
 
+function buildPasswordResetEmailHtml(resetLink: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Reset Shahi Dental Password</title>
+</head>
+<body style="margin:0;padding:40px 16px;background:#f4f7f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+
+  <div style="max-width:540px;margin:0 auto;background:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #e2eae3;box-shadow:0 12px 36px rgba(15,23,42,0.07);">
+
+    <!-- Top green gradient strip -->
+    <div style="height:5px;background:linear-gradient(90deg,#0d382c 0%,#176e56 50%,#369568 100%);"></div>
+
+    <!-- Header -->
+    <div style="background:linear-gradient(150deg,#0d382c 0%,#176e56 60%,#1f8569 100%);padding:36px 32px 32px;text-align:center;">
+      <div style="display:inline-block;background:#ffffff;border-radius:12px;padding:8px 18px;margin:0 0 16px;box-shadow:0 4px 14px rgba(0,0,0,0.1);">
+        <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+          <tr>
+            <td style="vertical-align:middle;padding-right:10px;">
+              <img
+                src="cid:svaasth_logo"
+                alt="Svaasth"
+                width="34"
+                height="44"
+                style="display:block;width:34px;height:44px;object-fit:contain;"
+              />
+            </td>
+            <td style="vertical-align:middle;text-align:left;">
+              <div style="font-size:16px;font-weight:800;color:#176e56;letter-spacing:0.08em;line-height:1.2;">SVAASTH</div>
+              <div style="font-size:9.5px;font-weight:600;color:#64748b;letter-spacing:0.12em;text-transform:uppercase;">HMS Portal</div>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <p style="margin:0 0 6px;font-size:11px;color:rgba(255,255,255,0.82);letter-spacing:0.18em;text-transform:uppercase;font-weight:700;">
+        Account Recovery
+      </p>
+      <p style="margin:0;font-size:14px;color:#ffffff;letter-spacing:0.04em;font-weight:600;">
+        Shahi Dental Clinic
+      </p>
+    </div>
+
+    <!-- Main Content -->
+    <div style="padding:36px 36px 28px;">
+      <h2 style="margin:0 0 14px;font-size:22px;color:#0f172a;font-weight:700;">
+        Reset your password
+      </h2>
+      <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.65;">
+        We received a request to reset the password for your account. Click the button below to choose a new password. This link is valid for <strong>30 minutes</strong>.
+      </p>
+
+      <div style="text-align:center;margin:0 0 28px;">
+        <a
+          href="${resetLink}"
+          style="display:inline-block;padding:12px 28px;border-radius:10px;background:#176e56;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;box-shadow:0 4px 12px rgba(23,110,86,0.25);"
+        >
+          Reset Password
+        </a>
+      </div>
+
+      <div style="background:#fafafa;border:1px solid #e5e7eb;border-left:3.5px solid #176e56;border-radius:8px;padding:12px 16px;margin-bottom:24px;">
+        <p style="margin:0;font-size:12.5px;color:#475569;line-height:1.55;">
+          If the button above does not work, copy and paste this link into your browser:<br />
+          <span style="word-break:break-all;color:#176e56;font-size:12px;">${resetLink}</span>
+        </p>
+      </div>
+
+      <div style="height:1px;background:#e5e7eb;margin:0 0 20px;"></div>
+
+      <p style="margin:0;font-size:12.5px;color:#64748b;line-height:1.6;">
+        If you did not request a password reset, please ignore this email — your account remains completely secure.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8faf9;border-top:1px solid #e5e7eb;">
+      <tr>
+        <td style="padding:16px 36px;font-size:11.5px;color:#64748b;font-weight:500;">
+          Powered by <strong style="color:#176e56;">Svaasth</strong> • Developed by Nityom Tikhe
+        </td>
+        <td style="padding:16px 36px;font-size:11.5px;color:#64748b;text-align:right;">
+          © 2026 Shahi Dental Clinic
+        </td>
+      </tr>
+    </table>
+
+    <div style="height:3px;background:linear-gradient(90deg,#0d382c,#176e56,#369568);"></div>
+
+  </div>
+</body>
+</html>`;
+}
+
 export async function issueLoginOtp(user: AuthUser) {
   const otp = generateOtpCode(4);
   const otpValidityMinutes = 5;
@@ -230,6 +360,7 @@ export async function issueLoginOtp(user: AuthUser) {
     subject: `Shahi Dental Clinic ${portalLabel} Login OTP`,
     text: `Your 4-digit OTP is ${otp}. It is valid for ${otpValidityMinutes} minutes.`,
     html: buildOtpEmailHtml(otp, deliveryEmail, `${otpValidityMinutes} minutes`, portalLabel),
+    attachments: getEmailAttachments(),
   });
 
   return {
@@ -280,18 +411,7 @@ export async function issuePasswordReset(email: string) {
     to: deliveryEmail,
     subject: "Reset your Shahi Dental password",
     text: `Reset your password using this link: ${resetLink}. This link expires in 30 minutes.`,
-    html: `
-      <div style="font-family: Arial, sans-serif; color: #0f172a;">
-        <h2 style="margin-bottom: 8px;">Reset your password</h2>
-        <p style="margin-top: 0;">Click the button below to set a new password. The link expires in 30 minutes.</p>
-        <p>
-          <a href="${resetLink}" style="display: inline-block; padding: 10px 16px; border-radius: 6px; background: #0ea5e9; color: #ffffff; text-decoration: none; font-weight: 600;">
-            Reset Password
-          </a>
-        </p>
-        <p style="word-break: break-all; font-size: 12px; color: #334155;">${resetLink}</p>
-        <p style="font-size: 12px; color: #64748b;">If you did not request this, ignore this email.</p>
-      </div>
-    `,
+    html: buildPasswordResetEmailHtml(resetLink),
+    attachments: getEmailAttachments(),
   });
 }

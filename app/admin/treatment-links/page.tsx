@@ -1041,17 +1041,17 @@ export default function TreatmentLinksPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+        <div className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Prescription Treatments
+            <span className="text-xs font-medium text-slate-500">
+              Prescription treatments
             </span>
             <span className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
               <Stethoscope size={18} />
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-slate-900">{unifiedRules.length}</span>
+            <span className="text-3xl font-bold text-slate-900 tabular-nums">{unifiedRules.length}</span>
             <span className="text-xs text-slate-500">in catalog</span>
           </div>
           <p className="text-[11px] text-slate-400 mt-1">
@@ -1059,35 +1059,35 @@ export default function TreatmentLinksPage() {
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+        <div className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-amber-600">
-              Crown & Cap Auto-Links
+            <span className="text-xs font-medium text-amber-700">
+              Crown & cap auto-links
             </span>
             <span className="p-2 bg-amber-50 text-amber-600 rounded-xl">
               <Crown size={18} />
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-amber-600">{crownCapCount}</span>
+            <span className="text-3xl font-bold text-amber-700 tabular-nums">{crownCapCount}</span>
             <span className="text-xs text-slate-500">procedures</span>
           </div>
           <p className="text-[11px] text-amber-600/80 mt-1 font-medium">
-            Auto-syncs to Crowns & Revenue Register
+            Auto-syncs to crowns & revenue register
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+        <div className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600">
-              Active Auto-Deductions
+            <span className="text-xs font-medium text-emerald-800">
+              Active auto-deductions
             </span>
             <span className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
               <CheckCircle2 size={18} />
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-emerald-600">{activeCount}</span>
+            <span className="text-3xl font-bold text-emerald-800 tabular-nums">{activeCount}</span>
             <span className="text-xs text-slate-500">of {unifiedRules.length} enabled</span>
           </div>
           <p className="text-[11px] text-slate-400 mt-1">
@@ -1095,17 +1095,17 @@ export default function TreatmentLinksPage() {
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+        <div className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-rose-600">
-              Low Stock Alerts
+            <span className="text-xs font-medium text-rose-700">
+              Low stock alerts
             </span>
             <span className="p-2 bg-rose-50 text-rose-600 rounded-xl">
               <AlertTriangle size={18} />
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-rose-600">{lowStockCount}</span>
+            <span className="text-3xl font-bold text-rose-700 tabular-nums">{lowStockCount}</span>
             <span className="text-xs text-slate-500">procedures affected</span>
           </div>
           <p className="text-[11px] text-slate-400 mt-1">
@@ -1176,7 +1176,7 @@ export default function TreatmentLinksPage() {
 
         {/* Category Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mr-1">
+          <span className="text-xs font-medium text-slate-500 mr-1">
             Category:
           </span>
           <button
@@ -1383,8 +1383,8 @@ export default function TreatmentLinksPage() {
                   {/* Linked Inventory Items */}
                   <div className="mt-3.5 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                        Consumables Auto-Deducted:
+                      <span className="text-xs font-medium text-slate-500">
+                        Consumables auto-deducted:
                       </span>
                       <button
                         onClick={() => handleEdit(rule)}
@@ -1493,8 +1493,8 @@ export default function TreatmentLinksPage() {
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div className="md:col-span-2">
-              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                Treatment Name / Description
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                Treatment name / description
               </label>
               <div className="flex gap-2">
                 <Input
@@ -1520,8 +1520,8 @@ export default function TreatmentLinksPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                Procedure Qty (e.g. number of teeth)
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                Procedure qty (e.g. number of teeth)
               </label>
               <Input
                 type="number"
@@ -1629,8 +1629,8 @@ export default function TreatmentLinksPage() {
             <form onSubmit={handleSaveRule} className="space-y-4">
               {/* Treatment Name Field */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Treatment / Procedure Name <span className="text-rose-500">*</span>
+                <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                  Treatment / procedure name <span className="text-rose-500">*</span>
                 </label>
                 <div className="space-y-2">
                   <Input
@@ -1674,8 +1674,8 @@ export default function TreatmentLinksPage() {
               {/* Linked Inventory Items Builder */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    Materials to Deduct from Inventory <span className="text-rose-500">*</span>
+                  <label className="text-xs font-medium text-slate-700">
+                    Materials to deduct from inventory <span className="text-rose-500">*</span>
                   </label>
                   <button
                     type="button"
@@ -1786,8 +1786,8 @@ export default function TreatmentLinksPage() {
 
               {/* Notes */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Notes / Description (Optional)
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Notes / description (optional)
                 </label>
                 <Input
                   type="text"
