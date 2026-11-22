@@ -263,7 +263,7 @@ export default function AddMedicinePage() {
             <div className="bg-white rounded-lg shadow-md p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-gray-800 flex items-center">
-                  <Pill className="mr-2 text-blue-500" size={20} />
+                  <Pill className="mr-2 text-emerald-600" size={20} />
                   {editMode ? 'Edit Medicine' : 'Add New Medicine'}
                 </h2>
                 {editMode && (
@@ -307,7 +307,7 @@ export default function AddMedicinePage() {
                     value={formData.name}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none"
                     placeholder="Enter medicine name"
                   />
                 </div>
@@ -322,7 +322,7 @@ export default function AddMedicinePage() {
                     name="company"
                     value={formData.company}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none"
                     placeholder="Enter company name"
                   />
                 </div>
@@ -340,7 +340,7 @@ export default function AddMedicinePage() {
                       onChange={handleChange}
                       required
                       min="0"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none"
                       placeholder="e.g. 10"
                     />
                   </div>
@@ -356,7 +356,7 @@ export default function AddMedicinePage() {
                       onChange={handleChange}
                       required
                       min="0"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none"
                       placeholder="e.g. 10"
                     />
                   </div>
@@ -387,7 +387,7 @@ export default function AddMedicinePage() {
                     value={formData.low_stock_threshold ?? 10}
                     onChange={handleChange}
                     min="0"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none"
                     placeholder="e.g. 10"
                   />
                 </div>
@@ -403,7 +403,7 @@ export default function AddMedicinePage() {
                     value={formData.cost_price}
                     onChange={handleChange}
                     step="0.01"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none"
                     placeholder="Enter cost price"
                   />
                 </div>
@@ -419,7 +419,7 @@ export default function AddMedicinePage() {
                     value={formData.selling_price}
                     onChange={handleChange}
                     step="0.01"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none"
                     placeholder="Enter selling price"
                   />
                 </div>
@@ -434,7 +434,7 @@ export default function AddMedicinePage() {
                     value={formData.description}
                     onChange={handleChange}
                     rows={4}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none"
                     placeholder="Enter medicine description"
                   ></textarea>
                 </div>
@@ -521,7 +521,7 @@ export default function AddMedicinePage() {
             <div className="bg-white rounded-lg shadow-md p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-gray-800 flex items-center">
-                  <Package className="mr-2 text-blue-500" size={20} />
+                  <Package className="mr-2 text-emerald-600" size={20} />
                   Medicine Inventory
                 </h2>
                 <div className="relative w-64">
@@ -530,7 +530,7 @@ export default function AddMedicinePage() {
                     placeholder="Search medicines..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full pl-10 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none"
                   />
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                     <Search size={16} className="text-gray-400" />
@@ -540,7 +540,7 @@ export default function AddMedicinePage() {
 
               {isLoadingMedicines ? (
                 <div className="flex justify-center items-center h-64">
-                  <RefreshCw size={32} className="animate-spin text-blue-500" />
+                  <RefreshCw size={32} className="animate-spin text-emerald-600" />
                 </div>
               ) : sortedMedicines.length === 0 ? (
                 <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">

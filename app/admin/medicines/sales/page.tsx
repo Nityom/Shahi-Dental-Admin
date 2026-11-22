@@ -556,7 +556,7 @@ export default function SalesReportPage() {
               onClick={() => setActiveTab('medicine')}
               className={`flex items-center px-6 py-4 text-sm font-medium transition-colors ${
                 activeTab === 'medicine'
-                  ? 'border-b-2 border-blue-500 text-blue-600'
+                  ? 'border-b-2 border-emerald-600 text-emerald-700 font-semibold'
                   : 'text-gray-600 hover:text-gray-800'
               }`}
             >
@@ -567,7 +567,7 @@ export default function SalesReportPage() {
               onClick={() => setActiveTab('patient')}
               className={`flex items-center px-6 py-4 text-sm font-medium transition-colors ${
                 activeTab === 'patient'
-                  ? 'border-b-2 border-blue-500 text-blue-600'
+                  ? 'border-b-2 border-emerald-600 text-emerald-700 font-semibold'
                   : 'text-gray-600 hover:text-gray-800'
               }`}
             >
@@ -578,7 +578,7 @@ export default function SalesReportPage() {
               onClick={() => setActiveTab('inventory')}
               className={`flex items-center px-6 py-4 text-sm font-medium transition-colors ${
                 activeTab === 'inventory'
-                  ? 'border-b-2 border-blue-500 text-blue-600'
+                  ? 'border-b-2 border-emerald-600 text-emerald-700 font-semibold'
                   : 'text-gray-600 hover:text-gray-800'
               }`}
             >
@@ -589,7 +589,7 @@ export default function SalesReportPage() {
               onClick={() => setActiveTab('diagnostics')}
               className={`flex items-center px-6 py-4 text-sm font-medium transition-colors ${
                 activeTab === 'diagnostics'
-                  ? 'border-b-2 border-blue-500 text-blue-600'
+                  ? 'border-b-2 border-emerald-600 text-emerald-700 font-semibold'
                   : 'text-gray-600 hover:text-gray-800'
               }`}
             >
@@ -613,7 +613,7 @@ export default function SalesReportPage() {
                   <select
                     value={reportType}
                     onChange={(e) => handlePeriodChange(e.target.value as ReportPeriod, setReportType, setStartDate, setEndDate)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none"
                   >
                     <option value="daily">Daily (Today)</option>
                     <option value="weekly">Weekly (Last 7 Days)</option>
@@ -630,7 +630,7 @@ export default function SalesReportPage() {
                   <select
                     value={groupBy}
                     onChange={(e) => setGroupBy(e.target.value as 'medicine' | 'company')}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none"
                   >
                     <option value="medicine">Medicine Name</option>
                     <option value="company">Company</option>
@@ -649,7 +649,7 @@ export default function SalesReportPage() {
                       setReportType('custom');
                     }}
                     max={getTodayIST()}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none"
                   />
                 </div>
 
@@ -665,7 +665,7 @@ export default function SalesReportPage() {
                       setReportType('custom');
                     }}
                     max={getTodayIST()}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none"
                   />
                 </div>
               </div>
@@ -714,7 +714,7 @@ export default function SalesReportPage() {
           <div className="bg-white rounded-lg shadow-md p-6 pb-8">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-gray-600 text-left">Total Transactions</p>
-              <Calendar className="text-blue-500" size={20} />
+              <Calendar className="text-emerald-600" size={20} />
             </div>
             <p className="text-2xl font-bold text-gray-800 text-left">{totalStats.transactions}</p>
           </div>
@@ -763,7 +763,7 @@ export default function SalesReportPage() {
         {!isLoading && Array.isArray(salesData) && salesData.length > 0 && (
           <div className="bg-white rounded-lg shadow-md p-6 mb-6 overflow-hidden">
             <div className="flex items-center mb-4">
-              <PieChart className="mr-2 text-blue-600" size={24} />
+              <PieChart className="mr-2 text-emerald-600" size={24} />
               <h2 className="text-lg font-semibold text-gray-800">
                 Sales Distribution by {groupBy === 'medicine' ? 'Medicine' : 'Company'}
               </h2>
@@ -845,7 +845,7 @@ export default function SalesReportPage() {
 
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
-              <RefreshCw size={32} className="animate-spin text-blue-500" />
+              <RefreshCw size={32} className="animate-spin text-emerald-600" />
             </div>
           ) : !Array.isArray(salesData) || salesData.length === 0 ? (
             <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
@@ -935,7 +935,7 @@ export default function SalesReportPage() {
                             Number(marginPercent) > 30
                               ? 'bg-green-100 text-green-800'
                               : Number(marginPercent) > 10
-                                ? 'bg-blue-100 text-blue-800'
+                                ? 'bg-emerald-100 text-emerald-800'
                                 : 'bg-gray-100 text-gray-800'
                           }`}>
                             {marginPercent}%
@@ -966,7 +966,7 @@ export default function SalesReportPage() {
                   <select
                     value={patientReportType}
                     onChange={(e) => handlePeriodChange(e.target.value as ReportPeriod, setPatientReportType, setPatientStartDate, setPatientEndDate)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none"
                   >
                     <option value="daily">Daily (Today)</option>
                     <option value="weekly">Weekly (Last 7 Days)</option>
@@ -988,7 +988,7 @@ export default function SalesReportPage() {
                       setPatientReportType('custom');
                     }}
                     max={getTodayIST()}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none"
                   />
                 </div>
 
@@ -1004,7 +1004,7 @@ export default function SalesReportPage() {
                       setPatientReportType('custom');
                     }}
                     max={getTodayIST()}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none"
                   />
                 </div>
               </div>
@@ -1053,7 +1053,7 @@ export default function SalesReportPage() {
               <div className="bg-white rounded-lg shadow-md p-6">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm text-gray-600">Total Patients</p>
-                  <Users className="text-blue-500" size={20} />
+                  <Users className="text-emerald-600" size={20} />
                 </div>
                 <p className="text-2xl font-bold text-gray-800">{patientTotalStats.totalPatients}</p>
               </div>
@@ -1111,7 +1111,7 @@ export default function SalesReportPage() {
 
               {isLoadingPatients ? (
                 <div className="flex justify-center items-center h-64">
-                  <RefreshCw size={32} className="animate-spin text-blue-500" />
+                  <RefreshCw size={32} className="animate-spin text-emerald-600" />
                 </div>
               ) : !Array.isArray(patientSalesData) || patientSalesData.length === 0 ? (
                 <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
@@ -1203,7 +1203,7 @@ export default function SalesReportPage() {
                   <select
                     value={inventoryReportType}
                     onChange={(e) => handlePeriodChange(e.target.value as ReportPeriod, setInventoryReportType, setInventoryStartDate, setInventoryEndDate)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none"
                   >
                     <option value="daily">Daily (Today)</option>
                     <option value="weekly">Weekly (Last 7 Days)</option>
@@ -1225,7 +1225,7 @@ export default function SalesReportPage() {
                       setInventoryReportType('custom');
                     }}
                     max={getTodayIST()}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none"
                   />
                 </div>
 
@@ -1241,7 +1241,7 @@ export default function SalesReportPage() {
                       setInventoryReportType('custom');
                     }}
                     max={getTodayIST()}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none"
                   />
                 </div>
               </div>
@@ -1290,8 +1290,8 @@ export default function SalesReportPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
                   <div className="flex items-center gap-4">
-                    <div className="p-3 bg-blue-100 rounded-lg">
-                      <Package size={28} className="text-blue-600" />
+                    <div className="p-3 bg-emerald-50 rounded-lg">
+                      <Package size={28} className="text-emerald-700" />
                     </div>
                     <div>
                       <p className="text-sm text-gray-600 mb-1">Total Items Sold / Used</p>
@@ -1440,7 +1440,7 @@ export default function SalesReportPage() {
                             {item.name}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-xs">
-                            <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-medium">
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-medium">
                               {item.subdivision || (item.source === 'material_usage' ? 'Material Outward' : 'Direct Sale')}
                             </span>
                           </td>
@@ -1536,7 +1536,7 @@ export default function SalesReportPage() {
                   <select
                     value={diagnosticReportType}
                     onChange={(e) => handlePeriodChange(e.target.value as ReportPeriod, setDiagnosticReportType, setDiagnosticStartDate, setDiagnosticEndDate)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600"
                   >
                     <option value="daily">Daily (Today)</option>
                     <option value="weekly">Weekly (Last 7 Days)</option>
@@ -1558,7 +1558,7 @@ export default function SalesReportPage() {
                       setDiagnosticReportType('custom');
                     }}
                     max={getTodayIST()}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600"
                   />
                 </div>
 
@@ -1574,7 +1574,7 @@ export default function SalesReportPage() {
                       setDiagnosticReportType('custom');
                     }}
                     max={getTodayIST()}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600"
                   />
                 </div>
 
@@ -1585,7 +1585,7 @@ export default function SalesReportPage() {
                   <select
                     value={diagnosticTypeFilter}
                     onChange={(e) => setDiagnosticTypeFilter(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600"
                   >
                     <option value="ALL">All Diagnostic Tests</option>
                     <option value="IOPAR">IOPAR / X-Ray (₹200)</option>
@@ -1635,7 +1635,7 @@ export default function SalesReportPage() {
                     placeholder="Search by patient name, phone, doctor, or test type..."
                     value={diagnosticSearch}
                     onChange={(e) => setDiagnosticSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600"
                   />
                 </div>
               </div>
@@ -1650,15 +1650,15 @@ export default function SalesReportPage() {
 
             {/* Diagnostic Metrics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-              <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500">
+              <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-emerald-600">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">IOPAR / X-Rays (₹200)</p>
+                    <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">IOPAR / X-Rays (₹200)</p>
                     <p className="text-2xl font-bold text-gray-900 mt-1">{diagnosticData?.totalIopar || 0} Tests</p>
-                    <p className="text-sm font-semibold text-blue-700 mt-1">₹{Number(diagnosticData?.totalIoparRevenue || 0).toLocaleString('en-IN')}</p>
+                    <p className="text-sm font-semibold text-emerald-800 mt-1">₹{Number(diagnosticData?.totalIoparRevenue || 0).toLocaleString('en-IN')}</p>
                   </div>
-                  <div className="p-3 bg-blue-50 rounded-full">
-                    <Activity className="text-blue-500" size={24} />
+                  <div className="p-3 bg-emerald-50 rounded-full">
+                    <Activity className="text-emerald-600" size={24} />
                   </div>
                 </div>
               </div>
@@ -1712,7 +1712,7 @@ export default function SalesReportPage() {
                 </div>
                 <button
                   onClick={fetchDiagnosticReport}
-                  className="flex items-center text-sm font-medium text-blue-600 hover:text-blue-800"
+                  className="flex items-center text-sm font-semibold text-emerald-700 hover:text-emerald-800 transition"
                 >
                   <RefreshCw className={`mr-1 ${isLoadingDiagnostics ? 'animate-spin' : ''}`} size={16} />
                   Refresh
@@ -1765,7 +1765,7 @@ export default function SalesReportPage() {
                               {row.investigation_types?.map((type: string, tIdx: number) => (
                                 <span
                                   key={tIdx}
-                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
+                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200"
                                 >
                                   {type}
                                 </span>

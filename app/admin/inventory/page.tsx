@@ -459,7 +459,7 @@ export default function AddInventoryPage() {
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-              <Layers className="text-blue-600 h-8 w-8" />
+              <Layers className="text-emerald-600 h-8 w-8" />
               Inventory & Stock Management
             </h1>
             <p className="text-gray-600 mt-1">
@@ -469,7 +469,7 @@ export default function AddInventoryPage() {
           <div className="flex items-center gap-2">
             <Link
               href="/admin/treatment-links"
-              className="inline-flex items-center gap-2 px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl border border-blue-200 transition shadow-sm"
+              className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-xl border border-emerald-200 transition shadow-sm"
               title="Configure auto-deductions linking prescription treatments to inventory materials"
             >
               <Link2 size={14} />
@@ -493,7 +493,7 @@ export default function AddInventoryPage() {
             onClick={() => setSelectedSubdivision('ALL')}
             className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
               selectedSubdivision === 'ALL'
-                ? 'bg-[#176e56] text-white shadow'
+                ? 'bg-emerald-600 text-white shadow'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -505,7 +505,7 @@ export default function AddInventoryPage() {
               onClick={() => setSelectedSubdivision(sub)}
               className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
                 selectedSubdivision === sub
-                  ? 'bg-[#176e56] text-white shadow'
+                  ? 'bg-emerald-600 text-white shadow'
                   : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
@@ -528,7 +528,7 @@ export default function AddInventoryPage() {
                 onClick={() => setSelectedSubdivision(sub)}
                 className={`p-4 rounded-xl border transition cursor-pointer ${
                   isSelected
-                    ? 'bg-blue-50/70 border-blue-300 ring-2 ring-blue-500/20'
+                    ? 'bg-emerald-50/70 border-emerald-300 ring-2 ring-emerald-500/20'
                     : 'bg-white border-gray-200 hover:border-gray-300 shadow-sm'
                 }`}
               >
@@ -554,7 +554,7 @@ export default function AddInventoryPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex justify-between items-center mb-5">
                 <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <Pill className="text-blue-600" size={20} />
+                  <Pill className="text-emerald-600" size={20} />
                   {isEditMode ? 'Edit Material Item' : 'Add New Material Item'}
                 </h2>
                 {isEditMode && (
@@ -594,7 +594,7 @@ export default function AddInventoryPage() {
                     value={formData.name}
                     onChange={handleChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     placeholder="e.g. Composite Shade A2, Extraction Forceps"
                   />
                 </div>
@@ -608,7 +608,7 @@ export default function AddInventoryPage() {
                     value={formData.subdivision || 'Consumable'}
                     onChange={handleChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
                   >
                     {SUBDIVISIONS.map(sub => (
                       <option key={sub} value={sub}>{sub}</option>
@@ -716,7 +716,7 @@ export default function AddInventoryPage() {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-2/3 px-4 py-2 bg-[#176e56] hover:bg-[#155944] text-white rounded-lg text-xs font-semibold shadow transition flex items-center justify-center gap-1 cursor-pointer"
+                    className="w-2/3 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow transition flex items-center justify-center gap-1"
                   >
                     {isLoading ? (
                       <RefreshCw size={14} className="animate-spin" />
@@ -819,7 +819,7 @@ export default function AddInventoryPage() {
                 <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Today's Direct Sales</h4>
                 <button
                   onClick={fetchTodaySales}
-                  className="text-[11px] text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  className="text-[11px] text-emerald-600 hover:text-emerald-800 flex items-center gap-1"
                 >
                   <RefreshCw size={12} className={isLoadingSales ? 'animate-spin' : ''} />
                   Refresh
@@ -869,7 +869,7 @@ export default function AddInventoryPage() {
                     placeholder="Search materials, vendor..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-9 pr-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                   />
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 </div>
@@ -877,7 +877,7 @@ export default function AddInventoryPage() {
 
               {isLoadingInventorys ? (
                 <div className="flex justify-center items-center py-20">
-                  <RefreshCw size={28} className="animate-spin text-blue-600" />
+                  <RefreshCw size={28} className="animate-spin text-emerald-600" />
                 </div>
               ) : sortedInventorys.length === 0 ? (
                 <div className="text-center py-16 bg-gray-50 rounded-xl border border-dashed border-gray-200">
@@ -927,9 +927,9 @@ export default function AddInventoryPage() {
                                 sub === 'Consumable'
                                   ? 'bg-purple-100 text-purple-700'
                                   : sub === 'One-Time Material'
-                                  ? 'bg-blue-100 text-blue-700'
+                                  ? 'bg-emerald-100 text-emerald-700'
                                   : sub === 'Non-Dental / Cleaning Consumable'
-                                  ? 'bg-teal-100 text-teal-700'
+                                  ? 'bg-emerald-100 text-emerald-700'
                                   : 'bg-amber-100 text-amber-800'
                               }`}>
                                 {sub}
@@ -970,7 +970,7 @@ export default function AddInventoryPage() {
                               <div className="flex items-center justify-end gap-2">
                                 <button
                                   onClick={() => handleEdit(item)}
-                                  className="text-blue-600 hover:text-blue-800 p-1"
+                                  className="text-emerald-600 hover:text-emerald-800 p-1"
                                   title="Edit Material"
                                 >
                                   <Edit size={16} />
@@ -1092,7 +1092,7 @@ export default function AddInventoryPage() {
                 />
               </div>
 
-              <div className="bg-blue-50 p-2.5 rounded-lg text-blue-900 font-medium flex justify-between items-center mt-2">
+              <div className="bg-emerald-50 p-2.5 rounded-lg text-emerald-900 font-medium flex justify-between items-center mt-2">
                 <span>Total Transaction Value:</span>
                 <strong className="text-sm">₹{(stockQty * stockRate).toFixed(2)}</strong>
               </div>
@@ -1126,7 +1126,7 @@ export default function AddInventoryPage() {
           <div className="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-2xl animate-scale-up border border-gray-200 max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center pb-4 border-b border-gray-100">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
                   <History size={20} />
                 </div>
                 <div>
@@ -1137,7 +1137,7 @@ export default function AddInventoryPage() {
               <div className="flex items-center gap-2">
                 <Link
                   href="/admin/registers?tab=MATERIAL"
-                  className="px-3 py-1.5 bg-[#176e56] hover:bg-[#155944] text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition"
                 >
                   <ExternalLink size={13} />
                   Open Full Registers Hub
@@ -1154,7 +1154,7 @@ export default function AddInventoryPage() {
             <div className="flex-1 overflow-y-auto py-4">
               {isLoadingLogs ? (
                 <div className="py-16 flex flex-col justify-center items-center gap-2">
-                  <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
+                  <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
                   <span className="text-xs text-gray-500">Loading register logs...</span>
                 </div>
               ) : materialLogs.length === 0 ? (
@@ -1185,7 +1185,7 @@ export default function AddInventoryPage() {
                           </td>
                           <td className="py-2.5 px-3 font-bold text-gray-900">{m.material_name}</td>
                           <td className="py-2.5 px-3">
-                            <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-[10px] font-medium">
+                            <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded text-[10px] font-medium">
                               {m.subdivision}
                             </span>
                           </td>

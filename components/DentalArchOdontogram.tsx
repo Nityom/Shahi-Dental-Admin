@@ -170,7 +170,7 @@ export default function DentalArchOdontogram({
               onClick={() => setDentitionType('PERMANENT')}
               className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
                 dentitionType === 'PERMANENT'
-                  ? 'bg-white text-blue-700 shadow-sm'
+                  ? 'bg-white text-emerald-700 shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -196,21 +196,21 @@ export default function DentalArchOdontogram({
           <button
             type="button"
             onClick={selectUpperArch}
-            className="px-2.5 py-1.5 rounded-lg font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 transition"
+            className="px-2.5 py-1.5 rounded-lg font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 transition"
           >
             Upper Arch
           </button>
           <button
             type="button"
             onClick={selectLowerArch}
-            className="px-2.5 py-1.5 rounded-lg font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 transition"
+            className="px-2.5 py-1.5 rounded-lg font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 transition"
           >
             Lower Arch
           </button>
           <button
             type="button"
             onClick={selectAllTeeth}
-            className="px-2.5 py-1.5 rounded-lg font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 transition"
+            className="px-2.5 py-1.5 rounded-lg font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 transition"
           >
             Select All
           </button>
@@ -624,8 +624,8 @@ export default function DentalArchOdontogram({
           P - Premolars (4, 5)
         </span>
         <span className="text-slate-300">•</span>
-        <span className="flex items-center gap-1.5 text-blue-800">
-          <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block" />
+        <span className="flex items-center gap-1.5 text-emerald-800">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" />
           M - Molars (6, 7, 8 / D, E)
         </span>
       </div>
@@ -641,7 +641,7 @@ export default function DentalArchOdontogram({
               <span
                 key={id}
                 onClick={() => onToggleTooth(id)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-100 text-blue-800 cursor-pointer hover:bg-rose-100 hover:text-rose-700 transition shadow-sm"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800 cursor-pointer hover:bg-rose-100 hover:text-rose-700 transition shadow-sm"
                 title="Click to remove from selection"
               >
                 {getToothBadgeName(id)}
@@ -652,7 +652,7 @@ export default function DentalArchOdontogram({
         </div>
 
         {selectedTeethNumbers.length > 0 && (
-          <span className="text-xs font-semibold text-blue-700">
+          <span className="text-xs font-semibold text-emerald-700">
             {selectedTeethNumbers.length} tooth{selectedTeethNumbers.length > 1 ? 's' : ''} ready for diagnosis
           </span>
         )}

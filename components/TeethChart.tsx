@@ -49,13 +49,13 @@ const TeethChart: React.FC<TeethChartProps> = ({ onTeethSelected }) => {
     // Color scheme matching the image
     if (category === 'Permanent') {
       // Central incisors (1)
-      if (lastDigit === 1) return "bg-blue-200 hover:bg-blue-300";
+      if (lastDigit === 1) return "bg-emerald-200 hover:bg-emerald-300";
       
       // Lateral incisors (2)  
-      if (lastDigit === 2) return "bg-blue-200 hover:bg-blue-300";
+      if (lastDigit === 2) return "bg-emerald-200 hover:bg-emerald-300";
       
       // Canines (3)
-      if (lastDigit === 3) return "bg-teal-200 hover:bg-teal-300";
+      if (lastDigit === 3) return "bg-emerald-200 hover:bg-emerald-300";
       
       // First premolars (4)
       if (lastDigit === 4) return "bg-green-200 hover:bg-green-300";
@@ -204,7 +204,7 @@ const TeethChart: React.FC<TeethChartProps> = ({ onTeethSelected }) => {
           ${isSelected ? 'scale-110 z-20 shadow-lg' : ''}`}
         onClick={() => handleToothClick(id)}
       >
-        <div className={`w-full h-full relative ${isSelected ? 'ring-2 ring-blue-600' : ''}`}>
+        <div className={`w-full h-full relative ${isSelected ? 'ring-2 ring-emerald-600' : ''}`}>
           {getToothShape()}
         </div>
       </div>
@@ -312,15 +312,15 @@ const TeethChart: React.FC<TeethChartProps> = ({ onTeethSelected }) => {
           <h4 className="font-medium mb-4 text-center">Tooth Type Legend</h4>
           <div className="grid grid-cols-8 border-b border-gray-300 pb-2 mb-2">
             <div className="col-span-1 text-center">
-              <div className="bg-blue-200 w-8 h-8 mx-auto mb-1 flex items-center justify-center">1</div>
+              <div className="bg-emerald-200 w-8 h-8 mx-auto mb-1 flex items-center justify-center">1</div>
               <div className="text-xs">Central incisors</div>
             </div>
             <div className="col-span-1 text-center">
-              <div className="bg-blue-200 w-8 h-8 mx-auto mb-1 flex items-center justify-center">2</div>
+              <div className="bg-emerald-200 w-8 h-8 mx-auto mb-1 flex items-center justify-center">2</div>
               <div className="text-xs">Lateral incisors</div>
             </div>
             <div className="col-span-1 text-center">
-              <div className="bg-teal-200 w-8 h-8 mx-auto mb-1 flex items-center justify-center">3</div>
+              <div className="bg-emerald-200 w-8 h-8 mx-auto mb-1 flex items-center justify-center">3</div>
               <div className="text-xs">Canines</div>
             </div>
             <div className="col-span-1 text-center">
@@ -351,11 +351,11 @@ const TeethChart: React.FC<TeethChartProps> = ({ onTeethSelected }) => {
             
             <div className="grid grid-cols-2 gap-2">
               <div className="flex items-center">
-                <div className="w-4 h-4 bg-blue-200 mr-2"></div>
+                <div className="w-4 h-4 bg-emerald-200 mr-2"></div>
                 <span className="text-xs">1-2: Incisors</span>
               </div>
               <div className="flex items-center">
-                <div className="w-4 h-4 bg-teal-200 mr-2"></div>
+                <div className="w-4 h-4 bg-emerald-200 mr-2"></div>
                 <span className="text-xs">3: Canines</span>
               </div>
               <div className="flex items-center">
@@ -404,7 +404,7 @@ const TeethChart: React.FC<TeethChartProps> = ({ onTeethSelected }) => {
               {selectedTeeth.map(id => (
                 <div 
                   key={id} 
-                  className="bg-blue-100 px-3 py-1 rounded-full text-sm flex items-center"
+                  className="bg-emerald-100 px-3 py-1 rounded-full text-sm flex items-center"
                 >
                   <span>
                     {id} ({getToothType(id)})

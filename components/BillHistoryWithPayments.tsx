@@ -100,9 +100,9 @@ export function BillHistoryWithPayments({
   return (
     <>
       {/* Overall Summary */}
-      <Card className="p-4 mb-4 bg-blue-50 border-blue-200">
+      <Card className="p-4 mb-4 bg-emerald-50/70 border-emerald-200">
         <div className="flex justify-between items-center mb-3">
-          <h3 className="font-semibold text-blue-800">Overall Bill Summary</h3>
+          <h3 className="font-bold text-emerald-950">Overall Bill Summary</h3>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={selectAll} className="text-xs">
               Select All
@@ -152,13 +152,13 @@ export function BillHistoryWithPayments({
 
           return (
             <div key={bill.id} className="space-y-2">
-              <Card className={`p-4 ${selectedBillIds.has(bill.id!) ? 'ring-2 ring-blue-400' : ''}`}>
+              <Card className={`p-4 ${selectedBillIds.has(bill.id!) ? 'ring-2 ring-emerald-500' : ''}`}>
                 <div className="flex justify-between items-start gap-3">
                   <input
                     type="checkbox"
                     checked={selectedBillIds.has(bill.id!)}
                     onChange={() => bill.id && toggleSelect(bill.id)}
-                    className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 cursor-pointer flex-shrink-0"
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer flex-shrink-0"
                   />
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
@@ -210,7 +210,7 @@ export function BillHistoryWithPayments({
                       size="sm"
                       variant="outline"
                       onClick={() => window.open(`/print-dues?billId=${bill.id}&signature=${defaultSignature}&doctorName=${encodeURIComponent(defaultDoctorName)}`, '_blank')}
-                      className="mt-1 text-xs flex items-center gap-1 border-blue-300 text-blue-700 hover:bg-blue-50"
+                      className="mt-1 text-xs flex items-center gap-1 border-emerald-300 text-emerald-800 hover:bg-emerald-50"
                       title="Print clinic-ready extraction/park dues report"
                     >
                       <Printer className="h-3.5 w-3.5" />

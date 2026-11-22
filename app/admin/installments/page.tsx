@@ -288,7 +288,7 @@ export default function InstallmentsPage() {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#176e56] mx-auto mb-4"></div>
           <p className="text-gray-600 font-medium">Loading pending payments & transactions...</p>
         </div>
       </div>
@@ -442,7 +442,7 @@ export default function InstallmentsPage() {
                   setDateFilterMode('ALL');
                   setSelectedDate('');
                 }}
-                className="hover:text-blue-900 ml-1"
+                className="hover:text-emerald-900 ml-1"
                 title="Reset to all bills"
               >
                 <X size={13} />
@@ -521,7 +521,7 @@ export default function InstallmentsPage() {
           <button
             onClick={() => setCategoryFilter('ALL')}
             className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
-              categoryFilter === 'ALL' ? 'bg-white text-blue-700 shadow-xs' : 'text-gray-600 hover:text-gray-900'
+              categoryFilter === 'ALL' ? 'bg-white text-emerald-800 font-bold shadow-xs' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             All Pending ({allPendingBills.length})
@@ -551,7 +551,7 @@ export default function InstallmentsPage() {
             <select
               value={pageSize}
               onChange={(e) => setPageSize(Number(e.target.value))}
-              className="bg-white border border-gray-300 rounded px-2 py-1 text-xs font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="bg-white border border-gray-300 rounded px-2 py-1 text-xs font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
               <option value={10}>10</option>
               <option value={20}>20</option>
@@ -563,7 +563,7 @@ export default function InstallmentsPage() {
             <button
               onClick={() => setViewMode('table')}
               className={`px-2.5 py-1 text-xs font-semibold rounded-md transition flex items-center gap-1 ${
-                viewMode === 'table' ? 'bg-white text-blue-700 shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                viewMode === 'table' ? 'bg-white text-emerald-800 font-bold shadow-xs' : 'text-gray-600 hover:text-gray-900'
               }`}
               title="Quick Overview Table"
             >
@@ -573,7 +573,7 @@ export default function InstallmentsPage() {
             <button
               onClick={() => setViewMode('cards')}
               className={`px-2.5 py-1 text-xs font-semibold rounded-md transition flex items-center gap-1 ${
-                viewMode === 'cards' ? 'bg-white text-blue-700 shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                viewMode === 'cards' ? 'bg-white text-emerald-800 font-bold shadow-xs' : 'text-gray-600 hover:text-gray-900'
               }`}
               title="Detailed Cards with Payment History"
             >

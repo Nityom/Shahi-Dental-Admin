@@ -218,7 +218,7 @@ const ConsumableSettingsPage = () => {
         </div>
         <Link
           href="/admin/treatment-links"
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#176e56] hover:bg-[#155944] text-white text-xs font-semibold rounded-xl shadow-md shadow-emerald-700/20 transition self-start sm:self-auto"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-md shadow-emerald-500/20 transition self-start sm:self-auto"
         >
           <Link2 size={16} />
           Go to Treatment Auto-Link
@@ -226,9 +226,9 @@ const ConsumableSettingsPage = () => {
         </Link>
       </div>
 
-      <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/80 flex items-center justify-between gap-4">
+      <div className="mb-6 p-4 rounded-xl bg-emerald-50/60 border border-emerald-200 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-[#176e56] text-white rounded-xl shadow-sm">
+          <div className="p-2.5 bg-emerald-600 text-white rounded-xl shadow-sm">
             <Link2 size={20} />
           </div>
           <div>
@@ -240,7 +240,7 @@ const ConsumableSettingsPage = () => {
         </div>
         <Link
           href="/admin/treatment-links"
-          className="text-xs font-bold text-blue-700 hover:text-blue-900 whitespace-nowrap flex items-center gap-1 hover:underline"
+          className="text-xs font-bold text-emerald-700 hover:text-emerald-900 whitespace-nowrap flex items-center gap-1 hover:underline"
         >
           Configure Treatment Rules &rarr;
         </Link>
@@ -322,7 +322,7 @@ const ConsumableSettingsPage = () => {
                     <tbody>
                       {/* Add New Row */}
                       {isAddingNew && (
-                        <tr className="border-b bg-blue-50">
+                        <tr className="border-b bg-emerald-50">
                           <td className="p-3">
                             <Input
                               placeholder="Item name"
@@ -404,7 +404,7 @@ const ConsumableSettingsPage = () => {
                                   className="w-20 mx-auto"
                                 />
                               ) : (
-                                <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-semibold">
+                                <span className="inline-block bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-semibold">
                                   {item.deduction_qty ?? item.quantity ?? 1}
                                 </span>
                               )}
@@ -449,7 +449,7 @@ const ConsumableSettingsPage = () => {
                                       const msg = `Inventory items available:\n\n${inventory.map(inv => `• ${inv.name} (Stock: ${inv.quantity})`).join('\n')}\n\nTip: Edit the consumable item name to match one of these inventory items.`;
                                       alert(msg);
                                     }}
-                                    className="text-xs text-blue-600 hover:underline"
+                                    className="text-xs text-emerald-600 hover:underline"
                                   >
                                     View inventory
                                   </button>
@@ -576,13 +576,13 @@ const ConsumableSettingsPage = () => {
                 </div>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded p-4">
-                <p className="text-sm text-blue-800 mb-2">
+              <div className="bg-emerald-50 border border-emerald-200 rounded p-4">
+                <p className="text-sm text-emerald-800 mb-2">
                   <strong>📝 Current Inventory Items:</strong>
                 </p>
                 {inventory.length > 0 ? (
                   <div className="max-h-40 overflow-y-auto">
-                    <ul className="text-sm text-blue-700 space-y-1">
+                    <ul className="text-sm text-emerald-700 space-y-1">
                       {inventory.slice(0, 20).map((inv, idx) => (
                         <li key={idx} className="flex justify-between">
                           <span>• {inv.name}</span>
@@ -595,7 +595,7 @@ const ConsumableSettingsPage = () => {
                     </ul>
                   </div>
                 ) : (
-                  <p className="text-sm text-blue-700">No inventory items found. Please add items to inventory first.</p>
+                  <p className="text-sm text-emerald-700">No inventory items found. Please add items to inventory first.</p>
                 )}
               </div>
 
@@ -628,9 +628,9 @@ const ConsumableSettingsPage = () => {
                   <p className="text-sm text-gray-600 mb-1">Low Stock Items</p>
                   <p className="text-2xl font-bold text-orange-700">{lowStockCount}</p>
                 </div>
-                <div className="bg-blue-50 p-4 rounded">
+                <div className="bg-emerald-50 p-4 rounded">
                   <p className="text-sm text-gray-600 mb-1">Units Per Patient</p>
-                  <p className="text-2xl font-bold text-blue-700">
+                  <p className="text-2xl font-bold text-emerald-700">
                     {items.filter(item => item.enabled !== false).reduce((sum, item) => sum + item.quantity, 0)}
                   </p>
                 </div>

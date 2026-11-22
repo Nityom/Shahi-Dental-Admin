@@ -469,7 +469,7 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
           {/* Bottom Page Footer */}
           <div className="mt-auto pt-2.5 border-t border-gray-300 text-xs text-gray-600 flex justify-between items-center">
             {!page.isLastPage ? (
-              <span className="font-semibold text-blue-700 italic">
+              <span className="font-semibold text-[#176e56] italic">
                 Continued on Page {page.pageNumber + 1}...
               </span>
             ) : (
@@ -488,7 +488,7 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
         <div className="no-print flex justify-center mt-6 mb-4">
           <button
             onClick={handlePrint}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-colors"
+            className="bg-[#176e56] hover:bg-[#155944] text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-colors cursor-pointer"
           >
             Print Bill
           </button>

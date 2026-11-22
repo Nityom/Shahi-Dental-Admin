@@ -1002,7 +1002,7 @@ export default function TreatmentLinksPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-            <Link href="/admin/inventory" className="hover:text-blue-600 transition flex items-center gap-1">
+            <Link href="/admin/inventory" className="hover:text-[#176e56] transition flex items-center gap-1">
               <Layers size={14} /> Inventory Management
             </Link>
             <span>/</span>
@@ -1154,7 +1154,7 @@ export default function TreatmentLinksPage() {
                 onClick={() => setStatusFilter('CUSTOMIZED')}
                 className={`px-3 py-1.5 rounded-lg transition ${
                   statusFilter === 'CUSTOMIZED'
-                    ? 'bg-white text-blue-700 shadow-sm font-semibold'
+                    ? 'bg-white text-emerald-800 shadow-sm font-bold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -1246,12 +1246,12 @@ export default function TreatmentLinksPage() {
       {/* Rules List / Cards */}
       {loading ? (
         <div className="py-20 text-center">
-          <RefreshCw className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-3" />
+          <RefreshCw className="w-8 h-8 animate-spin text-[#176e56] mx-auto mb-3" />
           <p className="text-slate-500 font-medium text-sm">Loading prescription auto-link treatments...</p>
         </div>
       ) : filteredRules.length === 0 ? (
         <div className="bg-white rounded-3xl p-12 text-center border border-dashed border-slate-300">
-          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-emerald-50 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Link2 size={28} />
           </div>
           <h3 className="text-lg font-bold text-slate-800 mb-1">No Matching Treatments Found</h3>
@@ -1264,7 +1264,7 @@ export default function TreatmentLinksPage() {
             <Button
               variant="outline"
               onClick={handleSyncAllPrescriptionTreatments}
-              className="text-xs rounded-xl border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100"
+              className="text-xs rounded-xl border-emerald-200 text-emerald-800 bg-emerald-50 hover:bg-emerald-100"
             >
               <Sparkles size={14} className="mr-1.5" />
               Sync All Prescription Treatments
@@ -1313,7 +1313,7 @@ export default function TreatmentLinksPage() {
                         )}
 
                         {rule.isCustomized ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                             Customized in DB
                           </span>
                         ) : (
@@ -1332,7 +1332,7 @@ export default function TreatmentLinksPage() {
                             className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md ${
                               al.type === 'crown'
                                 ? 'bg-amber-100/80 text-amber-800 border border-amber-200'
-                                : 'bg-blue-50 text-blue-700 border border-blue-200'
+                                : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                             }`}
                           >
                             {al.type === 'crown' ? <Crown size={11} /> : <Package size={11} />}
@@ -1362,7 +1362,7 @@ export default function TreatmentLinksPage() {
 
                       <button
                         onClick={() => handleEdit(rule)}
-                        className="p-1.5 text-slate-500 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition"
+                        className="p-1.5 text-slate-500 hover:text-emerald-700 rounded-lg hover:bg-emerald-50 transition"
                         title="Customize / Edit Rule"
                       >
                         <Edit size={16} />
@@ -1388,7 +1388,7 @@ export default function TreatmentLinksPage() {
                       </span>
                       <button
                         onClick={() => handleEdit(rule)}
-                        className="text-[11px] font-semibold text-blue-600 hover:underline"
+                        className="text-[11px] font-semibold text-emerald-700 hover:underline"
                       >
                         Customize Materials
                       </button>
@@ -1406,7 +1406,7 @@ export default function TreatmentLinksPage() {
                             className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/80 border border-slate-100 text-xs"
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <span className="w-5 h-5 rounded-lg bg-blue-100/70 text-blue-700 font-bold flex items-center justify-center shrink-0 text-[10px]">
+                              <span className="w-5 h-5 rounded-lg bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center shrink-0 text-[10px]">
                                 {item.quantity}x
                               </span>
                               <span className="font-semibold text-slate-800 truncate">
@@ -1460,7 +1460,7 @@ export default function TreatmentLinksPage() {
                   </span>
                   <button
                     onClick={() => handleEdit(rule)}
-                    className="font-semibold text-blue-600 hover:text-blue-700"
+                    className="font-semibold text-emerald-700 hover:text-emerald-800"
                   >
                     Edit & Customize →
                   </button>
@@ -1611,7 +1611,7 @@ export default function TreatmentLinksPage() {
           <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto space-y-5 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <span className="p-2 bg-blue-100 text-blue-700 rounded-xl">
+                <span className="p-2 bg-emerald-100 text-emerald-800 rounded-xl">
                   <Link2 size={18} />
                 </span>
                 <h3 className="text-lg font-bold text-slate-900">
@@ -1680,7 +1680,7 @@ export default function TreatmentLinksPage() {
                   <button
                     type="button"
                     onClick={handleAddItemRow}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100/80 px-2.5 py-1 rounded-lg transition"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg transition"
                   >
                     <Plus size={13} /> Add Another Material
                   </button>

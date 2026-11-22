@@ -1717,7 +1717,7 @@ const PrescriptionPage = () => {
         </div>
       ) : (
         <>
-          <h2 className="text-3xl font-bold mb-8 text-center text-blue-700 border-b pb-4">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#183e32] border-b border-[#e2eae3] pb-4 font-manrope tracking-tight text-center">
             {isEditMode ? 'Edit Prescription' : 'Create Prescription'}
           </h2>
           {userEmail && (
@@ -1733,10 +1733,10 @@ const PrescriptionPage = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Patient Information Section */}                <div className="bg-blue-50 p-6 rounded-lg border border-blue-100">
-              <h3 className="text-xl font-semibold mb-4 text-blue-800">Patient Information</h3>                  {formData.reference_number && (
-                <div className="mb-4 p-3 bg-blue-100 rounded-lg">
-                  <p className="text-sm text-blue-800">
+            {/* Patient Information Section */}                <div className="bg-emerald-50/50 p-6 rounded-xl border border-emerald-100">
+              <h3 className="text-xl font-bold mb-4 text-[#183e32]">Patient Information</h3>                  {formData.reference_number && (
+                <div className="mb-4 p-3 bg-emerald-100/70 rounded-lg">
+                  <p className="text-sm text-emerald-900 font-semibold">
                     Patient Reference: <span className="font-medium">{formData.reference_number}</span>
                   </p>
                 </div>
@@ -1749,7 +1749,7 @@ const PrescriptionPage = () => {
                     name="patientName"
                     value={formData.patientName}
                     onChange={handleChange}
-                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none transition"
                     required
                     placeholder="Enter patient's full name"
                   />
@@ -1762,7 +1762,7 @@ const PrescriptionPage = () => {
                     name="date"
                     value={formData.date}
                     onChange={handleChange}
-                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none transition"
                     required
                   />
                 </div>
@@ -1774,7 +1774,7 @@ const PrescriptionPage = () => {
                     name="age"
                     value={formData.age}
                     onChange={handleChange}
-                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none transition"
                     required
                     placeholder="Years"
                   />
@@ -1786,7 +1786,7 @@ const PrescriptionPage = () => {
                     name="sex"
                     value={formData.sex}
                     onChange={handleChange}
-                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none transition"
                     required
                   >
                     <option value="">Select Gender</option>
@@ -1805,7 +1805,7 @@ const PrescriptionPage = () => {
                     name="phoneNumber"
                     value={formData.phoneNumber}
                     onChange={handlePhoneNumberChange}
-                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none transition"
                     placeholder="Enter patient's phone number"
                   />
                   <p className="text-xs text-gray-500 mt-1">Patient data will auto-fill if phone exists</p>
@@ -1849,13 +1849,13 @@ const PrescriptionPage = () => {
                     <label className="block text-sm font-medium text-gray-700">
                       Investigation <span className="text-gray-500 text-xs">(Optional)</span>
                     </label>
-                    <span className="text-[11px] text-blue-600 font-medium">Auto-extracted to OPG & IOPAR Register</span>
+                    <span className="text-[11px] text-emerald-700 font-medium">Auto-extracted to OPG & IOPAR Register</span>
                   </div>
                   <textarea
                     name="investigation"
                     value={formData.investigation}
                     onChange={handleChange}
-                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                    className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none transition"
                     rows={2}
                     placeholder="Any investigations or tests recommended (e.g., OPG, IOPAR wrt 16, CBCT, Blood tests)"
                   />
@@ -1881,7 +1881,7 @@ const PrescriptionPage = () => {
                             setFormData((prev) => ({ ...prev, investigation: `${current}, ${item.text}` }));
                           }
                         }}
-                        className="px-2.5 py-1 text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition"
+                        className="px-2.5 py-1 text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg transition"
                       >
                         {item.label}
                       </button>
@@ -1889,19 +1889,19 @@ const PrescriptionPage = () => {
                   </div>
 
                   {/* Diagnostic Test Charges to Bill */}
-                  <div className="mt-3 p-3.5 bg-blue-50/60 rounded-xl border border-blue-100 space-y-3">
+                  <div className="mt-3 p-3.5 bg-emerald-50/50 rounded-xl border border-emerald-100 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-blue-900">Add Tests & Investigations to Bill</span>
-                      <span className="text-[11px] text-blue-600 font-medium">Included in Final Bill & Diagnostics Report</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-950">Add Tests & Investigations to Bill</span>
+                      <span className="text-[11px] text-emerald-700 font-medium">Included in Final Bill & Diagnostics Report</span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
                       {/* 1. IOPAR (₹200) */}
-                      <div className="bg-white p-2.5 rounded-lg border border-blue-200 flex flex-col justify-between gap-2 shadow-2xs">
+                      <div className="bg-white p-2.5 rounded-lg border border-emerald-200 flex flex-col justify-between gap-2 shadow-2xs">
                         <div className="flex items-center justify-between">
                           <div>
                             <span className="text-xs font-bold text-gray-900 block">IOPAR</span>
-                            <span className="text-[11px] font-semibold text-blue-700">₹200 / unit</span>
+                            <span className="text-[11px] font-semibold text-emerald-800">₹200 / unit</span>
                           </div>
                           <input
                             type="number"
@@ -1915,7 +1915,7 @@ const PrescriptionPage = () => {
                               const val = parseInt(e.target.value, 10);
                               if (isNaN(val) || val < 1) setIoparCount(1);
                             }}
-                            className="w-14 p-1 text-center border border-gray-300 rounded text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            className="w-14 p-1 text-center border border-gray-300 rounded text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                           />
                         </div>
                         <button
@@ -1947,18 +1947,18 @@ const PrescriptionPage = () => {
                             if (!current) setFormData(prev => ({ ...prev, investigation: 'IOPAR' }));
                             else if (!current.toUpperCase().includes('IOPAR')) setFormData(prev => ({ ...prev, investigation: `${current}, IOPAR` }));
                           }}
-                          className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1"
+                          className="w-full py-1.5 bg-[#176e56] hover:bg-[#155944] text-white rounded text-xs font-bold transition flex items-center justify-center gap-1"
                         >
                           + Add IOPAR (₹{Math.max(1, ioparCount || 1) * 200})
                         </button>
                       </div>
 
                       {/* 2. CBCT (₹1500) */}
-                      <div className="bg-white p-2.5 rounded-lg border border-blue-200 flex flex-col justify-between gap-2 shadow-2xs">
+                      <div className="bg-white p-2.5 rounded-lg border border-emerald-200 flex flex-col justify-between gap-2 shadow-2xs">
                         <div className="flex items-center justify-between">
                           <div>
                             <span className="text-xs font-bold text-gray-900 block">CBCT</span>
-                            <span className="text-[11px] font-semibold text-blue-700">₹1500 / scan</span>
+                            <span className="text-[11px] font-semibold text-emerald-800">₹1500 / scan</span>
                           </div>
                           <input
                             type="number"
@@ -1972,7 +1972,7 @@ const PrescriptionPage = () => {
                               const val = parseInt(e.target.value, 10);
                               if (isNaN(val) || val < 1) setCbctCount(1);
                             }}
-                            className="w-14 p-1 text-center border border-gray-300 rounded text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            className="w-14 p-1 text-center border border-gray-300 rounded text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                           />
                         </div>
                         <button
@@ -2004,18 +2004,18 @@ const PrescriptionPage = () => {
                             if (!current) setFormData(prev => ({ ...prev, investigation: 'CBCT' }));
                             else if (!current.toUpperCase().includes('CBCT')) setFormData(prev => ({ ...prev, investigation: `${current}, CBCT` }));
                           }}
-                          className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1"
+                          className="w-full py-1.5 bg-[#176e56] hover:bg-[#155944] text-white rounded text-xs font-bold transition flex items-center justify-center gap-1"
                         >
                           + Add CBCT (₹{Math.max(1, cbctCount || 1) * 1500})
                         </button>
                       </div>
 
                       {/* 3. Dental X-Ray (₹200) */}
-                      <div className="bg-white p-2.5 rounded-lg border border-blue-200 flex flex-col justify-between gap-2 shadow-2xs">
+                      <div className="bg-white p-2.5 rounded-lg border border-emerald-200 flex flex-col justify-between gap-2 shadow-2xs">
                         <div className="flex items-center justify-between">
                           <div>
                             <span className="text-xs font-bold text-gray-900 block">Dental X-Ray</span>
-                            <span className="text-[11px] font-semibold text-blue-700">₹200 / unit</span>
+                            <span className="text-[11px] font-semibold text-emerald-800">₹200 / unit</span>
                           </div>
                           <input
                             type="number"
@@ -2029,7 +2029,7 @@ const PrescriptionPage = () => {
                               const val = parseInt(e.target.value, 10);
                               if (isNaN(val) || val < 1) setXrayCount(1);
                             }}
-                            className="w-14 p-1 text-center border border-gray-300 rounded text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            className="w-14 p-1 text-center border border-gray-300 rounded text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                           />
                         </div>
                         <button
@@ -2061,18 +2061,18 @@ const PrescriptionPage = () => {
                             if (!current) setFormData(prev => ({ ...prev, investigation: 'Dental X-Ray' }));
                             else if (!current.toLowerCase().includes('x-ray')) setFormData(prev => ({ ...prev, investigation: `${current}, Dental X-Ray` }));
                           }}
-                          className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1"
+                          className="w-full py-1.5 bg-[#176e56] hover:bg-[#155944] text-white rounded text-xs font-bold transition flex items-center justify-center gap-1"
                         >
                           + Add X-Ray (₹{Math.max(1, xrayCount || 1) * 200})
                         </button>
                       </div>
 
                       {/* 4. Blood Test (₹50) */}
-                      <div className="bg-white p-2.5 rounded-lg border border-blue-200 flex flex-col justify-between gap-2 shadow-2xs">
+                      <div className="bg-white p-2.5 rounded-lg border border-emerald-200 flex flex-col justify-between gap-2 shadow-2xs">
                         <div className="flex items-center justify-between">
                           <div>
                             <span className="text-xs font-bold text-gray-900 block">Blood Test (CBC/BT)</span>
-                            <span className="text-[11px] font-semibold text-blue-700">₹50 / test</span>
+                            <span className="text-[11px] font-semibold text-emerald-800">₹50 / test</span>
                           </div>
                           <input
                             type="number"
@@ -2086,7 +2086,7 @@ const PrescriptionPage = () => {
                               const val = parseInt(e.target.value, 10);
                               if (isNaN(val) || val < 1) setBloodCount(1);
                             }}
-                            className="w-14 p-1 text-center border border-gray-300 rounded text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            className="w-14 p-1 text-center border border-gray-300 rounded text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                           />
                         </div>
                         <button
@@ -2118,18 +2118,18 @@ const PrescriptionPage = () => {
                             if (!current) setFormData(prev => ({ ...prev, investigation: 'Blood Test' }));
                             else if (!current.toLowerCase().includes('blood')) setFormData(prev => ({ ...prev, investigation: `${current}, Blood Test` }));
                           }}
-                          className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1"
+                          className="w-full py-1.5 bg-[#176e56] hover:bg-[#155944] text-white rounded text-xs font-bold transition flex items-center justify-center gap-1"
                         >
                           + Add Blood Test (₹{Math.max(1, bloodCount || 1) * 50})
                         </button>
                       </div>
 
                       {/* 5. Sugar Test (₹50) */}
-                      <div className="bg-white p-2.5 rounded-lg border border-blue-200 flex flex-col justify-between gap-2 shadow-2xs">
+                      <div className="bg-white p-2.5 rounded-lg border border-emerald-200 flex flex-col justify-between gap-2 shadow-2xs">
                         <div className="flex items-center justify-between">
                           <div>
                             <span className="text-xs font-bold text-gray-900 block">Sugar Test (RBS/FBS)</span>
-                            <span className="text-[11px] font-semibold text-blue-700">₹50 / test</span>
+                            <span className="text-[11px] font-semibold text-emerald-800">₹50 / test</span>
                           </div>
                           <input
                             type="number"
@@ -2143,7 +2143,7 @@ const PrescriptionPage = () => {
                               const val = parseInt(e.target.value, 10);
                               if (isNaN(val) || val < 1) setSugarCount(1);
                             }}
-                            className="w-14 p-1 text-center border border-gray-300 rounded text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            className="w-14 p-1 text-center border border-gray-300 rounded text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                           />
                         </div>
                         <button
@@ -2175,7 +2175,7 @@ const PrescriptionPage = () => {
                             if (!current) setFormData(prev => ({ ...prev, investigation: 'Sugar Test' }));
                             else if (!current.toLowerCase().includes('sugar')) setFormData(prev => ({ ...prev, investigation: `${current}, Sugar Test` }));
                           }}
-                          className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1"
+                          className="w-full py-1.5 bg-[#176e56] hover:bg-[#155944] text-white rounded text-xs font-bold transition flex items-center justify-center gap-1"
                         >
                           + Add Sugar Test (₹{Math.max(1, sugarCount || 1) * 50})
                         </button>
@@ -2201,7 +2201,7 @@ const PrescriptionPage = () => {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
                 <div>
                   <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                    <span className="p-1.5 bg-blue-100 text-blue-700 rounded-lg">🦷</span>
+                    <span className="p-1.5 bg-emerald-100 text-emerald-800 rounded-lg">🦷</span>
                     Diagnosis &amp; Teeth Chart
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
@@ -2217,7 +2217,7 @@ const PrescriptionPage = () => {
                       onClick={() => setToothSelectionMode('ARCH')}
                       className={`px-3 py-1.5 rounded-lg transition ${
                         toothSelectionMode === 'ARCH'
-                          ? 'bg-white text-blue-700 shadow-sm'
+                          ? 'bg-white text-emerald-800 font-bold shadow-sm'
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
@@ -2228,7 +2228,7 @@ const PrescriptionPage = () => {
                       onClick={() => setToothSelectionMode('DROPDOWN')}
                       className={`px-3 py-1.5 rounded-lg transition ${
                         toothSelectionMode === 'DROPDOWN'
-                          ? 'bg-white text-blue-700 shadow-sm'
+                          ? 'bg-white text-emerald-800 font-bold shadow-sm'
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
@@ -2253,7 +2253,7 @@ const PrescriptionPage = () => {
 
               {/* Add New Disease Form (Conditional) */}
               {showAddDiseaseForm && (
-                <div className="p-4 bg-white rounded-xl border border-blue-200 shadow-sm flex flex-col sm:flex-row gap-3 items-end">
+                <div className="p-4 bg-white rounded-xl border border-emerald-200 shadow-sm flex flex-col sm:flex-row gap-3 items-end">
                   <div className="flex-1 w-full">
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                       New Dental Condition / Disease Name
@@ -2309,12 +2309,12 @@ const PrescriptionPage = () => {
                           Click teeth on the arch model to the left, or proceed without specific teeth for general diagnosis.
                         </div>
                       ) : (
-                        <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 flex flex-wrap gap-1.5 items-center">
-                          <span className="text-xs font-bold text-blue-900 mr-1">Teeth:</span>
+                        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex flex-wrap gap-1.5 items-center">
+                          <span className="text-xs font-bold text-emerald-950 mr-1">Teeth:</span>
                           {selectedTeethNumbers.map((id) => (
                             <span
                               key={id}
-                              className="px-2.5 py-1 rounded-md bg-blue-600 text-white text-xs font-bold shadow-sm"
+                              className="px-2.5 py-1 rounded-md bg-[#176e56] text-white text-xs font-bold shadow-sm"
                             >
                               {getToothDropdownFormat(id)}
                             </span>
@@ -2348,7 +2348,7 @@ const PrescriptionPage = () => {
                               onClick={() => setSelectedDisease(d)}
                               className={`text-xs px-2.5 py-1.5 rounded-lg font-medium border transition ${
                                 isSelected
-                                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                  ? 'bg-[#176e56] text-white border-[#176e56] shadow-sm'
                                   : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                               }`}
                             >
@@ -2677,7 +2677,7 @@ const PrescriptionPage = () => {
                                     setTpSearchQuery(proc.name);
                                     setShowTpDropdown(false);
                                   }}
-                                  className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm flex justify-between"
+                                  className="w-full text-left px-3 py-2 hover:bg-emerald-50 text-sm flex justify-between"
                                 >
                                   <span>{proc.name}</span>
                                   <span className="text-gray-500">₹{proc.price}</span>
@@ -3046,7 +3046,7 @@ const PrescriptionPage = () => {
                             }}
                             min="1"
                             placeholder="Auto-calculated"
-                            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition bg-blue-50"
+                            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition bg-emerald-50/40"
                             title="Automatically calculated from dosage × duration. You can still edit manually if needed."
                           />
                           {medicine.dosage && medicine.duration && (
@@ -3145,7 +3145,7 @@ const PrescriptionPage = () => {
                       }}
                       className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
                         isSelected
-                          ? 'border-blue-600 bg-blue-50/70 shadow-sm ring-1 ring-blue-600'
+                          ? 'border-[#176e56] bg-emerald-50/70 shadow-sm ring-1 ring-[#176e56]'
                           : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
                       }`}
                     >
@@ -3155,7 +3155,7 @@ const PrescriptionPage = () => {
                           name="doctor_selection_radio"
                           checked={isSelected}
                           onChange={() => {}}
-                          className="h-4 w-4 text-blue-600 cursor-pointer"
+                          className="h-4 w-4 text-emerald-700 cursor-pointer"
                         />
                         <div>
                           <p className="text-sm font-bold text-gray-900 leading-tight">{doc.name}</p>
@@ -3275,7 +3275,7 @@ const PrescriptionPage = () => {
 
           {/* Prescription Preview Section */}
           <div className="mt-12 mb-8">
-            <h2 className="text-2xl font-bold mb-4 text-center text-blue-700 border-b pb-4">
+            <h2 className="text-2xl font-bold mb-4 text-center text-[#183e32] border-b border-[#e2eae3] pb-4 font-manrope">
               Prescription Preview
             </h2>
             <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden p-8">
@@ -3496,12 +3496,12 @@ const PrescriptionPage = () => {
             <div className="fixed inset-0 backdrop-blur-sm bg-black/40 flex items-center justify-center z-50 p-4 overflow-y-auto">
               <div className="bg-white rounded-xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-gray-200 animate-in fade-in zoom-in-95 duration-150">
                 {/* Header */}
-                <div className="px-5 py-3.5 bg-gradient-to-r from-blue-700 to-indigo-700 text-white flex items-center justify-between">
+                <div className="px-5 py-3.5 bg-gradient-to-r from-[#176e56] to-[#0f4637] text-white flex items-center justify-between">
                   <div>
                     <h3 className="text-base sm:text-lg font-bold flex items-center gap-2">
                       <span>Generate Bill & Payment</span>
                     </h3>
-                    <p className="text-xs text-blue-100 mt-0.5">
+                    <p className="text-xs text-emerald-100 mt-0.5">
                       Select which treatments/services the customer is paying for
                     </p>
                   </div>
@@ -3518,20 +3518,20 @@ const PrescriptionPage = () => {
                 {/* Modal Body */}
                 <div className="p-5 overflow-y-auto space-y-4">
                   {/* "Pay All" Master Checkbox */}
-                  <div className="flex items-center justify-between p-3 bg-blue-50/80 border border-blue-200 rounded-xl">
+                  <div className="flex items-center justify-between p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl">
                     <label className="flex items-center gap-2.5 cursor-pointer select-none">
                       <input
                         type="checkbox"
                         checked={isPayAllSelected}
                         onChange={(e) => toggleSelectAllBillItems(e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        className="h-4 w-4 rounded border-gray-300 text-emerald-700 focus:ring-emerald-500 cursor-pointer"
                       />
                       <div>
-                        <span className="text-sm font-bold text-blue-900 block">Pay All (Full Settlement)</span>
-                        <span className="text-[11px] text-blue-700">Select all treatments, xray and consultation</span>
+                        <span className="text-sm font-bold text-emerald-950 block">Pay All (Full Settlement)</span>
+                        <span className="text-[11px] text-emerald-700">Select all treatments, xray and consultation</span>
                       </div>
                     </label>
-                    <span className="text-sm font-bold text-blue-900">
+                    <span className="text-sm font-bold text-emerald-950">
                       ₹{Number(currentBill.total_amount).toLocaleString('en-IN')}
                     </span>
                   </div>
@@ -3571,7 +3571,7 @@ const PrescriptionPage = () => {
                             isAlreadyPaid
                               ? 'bg-emerald-50/40 border-emerald-200 opacity-90 cursor-default'
                               : isSelected
-                              ? 'bg-blue-50/50 border-blue-300 shadow-2xs cursor-pointer'
+                              ? 'bg-emerald-50/50 border-emerald-300 shadow-2xs cursor-pointer'
                               : 'bg-white border-gray-200 hover:bg-gray-50 cursor-pointer'
                           }`}
                         >
@@ -3585,13 +3585,13 @@ const PrescriptionPage = () => {
                                   toggleBillItemSelection(item.id);
                                 }
                               }}
-                              className={`mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 shrink-0 ${
+                              className={`mt-0.5 h-4 w-4 rounded border-gray-300 text-emerald-700 focus:ring-emerald-500 shrink-0 ${
                                 isAlreadyPaid ? 'cursor-not-allowed accent-emerald-600' : 'cursor-pointer'
                               }`}
                             />
                             <div className="truncate">
                               <div className="flex items-center gap-2">
-                                <span className={`text-xs sm:text-sm font-medium ${isAlreadyPaid ? 'text-emerald-950 font-semibold' : isSelected ? 'text-blue-950 font-semibold' : 'text-gray-800'}`}>
+                                <span className={`text-xs sm:text-sm font-medium ${isAlreadyPaid ? 'text-emerald-950 font-semibold' : isSelected ? 'text-emerald-950 font-semibold' : 'text-gray-800'}`}>
                                   {item.description}
                                 </span>
                                 {isAlreadyPaid && (
@@ -3608,7 +3608,7 @@ const PrescriptionPage = () => {
                               </div>
                             </div>
                           </div>
-                          <span className={`text-xs sm:text-sm font-bold shrink-0 ${isAlreadyPaid ? 'text-emerald-800' : isSelected ? 'text-blue-800' : 'text-gray-700'}`}>
+                          <span className={`text-xs sm:text-sm font-bold shrink-0 ${isAlreadyPaid ? 'text-emerald-800' : isSelected ? 'text-emerald-800' : 'text-gray-700'}`}>
                             ₹{Number(item.total).toLocaleString('en-IN')}
                           </span>
                         </label>
@@ -3619,7 +3619,7 @@ const PrescriptionPage = () => {
                       <div className="space-y-3">
                         <div className="flex items-center justify-between text-xs font-bold text-gray-500 uppercase tracking-wider">
                           <span>Treatments & Services ({items.length}):</span>
-                          <span className="text-blue-700 font-semibold lowercase">
+                          <span className="text-emerald-700 font-semibold lowercase">
                             {selectedBillItemIds.size} of {items.length} selected
                           </span>
                         </div>
@@ -3709,7 +3709,7 @@ const PrescriptionPage = () => {
                                   amountPaid: curRem > 0 ? Math.min(newPayable, curRem) : newPayable,
                                 }));
                               }}
-                              className="w-16 px-2 py-1 text-right text-xs border border-gray-300 rounded font-semibold focus:ring-2 focus:ring-blue-500"
+                              className="w-16 px-2 py-1 text-right text-xs border border-gray-300 rounded font-semibold focus:ring-2 focus:ring-emerald-500"
                               placeholder="0"
                             />
                             <span>%</span>
@@ -3776,7 +3776,7 @@ const PrescriptionPage = () => {
                     <select
                       value={paymentDetails.paymentMethod}
                       onChange={(e) => setPaymentDetails({ ...paymentDetails, paymentMethod: e.target.value })}
-                      className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                      className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none bg-white"
                     >
                       <option value="Cash">Cash</option>
                       <option value="UPI">UPI / QR (Google Pay / PhonePe / Paytm)</option>
@@ -3788,8 +3788,8 @@ const PrescriptionPage = () => {
 
                   {/* Allocation Notes Preview */}
                   {billPaymentNotes && (
-                    <div className="p-2.5 bg-blue-50/70 rounded-lg border border-blue-100 text-xs text-blue-900">
-                      <span className="font-semibold block mb-0.5 text-blue-950">Payment Allocation:</span>
+                    <div className="p-2.5 bg-emerald-50/70 rounded-lg border border-emerald-100 text-xs text-emerald-950">
+                      <span className="font-semibold block mb-0.5 text-emerald-950">Payment Allocation:</span>
                       <p className="text-gray-700 leading-relaxed">{billPaymentNotes}</p>
                     </div>
                   )}

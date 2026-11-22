@@ -256,7 +256,7 @@ export default function AddPaymentDialog({
             type="checkbox"
             checked={isChecked}
             onChange={() => toggleItem(item.id)}
-            className="mt-0.5 h-3.5 w-3.5 rounded border-gray-300 text-blue-600 cursor-pointer shrink-0"
+            className="mt-0.5 h-3.5 w-3.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
           />
           <div className="truncate">
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -307,22 +307,22 @@ export default function AddPaymentDialog({
           {billItems.length > 0 && (
             <div className="space-y-2.5">
               {/* Pay Full Balance Master Toggle */}
-              <div className="flex items-center justify-between p-3 bg-blue-50/70 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-emerald-50/70 border border-emerald-200 rounded-lg">
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={isPayAll}
                     onChange={(e) => toggleSelectAll(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                   />
                   <div>
-                    <span className="text-xs sm:text-sm font-bold text-blue-900 block">
+                    <span className="text-xs sm:text-sm font-bold text-emerald-950 block">
                       Pay Full Remaining Balance
                     </span>
-                    <span className="text-[11px] text-blue-700">Clear all pending treatments & dues</span>
+                    <span className="text-[11px] text-emerald-700">Clear all pending treatments & dues</span>
                   </div>
                 </label>
-                <span className="text-xs sm:text-sm font-bold text-blue-900">
+                <span className="text-xs sm:text-sm font-bold text-emerald-950">
                   ₹{safeBalanceAmount.toLocaleString("en-IN")}
                 </span>
               </div>

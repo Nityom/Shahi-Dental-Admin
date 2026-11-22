@@ -363,7 +363,7 @@ export default function AppointmentsPage() {
               ) : (
                 searchResults.map((appt, index) => {
                   const initials = (appt.name || '?').split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase();
-                  const avatarColors = ['bg-blue-100 text-blue-700','bg-violet-100 text-violet-700','bg-emerald-100 text-emerald-700','bg-amber-100 text-amber-700','bg-rose-100 text-rose-700','bg-cyan-100 text-cyan-700'];
+                  const avatarColors = ['bg-emerald-100 text-emerald-800','bg-teal-100 text-teal-800','bg-emerald-50 text-emerald-700','bg-amber-100 text-amber-700','bg-rose-100 text-rose-700','bg-cyan-100 text-cyan-700'];
                   const color = avatarColors[index % avatarColors.length];
                   return (
                     <button
@@ -377,7 +377,7 @@ export default function AppointmentsPage() {
                         setIsSearchOpen(false);
                         setSearchQuery('');
                       }}
-                      className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:border-blue-200 transition text-left w-full"
+                      className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50 hover:bg-emerald-50 hover:border-emerald-200 transition text-left w-full cursor-pointer"
                     >
                       <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${color}`}>
                         {initials}

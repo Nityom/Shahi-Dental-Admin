@@ -77,7 +77,7 @@ export default function CrownManagementPage() {
     shade: 'A2',
     cutting_date: todayStr,
     fixed_date: '',
-    dentist_name: 'Dr. Kautilya Swaroop',
+    dentist_name: 'Dr. Vipeen Raut',
     lab_name: 'DentCare Dental Lab',
     impression_type: 'Addition Silicone',
     expected_delivery_date: '',
@@ -242,7 +242,7 @@ export default function CrownManagementPage() {
       shade: 'A2',
       cutting_date: todayStr,
       fixed_date: '',
-      dentist_name: 'Dr. Kautilya Swaroop',
+      dentist_name: 'Dr. Vipeen Raut',
       lab_name: 'DentCare Dental Lab',
       impression_type: 'Addition Silicone',
       expected_delivery_date: '',
@@ -294,13 +294,13 @@ export default function CrownManagementPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-[#176e56] text-white rounded-2xl shadow-md shadow-emerald-700/20">
+            <div className="p-3 bg-emerald-600 text-white rounded-2xl shadow-md shadow-emerald-500/20">
               <Crown size={26} />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-black text-gray-900 tracking-tight">Crown Patients & Revenue</h1>
-                <span className="bg-emerald-50 text-emerald-800 font-bold px-2 py-0.5 rounded text-xs border border-emerald-200 flex items-center gap-1">
+                <span className="bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded text-xs border border-emerald-200 flex items-center gap-1">
                   <Sparkles size={12} /> Auto-Linked from Prescriptions
                 </span>
               </div>
@@ -325,7 +325,7 @@ export default function CrownManagementPage() {
                   setLoading(false);
                 }
               }}
-              className="p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+              className="p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition text-xs font-semibold flex items-center gap-1.5"
               title="Clean up erroneous records created from plain RCT prescriptions"
             >
               <Trash2 size={14} className="text-rose-500" />
@@ -333,14 +333,14 @@ export default function CrownManagementPage() {
             </button>
             <button
               onClick={() => fetchCrowns()}
-              className="p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition cursor-pointer"
+              className="p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition"
               title="Refresh"
             >
               <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
             </button>
             <button
               onClick={openAddModal}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#176e56] hover:bg-[#155944] text-white rounded-xl text-xs md:text-sm font-bold shadow-sm transition cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs md:text-sm font-bold shadow-sm transition"
             >
               <Plus size={16} />
               Add Crown Entry
@@ -351,7 +351,7 @@ export default function CrownManagementPage() {
         {/* Financial & Status KPI Cards (Single Crown Revenue & 4 Statuses) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
           {/* Total Crown Revenue */}
-          <div className="bg-[#176e56] text-white p-4.5 rounded-2xl shadow-sm">
+          <div className="bg-emerald-600 text-white p-4.5 rounded-2xl shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-100">Crown Revenue</span>
               <span className="p-1.5 bg-white/20 text-white rounded-lg">
@@ -369,22 +369,22 @@ export default function CrownManagementPage() {
             onClick={() => setStatusFilter(statusFilter === 'Crown Cutting' ? 'ALL' : 'Crown Cutting')}
             className={`p-4.5 rounded-2xl border cursor-pointer transition-all shadow-sm ${
               statusFilter === 'Crown Cutting'
-                ? 'bg-blue-500 text-white border-blue-500 ring-2 ring-blue-500'
-                : 'bg-white border-gray-200 hover:border-blue-300'
+                ? 'bg-emerald-500 text-white border-emerald-500 ring-2 ring-emerald-500'
+                : 'bg-white border-gray-200 hover:border-emerald-300'
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className={`text-[11px] font-bold uppercase tracking-wider ${statusFilter === 'Crown Cutting' ? 'text-blue-100' : 'text-gray-500'}`}>
+              <span className={`text-[11px] font-bold uppercase tracking-wider ${statusFilter === 'Crown Cutting' ? 'text-emerald-100' : 'text-gray-500'}`}>
                 1. Crown Cutting
               </span>
-              <span className={`p-1.5 rounded-lg ${statusFilter === 'Crown Cutting' ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-700'}`}>
+              <span className={`p-1.5 rounded-lg ${statusFilter === 'Crown Cutting' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'}`}>
                 <Clock size={16} />
               </span>
             </div>
             <div className={`text-2xl md:text-3xl font-black mt-2 ${statusFilter === 'Crown Cutting' ? 'text-white' : 'text-gray-900'}`}>
               {metrics.countCutting}
             </div>
-            <p className={`text-[11px] mt-1 ${statusFilter === 'Crown Cutting' ? 'text-blue-100' : 'text-gray-400'}`}>
+            <p className={`text-[11px] mt-1 ${statusFilter === 'Crown Cutting' ? 'text-emerald-100' : 'text-gray-400'}`}>
               In Progress / Cutting
             </p>
           </div>
@@ -394,22 +394,22 @@ export default function CrownManagementPage() {
             onClick={() => setStatusFilter(statusFilter === 'Crown Received' ? 'ALL' : 'Crown Received')}
             className={`p-4.5 rounded-2xl border cursor-pointer transition-all shadow-sm ${
               statusFilter === 'Crown Received'
-                ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-600'
-                : 'bg-white border-gray-200 hover:border-indigo-300'
+                ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-600'
+                : 'bg-white border-gray-200 hover:border-emerald-300'
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className={`text-[11px] font-bold uppercase tracking-wider ${statusFilter === 'Crown Received' ? 'text-indigo-100' : 'text-gray-500'}`}>
+              <span className={`text-[11px] font-bold uppercase tracking-wider ${statusFilter === 'Crown Received' ? 'text-emerald-100' : 'text-gray-500'}`}>
                 2. Crown Received
               </span>
-              <span className={`p-1.5 rounded-lg ${statusFilter === 'Crown Received' ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-700'}`}>
+              <span className={`p-1.5 rounded-lg ${statusFilter === 'Crown Received' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'}`}>
                 <CheckCircle2 size={16} />
               </span>
             </div>
             <div className={`text-2xl md:text-3xl font-black mt-2 ${statusFilter === 'Crown Received' ? 'text-white' : 'text-gray-900'}`}>
               {metrics.countReceived}
             </div>
-            <p className={`text-[11px] mt-1 ${statusFilter === 'Crown Received' ? 'text-indigo-100' : 'text-gray-400'}`}>
+            <p className={`text-[11px] mt-1 ${statusFilter === 'Crown Received' ? 'text-emerald-100' : 'text-gray-400'}`}>
               Received from lab
             </p>
           </div>
@@ -483,7 +483,7 @@ export default function CrownManagementPage() {
                   onClick={() => setStatusFilter(chip.id)}
                   className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                     statusFilter === chip.id
-                      ? 'bg-[#176e56] text-white shadow-xs'
+                      ? 'bg-emerald-600 text-white shadow-xs'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/60'
                   }`}
                 >
@@ -552,7 +552,7 @@ export default function CrownManagementPage() {
                   onClick={() => setDateFilterType('cutting_date')}
                   className={`px-2.5 py-1 rounded-md text-xs font-bold transition ${
                     dateFilterType === 'cutting_date'
-                      ? 'bg-[#176e56] text-white shadow-xs'
+                      ? 'bg-emerald-600 text-white shadow-xs'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
@@ -601,7 +601,7 @@ export default function CrownManagementPage() {
                 placeholder="Search patient, tooth, lab, ref #..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-1.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full pl-9 pr-4 py-1.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
               />
             </div>
           </div>
@@ -620,7 +620,7 @@ export default function CrownManagementPage() {
 
           {loading ? (
             <div className="p-16 text-center text-gray-400">
-              <RefreshCw size={32} className="animate-spin mx-auto mb-2 text-blue-600" />
+              <RefreshCw size={32} className="animate-spin mx-auto mb-2 text-emerald-600" />
               <p className="font-medium">Loading crown patient records...</p>
             </div>
           ) : displayedCrowns.length === 0 ? (
@@ -672,13 +672,13 @@ export default function CrownManagementPage() {
                             📱 {c.phone_number} {c.reference_number && `• ${c.reference_number}`}
                           </div>
                         </td>
-                        <td className="py-3.5 px-4 font-black text-blue-700 text-sm">
+                        <td className="py-3.5 px-4 font-black text-emerald-700 text-sm">
                           {c.tooth_numbers}
                         </td>
                         <td className="py-3.5 px-4">
                           <div className="font-medium text-gray-900">{c.treatment_reference || 'RCT / Crown'}</div>
                           {c.prescription_id && (
-                            <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded font-mono">
+                            <span className="text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded font-mono">
                               Auto-Linked Rx
                             </span>
                           )}
@@ -694,10 +694,10 @@ export default function CrownManagementPage() {
                               currentStatus === 'Crown Fixed'
                                 ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                                 : currentStatus === 'Crown Received'
-                                ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                                 : currentStatus === 'Crown Not Required'
                                 ? 'bg-gray-100 text-gray-700 border-gray-300'
-                                : 'bg-blue-50 text-blue-800 border-blue-200'
+                                : 'bg-emerald-50 text-emerald-800 border-emerald-200'
                             }`}
                           >
                             <option value="Crown Cutting">1. Crown Cutting</option>
@@ -716,7 +716,7 @@ export default function CrownManagementPage() {
                             <span className="text-gray-300 font-mono">—</span>
                           )}
                         </td>
-                        <td className="py-3.5 px-4 text-right font-black text-blue-700 text-sm">
+                        <td className="py-3.5 px-4 text-right font-black text-emerald-700 text-sm">
                           {pCost ? `₹${pCost.toLocaleString('en-IN')}` : '₹0'}
                         </td>
                         <td className="py-3.5 px-4 whitespace-nowrap">
@@ -752,7 +752,7 @@ export default function CrownManagementPage() {
                             {c.prescription_id && (
                               <Link
                                 href={`/admin/prescription?patientId=${c.prescription_id}&reference=${c.reference_number || ''}`}
-                                className="p-1 text-blue-600 hover:text-blue-800 bg-blue-50 rounded"
+                                className="p-1 text-emerald-600 hover:text-emerald-800 bg-emerald-50 rounded"
                                 title="View Prescription"
                               >
                                 <ExternalLink size={13} />
@@ -769,7 +769,7 @@ export default function CrownManagementPage() {
                                   shade: c.shade || '',
                                   cutting_date: c.cutting_date,
                                   fixed_date: c.fixed_date || '',
-                                  dentist_name: c.dentist_name || 'Dr. Kautilya Swaroop',
+                                  dentist_name: c.dentist_name || 'Dr. Vipeen Raut',
                                   lab_name: c.lab_name || '',
                                   impression_type: c.impression_type || '',
                                   expected_delivery_date: c.expected_delivery_date || '',
@@ -783,7 +783,7 @@ export default function CrownManagementPage() {
                                 setIsEditMode(true);
                                 setIsModalOpen(true);
                               }}
-                              className="text-blue-600 hover:text-blue-800 p-1"
+                              className="text-emerald-600 hover:text-emerald-800 p-1"
                               title="Edit"
                             >
                               <Edit size={14} />
@@ -837,7 +837,7 @@ export default function CrownManagementPage() {
                     placeholder="Search by name, phone or ref #..."
                     value={patientSearchQuery}
                     onChange={(e) => handlePatientQueryChange(e.target.value)}
-                    className="w-full px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-emerald-500"
                   />
                   {showSuggestions && patientSuggestions.length > 0 && (
                     <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
@@ -845,7 +845,7 @@ export default function CrownManagementPage() {
                         <div
                           key={p.id || p.phone_number}
                           onClick={() => selectPatientForForm(p)}
-                          className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-0"
+                          className="px-3 py-2 hover:bg-emerald-50 cursor-pointer border-b last:border-0"
                         >
                           <div className="font-bold text-gray-900">{p.name}</div>
                           <div className="text-[11px] text-gray-500">
@@ -910,10 +910,10 @@ export default function CrownManagementPage() {
                       form.crown_status === 'Crown Fixed'
                         ? 'text-emerald-700'
                         : form.crown_status === 'Crown Received'
-                        ? 'text-indigo-700'
+                        ? 'text-emerald-700'
                         : form.crown_status === 'Crown Not Required'
                         ? 'text-gray-700'
-                        : 'text-blue-700'
+                        : 'text-emerald-700'
                     }`}
                   >
                     <option value="Crown Cutting">1. Crown Cutting</option>
@@ -1084,7 +1084,7 @@ export default function CrownManagementPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#176e56] hover:bg-[#155944] text-white font-semibold rounded-xl cursor-pointer"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl"
                 >
                   {isEditMode ? 'Update' : 'Save'}
                 </button>

@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { Alert } from "@/components/ui/alert";
 import PrescriptionHistory from "@/components/PrescriptionHistory";
 import { useIsAdmin } from '@/hooks/use-is-admin';
-import { Calendar as CalendarIcon, X, Search, RefreshCw, UserPlus, Filter, IndianRupee, Printer, History, CheckCircle2 } from 'lucide-react';
+import { Calendar as CalendarIcon, X, Search, RefreshCw, UserPlus, Filter, IndianRupee, Printer, History, CheckCircle2, Eye, Trash2, FilePlus } from 'lucide-react';
 import { paymentTransactionService, PaymentTransaction } from '@/services/payment-transactions';
 
 // Group prescriptions by patient name to create a patient list
@@ -650,7 +650,7 @@ const ViewPatients = () => {
       )}
 
       <div className="w-full max-w-7xl mx-auto mt-4 sm:mt-8 p-4">
-        <h2 className="text-3xl font-bold mb-6 text-center text-blue-700 border-b pb-4">Patient Records</h2>
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-[#183e32] border-b border-[#e2eae3] pb-4 font-manrope tracking-tight text-center">Patient Records</h2>
 
         {/* Search, Calendar Date Filter & Actions Bar */}
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 space-y-4">
@@ -663,7 +663,7 @@ const ViewPatients = () => {
                 placeholder="Search patient name, phone, ref no..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-9 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="w-full pl-10 pr-9 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 text-sm outline-none transition"
               />
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                 <Search size={18} />
@@ -681,8 +681,8 @@ const ViewPatients = () => {
             {/* Calendar / Date Picker & Actions */}
             <div className="flex flex-wrap items-center gap-2.5">
               {/* Calendar Date Picker */}
-              <div className="flex items-center gap-2 bg-gray-50 border border-gray-300 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
-                <CalendarIcon size={16} className="text-blue-600 shrink-0" />
+              <div className="flex items-center gap-2 bg-gray-50 border border-gray-300 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-600">
+                <CalendarIcon size={16} className="text-[#176e56] shrink-0" />
                 <span className="text-xs font-semibold text-gray-700">Filter Date:</span>
                 <input
                   type="date"
@@ -912,24 +912,27 @@ const ViewPatients = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-gray-500">{formatDate(patient.latestVisit)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-gray-500">{patient.totalVisits}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex space-x-2">
+                        <div className="flex items-center gap-2">
                           <button
                             onClick={() => openPatientDetails(patient)}
-                            className="px-3 py-1 bg-[#176e56] text-white rounded hover:bg-[#155944] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#176e56] text-white rounded-lg text-xs font-semibold hover:bg-[#155944] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition shadow-xs cursor-pointer"
                           >
-                            View Details
+                            <Eye size={14} className="shrink-0" />
+                            <span>View Details</span>
                           </button>
                           {isAdmin && (
                             <button
                               onClick={() => handleDelete(patient)}
-                              className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition shadow-xs cursor-pointer"
                             >
-                              Delete
+                              <Trash2 size={14} className="shrink-0" />
+                              <span>Delete</span>
                             </button>
                           )}
                           <Link href={`/admin/prescription?patientName=${encodeURIComponent(patient.name)}&phone=${encodeURIComponent(patient.phone_number)}&age=${patient.age}&sex=${patient.sex}&medicalHistory=${encodeURIComponent(patient.prescriptions[0]?.medical_history || '')}`}>
-                            <button className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition">
-                              New Prescription
+                            <button className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition shadow-xs cursor-pointer">
+                              <FilePlus size={14} className="shrink-0" />
+                              <span>New Prescription</span>
                             </button>
                           </Link>
                         </div>
@@ -1240,7 +1243,7 @@ const ViewPatients = () => {
                     <button
                       type="button"
                       onClick={closeModal}
-                      className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                      className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                     >
                       Close
                     </button>

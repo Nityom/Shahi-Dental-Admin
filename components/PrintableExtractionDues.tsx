@@ -170,19 +170,19 @@ export const PrintableExtractionDues: React.FC<PrintableExtractionDuesProps> = (
       <div className="printable-dues-container print-preview font-sans text-gray-900">
         {/* Floating / Top Print Bar */}
         {showPrintButton && (
-          <div className="no-print mb-6 flex items-center justify-between bg-blue-50 border border-blue-200 p-3 rounded-lg">
+          <div className="no-print mb-6 flex items-center justify-between bg-emerald-50/70 border border-emerald-200 p-3 rounded-lg">
             <button
               onClick={() => window.history.back()}
-              className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600"
+              className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-[#176e56]"
             >
               <ArrowLeft className="w-4 h-4 mr-1.5" />
               Back
             </button>
             <div className="flex items-center gap-3">
-              <span className="text-xs text-blue-700 font-medium">Ready for high-resolution print</span>
+              <span className="text-xs text-emerald-800 font-medium">Ready for high-resolution print</span>
               <button
                 onClick={handlePrint}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-md shadow transition"
+                className="inline-flex items-center px-4 py-2 bg-[#176e56] hover:bg-[#155944] text-white text-sm font-semibold rounded-md shadow transition cursor-pointer"
               >
                 <Printer className="w-4 h-4 mr-2" />
                 Print Dues Report
@@ -245,7 +245,7 @@ export const PrintableExtractionDues: React.FC<PrintableExtractionDuesProps> = (
             </div>
             <div>
               <div className="text-xs text-gray-500">Attending Doctor</div>
-              <div className="font-semibold text-blue-700">{doctorName}</div>
+              <div className="font-semibold text-[#176e56]">{doctorName}</div>
             </div>
           </div>
         </div>
@@ -274,7 +274,7 @@ export const PrintableExtractionDues: React.FC<PrintableExtractionDuesProps> = (
                     <td className="py-2.5 px-3">
                       <div className="font-semibold text-gray-900">{item.description}</div>
                       {item.itemType && item.itemType !== 'other' && (
-                        <span className="inline-block text-[10px] uppercase font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded mt-0.5">
+                        <span className="inline-block text-[10px] uppercase font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded mt-0.5">
                           {item.itemType}
                         </span>
                       )}

@@ -467,7 +467,7 @@ export default function DoctorManagementPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
         <div>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+            <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
               <Stethoscope size={26} />
             </div>
             <div>
@@ -483,7 +483,7 @@ export default function DoctorManagementPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={openNewDoctorModal}
-            className="flex items-center gap-2 bg-[#176e56] hover:bg-[#155944] text-white px-4 py-2.5 rounded-xl font-medium shadow-sm transition-all text-sm cursor-pointer"
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-medium shadow-sm transition-all text-sm"
           >
             <Plus size={18} />
             <span>Add Doctor</span>
@@ -496,7 +496,7 @@ export default function DoctorManagementPage() {
         <button
           onClick={() => setActiveTab('ASSISTANT_DASHBOARD')}
           className={`py-4 px-5 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all ${activeTab === 'ASSISTANT_DASHBOARD'
-              ? 'border-blue-600 text-blue-600'
+              ? 'border-emerald-600 text-emerald-600'
               : 'border-transparent text-gray-500 hover:text-gray-900'
             }`}
         >
@@ -507,7 +507,7 @@ export default function DoctorManagementPage() {
         <button
           onClick={() => setActiveTab('DIRECTORY')}
           className={`py-4 px-5 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all ${activeTab === 'DIRECTORY'
-              ? 'border-blue-600 text-blue-600'
+              ? 'border-emerald-600 text-emerald-600'
               : 'border-transparent text-gray-500 hover:text-gray-900'
             }`}
         >
@@ -518,7 +518,7 @@ export default function DoctorManagementPage() {
         <button
           onClick={() => setActiveTab('PAYOUT_LEDGER')}
           className={`py-4 px-5 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all ${activeTab === 'PAYOUT_LEDGER'
-              ? 'border-blue-600 text-blue-600'
+              ? 'border-emerald-600 text-emerald-600'
               : 'border-transparent text-gray-500 hover:text-gray-900'
             }`}
         >
@@ -542,7 +542,7 @@ export default function DoctorManagementPage() {
                 <select
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white font-medium text-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white font-medium text-gray-800 focus:ring-2 focus:ring-emerald-500 outline-none"
                 >
                   {generateMonthOptions.map((opt) => (
                     <option key={opt.val} value={opt.val}>
@@ -559,7 +559,7 @@ export default function DoctorManagementPage() {
                 <select
                   value={selectedDoctorId}
                   onChange={(e) => setSelectedDoctorId(e.target.value)}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white font-medium text-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white font-medium text-gray-800 focus:ring-2 focus:ring-emerald-500 outline-none"
                 >
                   <option value="ALL">All Assistant Doctors (Overview)</option>
                   {doctors
@@ -589,7 +589,7 @@ export default function DoctorManagementPage() {
               )}
               <button
                 onClick={() => fetchDashboardData()}
-                className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 px-3 py-2 rounded-lg font-medium transition-all"
+                className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-emerald-600 bg-gray-100 hover:bg-emerald-50 px-3 py-2 rounded-lg font-medium transition-all"
               >
                 <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
                 <span>Refresh Revenue</span>
@@ -628,17 +628,17 @@ export default function DoctorManagementPage() {
                   <p className="text-xs text-emerald-600 mt-1">Treatment Commission Base</p>
                 </div>
 
-                <div className="bg-blue-50/70 p-5 rounded-2xl border border-blue-100 shadow-sm">
-                  <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Commission %</p>
-                  <p className="text-2xl font-bold text-blue-800 mt-2">
+                <div className="bg-emerald-50/70 p-4 rounded-xl border border-emerald-100 shadow-2xs">
+                  <p className="text-xs font-medium text-emerald-800">Commission %</p>
+                  <p className="text-xl font-bold font-mono tabular-nums text-emerald-800 mt-1">
                     {individualDoctorRevenue.commissionPercentage}%
                   </p>
-                  <p className="text-xs text-blue-600 mt-1">{individualDoctorRevenue.doctorName}</p>
+                  <p className="text-xs text-emerald-600 mt-1">{individualDoctorRevenue.doctorName}</p>
                 </div>
 
-                <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-5 rounded-2xl shadow-sm">
-                  <p className="text-xs font-semibold text-blue-200 uppercase tracking-wider">Payable to Doctor</p>
-                  <p className="text-2xl font-black mt-2">
+                <div className="bg-emerald-700 text-white p-4 rounded-xl shadow-2xs">
+                  <p className="text-xs font-medium text-emerald-100">Payable to doctor</p>
+                  <p className="text-xl font-bold font-mono tabular-nums mt-1">
                     ₹{individualDoctorRevenue.amountPayable.toLocaleString()}
                   </p>
                   <div className="mt-2 flex items-center justify-between">
@@ -647,7 +647,7 @@ export default function DoctorManagementPage() {
                     </span>
                     <button
                       onClick={() => openRecordPayoutModal(individualDoctorRevenue)}
-                      className="text-xs bg-white text-blue-700 font-bold px-2.5 py-1 rounded-lg hover:bg-blue-50 transition-all shadow-sm"
+                      className="text-xs bg-white text-emerald-700 font-bold px-2.5 py-1 rounded-lg hover:bg-emerald-50 transition-all shadow-sm"
                     >
                       Record Payout
                     </button>
@@ -664,7 +664,7 @@ export default function DoctorManagementPage() {
                       Formula: Eligible Revenue = Total Revenue − Meds − Crown/Cap − X-ray − Consultation − Braces
                     </p>
                   </div>
-                  <span className="text-xs bg-blue-50 text-blue-700 font-semibold px-3 py-1 rounded-full border border-blue-100">
+                  <span className="text-xs bg-emerald-50 text-emerald-700 font-semibold px-3 py-1 rounded-full border border-emerald-100">
                     Month: {selectedMonth}
                   </span>
                 </div>
@@ -727,13 +727,13 @@ export default function DoctorManagementPage() {
                             ₹{individualDoctorRevenue.eligibleRevenue.toLocaleString()}
                           </td>
                         </tr>
-                        <tr className="bg-blue-50 text-blue-900 font-semibold">
+                        <tr className="bg-emerald-50 text-emerald-900 font-semibold">
                           <td className="px-5 py-3">Doctor Commission %</td>
                           <td className="px-5 py-3 text-right">
                             {individualDoctorRevenue.commissionPercentage}%
                           </td>
                         </tr>
-                        <tr className="bg-indigo-600 text-white font-black text-base">
+                        <tr className="bg-emerald-600 text-white font-black text-base">
                           <td className="px-5 py-3.5">Payable to Doctor</td>
                           <td className="px-5 py-3.5 text-right text-lg">
                             ₹{individualDoctorRevenue.amountPayable.toLocaleString()}
@@ -774,7 +774,7 @@ export default function DoctorManagementPage() {
                           <th className="px-4 py-3 text-right text-red-600">Braces</th>
                           <th className="px-4 py-3 text-right text-red-600">RPD/FPD/Impl.</th>
                           <th className="px-4 py-3 text-right font-bold text-emerald-700">Eligible</th>
-                          <th className="px-4 py-3 text-right font-bold text-blue-700">Payout</th>
+                          <th className="px-4 py-3 text-right font-bold text-emerald-700">Payout</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -812,7 +812,7 @@ export default function DoctorManagementPage() {
                             <td className="px-4 py-3 text-right font-bold text-emerald-700">
                               ₹{rx.eligible_revenue.toLocaleString()}
                             </td>
-                            <td className="px-4 py-3 text-right font-black text-blue-700">
+                            <td className="px-4 py-3 text-right font-black text-emerald-700">
                               ₹{rx.payable_commission.toLocaleString()}
                             </td>
                           </tr>
@@ -837,7 +837,7 @@ export default function DoctorManagementPage() {
 
               {loading ? (
                 <div className="p-12 text-center text-gray-400">
-                  <RefreshCw size={32} className="animate-spin mx-auto mb-2 text-blue-600" />
+                  <RefreshCw size={32} className="animate-spin mx-auto mb-2 text-emerald-600" />
                   <p className="font-medium">Calculating revenue and eligible payouts...</p>
                 </div>
               ) : assistantSummaries.length === 0 ? (
@@ -857,7 +857,7 @@ export default function DoctorManagementPage() {
                         <th className="px-4 py-3 text-right text-red-600">Meds Excluded</th>
                         <th className="px-4 py-3 text-right text-red-600">Other Exclusions</th>
                         <th className="px-4 py-3 text-right font-bold text-emerald-700">Eligible Revenue</th>
-                        <th className="px-4 py-3 text-right font-black text-blue-700">Payable Amount</th>
+                        <th className="px-4 py-3 text-right font-black text-emerald-700">Payable Amount</th>
                         <th className="px-4 py-3 text-center">Status</th>
                         <th className="px-5 py-3 text-right">Action</th>
                       </tr>
@@ -869,7 +869,7 @@ export default function DoctorManagementPage() {
                           <tr key={doc.doctorId} className="hover:bg-gray-50 transition-all">
                             <td className="px-5 py-4 font-bold text-gray-900">
                               <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
+                                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">
                                   {doc.doctorName.substring(0, 2).toUpperCase()}
                                 </div>
                                 <div>
@@ -879,7 +879,7 @@ export default function DoctorManagementPage() {
                               </div>
                             </td>
                             <td className="px-4 py-4 text-center">
-                              <span className="bg-blue-50 text-blue-700 font-bold px-2.5 py-1 rounded-lg text-xs border border-blue-100">
+                              <span className="bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 rounded-lg text-xs border border-emerald-100">
                                 {doc.commissionPercentage}%
                               </span>
                             </td>
@@ -895,7 +895,7 @@ export default function DoctorManagementPage() {
                             <td className="px-4 py-4 text-right font-bold text-emerald-700 text-base">
                               ₹{doc.eligibleRevenue.toLocaleString()}
                             </td>
-                            <td className="px-4 py-4 text-right font-black text-indigo-700 text-base">
+                            <td className="px-4 py-4 text-right font-black text-emerald-700 text-base">
                               ₹{doc.amountPayable.toLocaleString()}
                             </td>
                             <td className="px-4 py-4 text-center">
@@ -920,7 +920,7 @@ export default function DoctorManagementPage() {
                                 </button>
                                 <button
                                   onClick={() => openRecordPayoutModal(doc)}
-                                  className="text-xs bg-[#176e56] hover:bg-[#155944] text-white px-2.5 py-1.5 rounded-lg font-semibold transition-all shadow-sm cursor-pointer"
+                                  className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded-lg font-semibold transition-all shadow-sm"
                                 >
                                   Payout
                                 </button>
@@ -958,13 +958,13 @@ export default function DoctorManagementPage() {
                 placeholder="Search doctors by name, phone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
               />
             </div>
 
             <button
               onClick={openNewDoctorModal}
-              className="flex items-center gap-2 bg-[#176e56] hover:bg-[#155944] text-white px-4 py-2.5 rounded-xl font-medium shadow-sm transition-all text-sm cursor-pointer"
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-medium shadow-sm transition-all text-sm"
             >
               <Plus size={18} />
               <span>Add New Doctor</span>
@@ -994,7 +994,7 @@ export default function DoctorManagementPage() {
                           <div
                             className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs ${doc.doctor_type === 'MAIN'
                                 ? 'bg-amber-100 text-amber-800'
-                                : 'bg-blue-100 text-blue-800'
+                                : 'bg-emerald-100 text-emerald-800'
                               }`}
                           >
                             {doc.name.substring(0, 2).toUpperCase()}
@@ -1009,7 +1009,7 @@ export default function DoctorManagementPage() {
                         <span
                           className={`text-xs font-bold px-2.5 py-1 rounded-full ${doc.doctor_type === 'MAIN'
                               ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                              : 'bg-blue-50 text-blue-700 border border-blue-200'
+                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             }`}
                         >
                           {doc.doctor_type === 'MAIN' ? 'Main Doctor' : 'Assistant Doctor'}
@@ -1017,7 +1017,7 @@ export default function DoctorManagementPage() {
                       </td>
                       <td className="px-4 py-4 text-center">
                         {doc.doctor_type === 'ASSISTANT' ? (
-                          <span className="font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg text-xs border border-blue-100">
+                          <span className="font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg text-xs border border-emerald-100">
                             {doc.commission_percentage}%
                           </span>
                         ) : (
@@ -1062,7 +1062,7 @@ export default function DoctorManagementPage() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handleEditDoctorClick(doc)}
-                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                            className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
                             title="Edit Doctor"
                           >
                             <Edit size={16} />
@@ -1192,7 +1192,7 @@ export default function DoctorManagementPage() {
                   placeholder="e.g. Dr. Priya Sharma"
                   value={doctorForm.name}
                   onChange={(e) => setDoctorForm({ ...doctorForm, name: e.target.value })}
-                  className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                 />
               </div>
 
@@ -1207,7 +1207,7 @@ export default function DoctorManagementPage() {
                         doctor_type: e.target.value as 'MAIN' | 'ASSISTANT',
                       })
                     }
-                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium"
+                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white font-medium"
                   >
                     <option value="MAIN">Main / Regular Doctor</option>
                     <option value="ASSISTANT">Assistant Doctor</option>
@@ -1225,7 +1225,7 @@ export default function DoctorManagementPage() {
                         commission_percentage: Number(e.target.value) as 2 | 5 | 7 | 10,
                       })
                     }
-                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white font-bold text-blue-700 disabled:opacity-50 disabled:bg-gray-100"
+                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white font-bold text-emerald-700 disabled:opacity-50 disabled:bg-gray-100"
                   >
                     <option value={2}>2%</option>
                     <option value={5}>5%</option>
@@ -1243,7 +1243,7 @@ export default function DoctorManagementPage() {
                     placeholder="e.g. 9876543210"
                     value={doctorForm.phone}
                     onChange={(e) => setDoctorForm({ ...doctorForm, phone: e.target.value })}
-                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                   />
                 </div>
 
@@ -1254,7 +1254,7 @@ export default function DoctorManagementPage() {
                     onChange={(e) =>
                       setDoctorForm({ ...doctorForm, status: e.target.value as 'ACTIVE' | 'INACTIVE' })
                     }
-                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium"
+                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white font-medium"
                   >
                     <option value="ACTIVE">Active</option>
                     <option value="INACTIVE">Inactive</option>
@@ -1268,7 +1268,7 @@ export default function DoctorManagementPage() {
                   type="date"
                   value={doctorForm.joining_date}
                   onChange={(e) => setDoctorForm({ ...doctorForm, joining_date: e.target.value })}
-                  className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                 />
               </div>
 
@@ -1279,7 +1279,7 @@ export default function DoctorManagementPage() {
                   placeholder="e.g. Endodontics, Dental Surgery, Associate"
                   value={doctorForm.notes}
                   onChange={(e) => setDoctorForm({ ...doctorForm, notes: e.target.value })}
-                  className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                 />
               </div>
 
@@ -1289,7 +1289,7 @@ export default function DoctorManagementPage() {
                   <label className="block text-xs font-semibold text-gray-700">
                     Doctor Signature Image
                   </label>
-                  <span className="text-[11px] text-blue-600 font-medium">Prints on Prescriptions & Bills</span>
+                  <span className="text-[11px] text-emerald-600 font-medium">Prints on Prescriptions & Bills</span>
                 </div>
 
                 {doctorForm.signature_url ? (
@@ -1325,7 +1325,7 @@ export default function DoctorManagementPage() {
 
                     <div className="flex items-center gap-2 pt-0.5">
                       <label className="text-xs bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 px-3 py-1.5 rounded-lg cursor-pointer font-medium transition-all inline-flex items-center gap-1.5 shadow-2xs">
-                        <Upload size={14} className="text-blue-600" />
+                        <Upload size={14} className="text-emerald-600" />
                         <span>Upload Different Image</span>
                         <input
                           type="file"
@@ -1338,8 +1338,8 @@ export default function DoctorManagementPage() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 hover:border-blue-500 hover:bg-blue-50/40 rounded-xl p-4 cursor-pointer transition-all bg-gray-50/50 group">
-                      <div className="p-2.5 bg-blue-100/70 text-blue-600 rounded-full mb-1.5 group-hover:scale-105 transition-transform">
+                    <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50/40 rounded-xl p-4 cursor-pointer transition-all bg-gray-50/50 group">
+                      <div className="p-2.5 bg-emerald-100/70 text-emerald-600 rounded-full mb-1.5 group-hover:scale-105 transition-transform">
                         <Upload size={20} />
                       </div>
                       <span className="text-xs font-bold text-gray-800">
@@ -1389,7 +1389,7 @@ export default function DoctorManagementPage() {
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 bg-[#176e56] hover:bg-[#155944] text-white font-medium rounded-xl text-sm shadow-sm transition-all cursor-pointer"
+                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl text-sm shadow-sm transition-all"
                   >
                     {isEditDoctor ? 'Update Doctor' : 'Save Doctor'}
                   </button>
@@ -1422,16 +1422,16 @@ export default function DoctorManagementPage() {
             </div>
 
             <form onSubmit={handleSavePayout} className="space-y-4 mt-4">
-              <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-2">
-                <div className="flex justify-between text-xs text-blue-900">
+              <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 space-y-2">
+                <div className="flex justify-between text-xs text-emerald-900">
                   <span>Eligible Revenue:</span>
                   <span className="font-bold">₹{payoutForm.eligible_revenue.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-xs text-blue-900">
+                <div className="flex justify-between text-xs text-emerald-900">
                   <span>Commission Rate:</span>
                   <span className="font-bold">{payoutForm.commission_percentage}%</span>
                 </div>
-                <div className="flex justify-between text-sm font-black text-blue-950 pt-2 border-t border-blue-200">
+                <div className="flex justify-between text-sm font-black text-emerald-950 pt-2 border-t border-emerald-200">
                   <span>Calculated Payout:</span>
                   <span className="text-base">₹{payoutForm.payout_amount.toLocaleString()}</span>
                 </div>
@@ -1447,7 +1447,7 @@ export default function DoctorManagementPage() {
                     required
                     value={payoutForm.paid_amount}
                     onChange={(e) => setPayoutForm({ ...payoutForm, paid_amount: Number(e.target.value) })}
-                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm font-bold text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm font-bold text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none"
                   />
                 </div>
 
@@ -1461,7 +1461,7 @@ export default function DoctorManagementPage() {
                         payment_status: e.target.value as 'PENDING' | 'PARTIAL' | 'PAID',
                       })
                     }
-                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium"
+                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white font-medium"
                   >
                     <option value="PAID">Full Paid</option>
                     <option value="PARTIAL">Partial Payment</option>
@@ -1478,7 +1478,7 @@ export default function DoctorManagementPage() {
                     required
                     value={payoutForm.payment_date}
                     onChange={(e) => setPayoutForm({ ...payoutForm, payment_date: e.target.value })}
-                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                   />
                 </div>
 
@@ -1492,7 +1492,7 @@ export default function DoctorManagementPage() {
                         payment_mode: e.target.value as any,
                       })
                     }
-                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium"
+                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white font-medium"
                   >
                     <option value="UPI">UPI</option>
                     <option value="Bank Transfer">Bank Transfer (NEFT/IMPS)</option>
@@ -1512,7 +1512,7 @@ export default function DoctorManagementPage() {
                   placeholder="e.g. UPI Ref # 309817264812"
                   value={payoutForm.transaction_reference}
                   onChange={(e) => setPayoutForm({ ...payoutForm, transaction_reference: e.target.value })}
-                  className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                 />
               </div>
 
@@ -1522,7 +1522,7 @@ export default function DoctorManagementPage() {
                   rows={2}
                   value={payoutForm.notes}
                   onChange={(e) => setPayoutForm({ ...payoutForm, notes: e.target.value })}
-                  className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                 />
               </div>
 

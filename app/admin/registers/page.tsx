@@ -93,7 +93,7 @@ function RegistersContent() {
     phone_number: '',
     reference_number: '',
     review_date: todayStr,
-    doctor_name: 'Dr. Kautilya Swaroop',
+    doctor_name: 'Dr. Vipeen Raut',
     chief_complaint_or_treatment: '',
     findings_notes: '',
     status: 'Scheduled',
@@ -106,7 +106,7 @@ function RegistersContent() {
     recall_type: '6-Month Preventive Checkup',
     due_date: todayStr,
     status: 'Due',
-    doctor_name: 'Dr. Kautilya Swaroop',
+    doctor_name: 'Dr. Vipeen Raut',
     notes: '',
     contacted_date: '',
   });
@@ -117,7 +117,7 @@ function RegistersContent() {
     reference_number: '',
     followup_date: todayStr,
     treatment_summary: '',
-    doctor_name: 'Dr. Kautilya Swaroop',
+    doctor_name: 'Dr. Vipeen Raut',
     status: 'Pending',
     notes: '',
     next_followup_date: '',
@@ -156,7 +156,7 @@ function RegistersContent() {
     pending_balance: 0,
     payment_mode: 'Cash',
     transaction_reference: '',
-    paid_by: 'Dr. Kautilya Swaroop',
+    paid_by: 'Dr. Vipeen Raut',
     notes: '',
   });
 
@@ -298,7 +298,7 @@ function RegistersContent() {
         pending_balance: 0,
         payment_mode: 'Cash',
         transaction_reference: '',
-        paid_by: 'Dr. Kautilya Swaroop',
+        paid_by: 'Dr. Vipeen Raut',
         notes: '',
       });
     }
@@ -359,7 +359,6 @@ function RegistersContent() {
   const openPayStaffModal = (staff: StaffMember, type: 'Salary' | 'Advance' = 'Salary') => {
     setIsEditMode(false);
     setEditingId(null);
-    const pendingSalary = staff.pending_salary_this_month !== undefined ? staff.pending_salary_this_month : staff.fixed_salary;
     setStaffPaymentForm({
       staff_id: staff.id || (staff as any)._id,
       staff_name: staff.name,
@@ -369,14 +368,14 @@ function RegistersContent() {
       payment_date: todayStr,
       payment_type: type,
       base_salary: staff.fixed_salary,
-      amount_paid: type === 'Salary' ? (pendingSalary > 0 ? pendingSalary : 0) : 0,
-      advance_deducted: type === 'Salary' ? (staff.advance_balance || 0) : 0,
+      amount_paid: type === 'Salary' ? (staff.pending_salary_this_month && staff.pending_salary_this_month > 0 ? staff.pending_salary_this_month : staff.fixed_salary) : 0,
+      advance_deducted: 0,
       previous_payments_total: 0,
       pending_balance: 0,
       payment_mode: 'Cash',
       transaction_reference: '',
-      paid_by: 'Dr. Kautilya Swaroop',
-      notes: type === 'Salary' && (staff.advance_balance || 0) > 0 ? `Auto-deducted ₹${staff.advance_balance} advance from salary` : '',
+      paid_by: 'Dr. Vipeen Raut',
+      notes: '',
     });
     setIsModalOpen(true);
   };
@@ -394,12 +393,8 @@ function RegistersContent() {
         if (isEditMode && editingId) await followupService.update(editingId, followupForm);
         else await followupService.create(followupForm);
       } else if (activeTab === 'STAFF_PAYMENTS') {
-        const { _id, id, _creationTime, created_at, ...cleanPaymentForm } = staffPaymentForm as any;
-        if (!cleanPaymentForm.staff_id || cleanPaymentForm.staff_id === '') {
-          delete cleanPaymentForm.staff_id;
-        }
-        if (isEditMode && editingId) await staffPaymentService.update(editingId, cleanPaymentForm);
-        else await staffMemberService.recordPayment(cleanPaymentForm);
+        if (isEditMode && editingId) await staffPaymentService.update(editingId, staffPaymentForm);
+        else await staffMemberService.recordPayment(staffPaymentForm);
       }
 
       setIsModalOpen(false);
@@ -416,7 +411,7 @@ function RegistersContent() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-              <ClipboardList className="text-blue-600" />
+              <ClipboardList className="text-emerald-600" />
               <span>Registers & Clinical Records</span>
             </h1>
             <p className="text-xs md:text-sm text-gray-500 mt-1">
@@ -435,7 +430,7 @@ function RegistersContent() {
               </button>
               <button
                 onClick={openAddModal}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-[#176e56] hover:bg-[#155944] text-white rounded-xl text-xs md:text-sm font-semibold shadow-sm transition cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs md:text-sm font-semibold shadow-sm transition"
               >
                 <IndianRupee size={16} />
                 Record Payment
@@ -444,7 +439,7 @@ function RegistersContent() {
           ) : (
             <button
               onClick={openAddModal}
-              className="flex items-center gap-2 px-4 py-2 bg-[#176e56] hover:bg-[#155944] text-white rounded-xl text-xs md:text-sm font-semibold shadow-sm transition cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs md:text-sm font-semibold shadow-sm transition"
             >
               <Plus size={16} />
               Add Entry
@@ -472,9 +467,9 @@ function RegistersContent() {
                   setSearchTerm('');
                   router.push(`/admin/registers?tab=${newTab}`);
                 }}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition ${
                   isActive
-                    ? 'bg-[#176e56] text-white shadow-sm'
+                    ? 'bg-emerald-600 text-white shadow-sm'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }`}
               >
@@ -536,7 +531,7 @@ function RegistersContent() {
               placeholder="Search by name, phone, notes..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         </div>
@@ -549,7 +544,7 @@ function RegistersContent() {
               <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
                 <div className="flex items-center justify-between text-gray-500 text-xs font-semibold uppercase">
                   <span>Staff Members</span>
-                  <Users size={16} className="text-blue-600" />
+                  <Users size={16} className="text-emerald-600" />
                 </div>
                 <div className="text-2xl font-black text-gray-900 mt-1">{staffMembers.length}</div>
                 <p className="text-[11px] text-gray-500 mt-0.5">Active clinic personnel</p>
@@ -558,9 +553,9 @@ function RegistersContent() {
               <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
                 <div className="flex items-center justify-between text-gray-500 text-xs font-semibold uppercase">
                   <span>Fixed Monthly Payroll</span>
-                  <IndianRupee size={16} className="text-indigo-600" />
+                  <IndianRupee size={16} className="text-emerald-600" />
                 </div>
-                <div className="text-2xl font-black text-indigo-900 mt-1">
+                <div className="text-2xl font-black text-emerald-900 mt-1">
                   ₹{staffTotals.totalFixedSalary.toLocaleString('en-IN')}
                 </div>
                 <p className="text-[11px] text-gray-500 mt-0.5">Total base salary commitment</p>
@@ -608,7 +603,7 @@ function RegistersContent() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-gray-100">
                 <div>
                   <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                    <Users size={18} className="text-blue-600" />
+                    <Users size={18} className="text-emerald-600" />
                     Staff Directory & Fixed Salaries
                   </h2>
                   <p className="text-xs text-gray-500">
@@ -638,7 +633,7 @@ function RegistersContent() {
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm uppercase">
+                            <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center text-sm uppercase">
                               {member.name.charAt(0)}
                             </div>
                             <div>
@@ -654,7 +649,7 @@ function RegistersContent() {
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => openEditStaffModal(member)}
-                              className="text-gray-400 hover:text-blue-600 p-1"
+                              className="text-gray-400 hover:text-emerald-600 p-1"
                               title="Edit Staff Member & Fixed Salary"
                             >
                               <Edit size={14} />
@@ -687,15 +682,11 @@ function RegistersContent() {
                               hasAdvance ? 'text-amber-700' : 'text-gray-500 font-normal'
                             }`}>
                               ₹{(member.advance_balance || 0).toLocaleString('en-IN')}
-                              {hasAdvance ? (
+                              {hasAdvance && (
                                 <span className="px-1 py-0.5 bg-amber-100 text-amber-800 text-[9px] font-bold rounded">
                                   Due
                                 </span>
-                              ) : (member.advance_deducted_this_month && member.advance_deducted_this_month > 0) ? (
-                                <span className="px-1 py-0.5 bg-emerald-100 text-emerald-800 text-[9px] font-bold rounded">
-                                  Deducted
-                                </span>
-                              ) : null}
+                              )}
                             </div>
                           </div>
 
@@ -708,7 +699,7 @@ function RegistersContent() {
 
                           <div>
                             <span className="text-[10px] uppercase font-semibold text-gray-500">Remaining</span>
-                            <div className={`font-medium ${(member.pending_salary_this_month || 0) > 0 ? 'text-gray-900 font-bold' : 'text-emerald-700'}`}>
+                            <div className="font-medium text-gray-700">
                               ₹{(member.pending_salary_this_month || 0).toLocaleString('en-IN')}
                             </div>
                           </div>
@@ -738,10 +729,10 @@ function RegistersContent() {
 
             {/* Individual staff ledger summary if selected */}
             {staffLedgerSummary && (
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+              <div className="bg-emerald-50/50 border border-emerald-200 rounded-xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
                 <div>
                   <span className="text-gray-500 font-semibold uppercase">Selected Staff</span>
-                  <div className="text-base font-bold text-blue-900">{staffLedgerSummary.staffName}</div>
+                  <div className="text-base font-bold text-emerald-900">{staffLedgerSummary.staffName}</div>
                 </div>
                 <div>
                   <span className="text-gray-500 font-semibold uppercase">Total Salary Paid</span>
@@ -764,7 +755,7 @@ function RegistersContent() {
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           {loading ? (
             <div className="py-20 flex justify-center items-center">
-              <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
+              <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -798,14 +789,14 @@ function RegistersContent() {
                           <td className="py-3 px-3">
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                               r.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                              r.status === 'Visited' ? 'bg-blue-100 text-blue-800' :
+                              r.status === 'Visited' ? 'bg-emerald-100 text-emerald-800' :
                               r.status === 'Scheduled' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
                             }`}>{r.status}</span>
                           </td>
                           <td className="py-3 px-3 text-gray-500 max-w-xs truncate">{r.findings_notes || '-'}</td>
                           <td className="py-3 px-3 text-right">
                             <div className="flex justify-end gap-1.5">
-                              <button onClick={() => { setReviewForm(r); setEditingId(r.id || null); setIsEditMode(true); setIsModalOpen(true); }} className="text-blue-600 hover:text-blue-800 p-1"><Edit size={14} /></button>
+                              <button onClick={() => { setReviewForm(r); setEditingId(r.id || null); setIsEditMode(true); setIsModalOpen(true); }} className="text-emerald-600 hover:text-emerald-800 p-1"><Edit size={14} /></button>
                               {isAdmin && <button onClick={async () => { if (confirm('Delete?')) { await reviewService.delete(r.id!); fetchData(); } }} className="text-red-600 hover:text-red-800 p-1"><Trash2 size={14} /></button>}
                             </div>
                           </td>
@@ -845,7 +836,7 @@ function RegistersContent() {
                           <td className="py-3 px-3">
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                               rc.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                              rc.status === 'Contacted' ? 'bg-blue-100 text-blue-800' :
+                              rc.status === 'Contacted' ? 'bg-emerald-100 text-emerald-800' :
                               rc.status === 'Scheduled' ? 'bg-purple-100 text-purple-800' : 'bg-yellow-100 text-yellow-800'
                             }`}>{rc.status}</span>
                           </td>
@@ -853,7 +844,7 @@ function RegistersContent() {
                           <td className="py-3 px-3 text-gray-500 max-w-xs truncate">{rc.notes || '-'}</td>
                           <td className="py-3 px-3 text-right">
                             <div className="flex justify-end gap-1.5">
-                              <button onClick={() => { setRecallForm(rc); setEditingId(rc.id || null); setIsEditMode(true); setIsModalOpen(true); }} className="text-blue-600 hover:text-blue-800 p-1"><Edit size={14} /></button>
+                              <button onClick={() => { setRecallForm(rc); setEditingId(rc.id || null); setIsEditMode(true); setIsModalOpen(true); }} className="text-emerald-600 hover:text-emerald-800 p-1"><Edit size={14} /></button>
                               {isAdmin && <button onClick={async () => { if (confirm('Delete?')) { await recallService.delete(rc.id!); fetchData(); } }} className="text-red-600 hover:text-red-800 p-1"><Trash2 size={14} /></button>}
                             </div>
                           </td>
@@ -893,14 +884,14 @@ function RegistersContent() {
                           <td className="py-3 px-3">
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                               f.status === 'Completed' || f.status === 'Confirmed' ? 'bg-green-100 text-green-800' :
-                              f.status === 'Called - Reached' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
+                              f.status === 'Called - Reached' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
                             }`}>{f.status}</span>
                           </td>
                           <td className="py-3 px-3 text-gray-600">{f.next_followup_date || '-'}</td>
                           <td className="py-3 px-3 text-gray-500 max-w-xs truncate">{f.notes || '-'}</td>
                           <td className="py-3 px-3 text-right">
                             <div className="flex justify-end gap-1.5">
-                              <button onClick={() => { setFollowupForm(f); setEditingId(f.id || null); setIsEditMode(true); setIsModalOpen(true); }} className="text-blue-600 hover:text-blue-800 p-1"><Edit size={14} /></button>
+                              <button onClick={() => { setFollowupForm(f); setEditingId(f.id || null); setIsEditMode(true); setIsModalOpen(true); }} className="text-emerald-600 hover:text-emerald-800 p-1"><Edit size={14} /></button>
                               {isAdmin && <button onClick={async () => { if (confirm('Delete?')) { await followupService.delete(f.id!); fetchData(); } }} className="text-red-600 hover:text-red-800 p-1"><Trash2 size={14} /></button>}
                             </div>
                           </td>
@@ -941,7 +932,7 @@ function RegistersContent() {
                               <div className="text-[11px] text-gray-500 flex items-center gap-1.5 mt-0.5">
                                 <span>{sp.staff_role}</span>
                                 {matchedStaff && (
-                                  <span className="text-[10px] text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded font-medium">
+                                  <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded font-medium">
                                     Fixed: ₹{matchedStaff.fixed_salary.toLocaleString('en-IN')}
                                   </span>
                                 )}
@@ -974,7 +965,7 @@ function RegistersContent() {
                             </td>
                             <td className="py-3 px-3 text-right">
                               <div className="flex justify-end gap-1.5">
-                                <button onClick={() => { setStaffPaymentForm(sp); setEditingId(sp.id || null); setIsEditMode(true); setIsModalOpen(true); }} className="text-blue-600 hover:text-blue-800 p-1"><Edit size={14} /></button>
+                                <button onClick={() => { setStaffPaymentForm(sp); setEditingId(sp.id || null); setIsEditMode(true); setIsModalOpen(true); }} className="text-emerald-600 hover:text-emerald-800 p-1"><Edit size={14} /></button>
                                 {isAdmin && <button onClick={async () => { if (confirm('Delete this payment record?')) { await staffPaymentService.delete(sp.id!); fetchData(); } }} className="text-red-600 hover:text-red-800 p-1"><Trash2 size={14} /></button>}
                               </div>
                             </td>
@@ -1013,7 +1004,7 @@ function RegistersContent() {
                     placeholder="Search by name, phone or ref #..."
                     value={patientSearchQuery}
                     onChange={(e) => handlePatientQueryChange(e.target.value)}
-                    className="w-full px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-emerald-500"
                   />
                   {showSuggestions && patientSuggestions.length > 0 && (
                     <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
@@ -1021,7 +1012,7 @@ function RegistersContent() {
                         <div
                           key={p.id || p.phone_number}
                           onClick={() => selectPatientForForm(p)}
-                          className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-0"
+                          className="px-3 py-2 hover:bg-emerald-50 cursor-pointer border-b last:border-0"
                         >
                           <div className="font-bold text-gray-900">{p.name}</div>
                           <div className="text-[11px] text-gray-500">📱 {p.phone_number} {p.reference_number && `• ${p.reference_number}`}</div>
@@ -1162,7 +1153,7 @@ function RegistersContent() {
                           setIsModalOpen(false);
                           openAddStaffModal();
                         }}
-                        className="text-blue-600 hover:text-blue-800 text-[11px] font-medium"
+                        className="text-emerald-600 hover:text-emerald-800 text-[11px] font-medium"
                       >
                         + New Staff
                       </button>
@@ -1220,7 +1211,7 @@ function RegistersContent() {
                     if (!currentStaff) return null;
                     const hasAdv = (currentStaff.advance_balance || 0) > 0;
                     return (
-                      <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl grid grid-cols-2 gap-2 text-xs">
+                      <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl grid grid-cols-2 gap-2 text-xs">
                         <div>
                           <span className="text-[10px] uppercase font-semibold text-gray-500">Fixed Monthly Salary</span>
                           <div className="font-bold text-gray-900 text-sm">
@@ -1305,32 +1296,43 @@ function RegistersContent() {
                           onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, amount_paid: Number(e.target.value) })}
                           required
                           placeholder="Amount paid"
-                          className="w-full pl-7 pr-3 py-1.5 border rounded-lg font-bold text-gray-900 text-sm focus:ring-2 focus:ring-blue-500"
+                          className="w-full pl-7 pr-3 py-1.5 border rounded-lg font-bold text-gray-900 text-sm focus:ring-2 focus:ring-emerald-500"
                         />
                       </div>
                     </div>
                   </div>
 
-                  {/* Automatic advance debit info */}
+                  {/* Advance deduction if staff has existing advance */}
                   {(() => {
                     const currentStaff = staffMembers.find(
                       (m) => m.name.toLowerCase() === (staffPaymentForm.staff_name || '').toLowerCase()
                     );
                     if (currentStaff && (currentStaff.advance_balance || 0) > 0 && staffPaymentForm.payment_type === 'Salary') {
                       return (
-                        <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl flex items-center justify-between text-xs text-amber-900">
-                          <div className="flex items-center gap-2">
-                            <span className="text-base">💼</span>
-                            <div>
-                              <span className="font-bold block">Advance Auto-Debited from Salary</span>
-                              <span className="text-[11px] text-amber-700">
-                                Outstanding advance of ₹{(currentStaff.advance_balance || 0).toLocaleString('en-IN')} is automatically deducted from this salary.
-                              </span>
-                            </div>
+                        <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1">
+                          <div className="flex items-center justify-between">
+                            <label className="block font-semibold text-amber-900 text-xs">
+                              Deduct from Advance Balance (Optional)
+                            </label>
+                            <span className="text-[10px] text-amber-700 font-medium">
+                              Current Balance: ₹{(currentStaff.advance_balance || 0).toLocaleString('en-IN')}
+                            </span>
                           </div>
-                          <span className="font-black text-sm text-amber-900 shrink-0">
-                            -₹{(currentStaff.advance_balance || 0).toLocaleString('en-IN')}
-                          </span>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">₹</span>
+                            <input
+                              type="number"
+                              min="0"
+                              max={currentStaff.advance_balance || 0}
+                              value={staffPaymentForm.advance_deducted === 0 ? '' : staffPaymentForm.advance_deducted}
+                              onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, advance_deducted: Number(e.target.value) })}
+                              placeholder="0"
+                              className="w-full pl-7 pr-3 py-1.5 border border-amber-300 rounded-lg text-xs font-semibold text-amber-900 bg-white"
+                            />
+                          </div>
+                          <p className="text-[10px] text-amber-700">
+                            Entering an amount here will automatically reduce the staff member&apos;s advance balance.
+                          </p>
                         </div>
                       );
                     }
@@ -1358,7 +1360,7 @@ function RegistersContent() {
                         type="text"
                         value={staffPaymentForm.paid_by || ''}
                         onChange={(e) => setStaffPaymentForm({ ...staffPaymentForm, paid_by: e.target.value })}
-                        placeholder="Dr. Kautilya Swaroop"
+                        placeholder="Dr. Vipeen Raut"
                         className="w-full px-3 py-1.5 border rounded-lg"
                       />
                     </div>
@@ -1381,7 +1383,7 @@ function RegistersContent() {
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border rounded-xl hover:bg-gray-100">
                   Cancel
                 </button>
-                <button type="submit" className="px-4 py-2 bg-[#176e56] hover:bg-[#155944] text-white font-semibold rounded-xl cursor-pointer">
+                <button type="submit" className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl">
                   {isEditMode ? 'Update' : 'Save'}
                 </button>
               </div>

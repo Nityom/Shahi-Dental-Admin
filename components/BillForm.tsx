@@ -501,7 +501,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
   return (
     <div className="w-full">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-3xl font-bold text-blue-700">Generate Bill</h2>
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-[#183e32] font-manrope">Generate Bill</h2>
         <button
           onClick={onBack}
           className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 transition"
@@ -519,8 +519,8 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
 
       {/* Stock Update Results */}
       {stockUpdateResults.length > 0 && (
-        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 className="font-medium text-blue-800 mb-2">Medicine Stock Update Status:</h4>
+        <div className="mb-4 p-4 bg-emerald-50/70 border border-emerald-200 rounded-lg">
+          <h4 className="font-bold text-emerald-950 mb-2">Medicine Stock Update Status:</h4>
           <div className="space-y-2">
             {stockUpdateResults.map((result, index) => (
               <div
@@ -542,8 +542,8 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
 
       <div className="grid grid-cols-1 gap-8">
         {/* Clinic Information */}
-        <div className="bg-blue-50 p-6 rounded-lg border border-blue-100">
-          <div className="flex justify-between items-center">            <div>              <h3 className="text-2xl font-bold text-blue-800">Shahi Dental Clinic</h3>
+        <div className="bg-emerald-50/60 p-6 rounded-xl border border-emerald-100">
+          <div className="flex justify-between items-center">            <div>              <h3 className="text-2xl font-bold text-[#183e32]">Shahi Dental Clinic</h3>
             <p className="text-gray-600">Professional Dental Care Services</p>
           </div>
             <div className="text-right">
@@ -561,7 +561,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
             <p><strong>Age/Sex:</strong> {patientData.age} / {patientData.sex}</p>
             <p><strong>Visit Date:</strong> {new Date(patientData.date).toLocaleDateString()}</p>
             {patientData.reference_number && (
-              <p className="mt-2 font-medium text-blue-700">
+              <p className="mt-2 font-semibold text-emerald-800">
                 <strong>Patient Reference:</strong> {patientData.reference_number}
               </p>
             )}
@@ -663,7 +663,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
                 <button
                   type="button"
                   onClick={addProcedure}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                  className="px-4 py-2 bg-[#176e56] text-white rounded-lg hover:bg-[#155944] focus:outline-none focus:ring-2 focus:ring-emerald-500 transition cursor-pointer"
                   disabled={!newProcedure.description || newProcedure.unitPrice <= 0}
                 >
                   Add Item
@@ -730,7 +730,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
                 ))}
 
                 {/* Consultation Fee Row */}
-                <tr className="bg-blue-50">
+                <tr className="bg-emerald-50/60">
                   <td className="px-4 py-3 whitespace-nowrap">{billItems.length + 1}</td>
                   <td className="px-4 py-3 whitespace-nowrap font-medium">Consultation Fee</td>
                   <td className="px-4 py-3 whitespace-nowrap">1</td>
@@ -882,7 +882,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
               <button
                 type="button"
                 onClick={handlePrintableBill}
-                className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition flex items-center gap-2"
+                className="px-6 py-2.5 bg-[#176e56] text-white rounded-lg hover:bg-[#155944] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition flex items-center gap-2 cursor-pointer"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
