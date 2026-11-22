@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { Alert } from "@/components/ui/alert";
 import PrescriptionHistory from "@/components/PrescriptionHistory";
 import { useIsAdmin } from '@/hooks/use-is-admin';
-import { Calendar as CalendarIcon, X, Search, RefreshCw, UserPlus, Filter, IndianRupee, Printer, History, CheckCircle2, Eye, Trash2, FilePlus, ChevronDown, ChevronUp, Stethoscope, Pill, Activity } from 'lucide-react';
+import { Calendar as CalendarIcon, X, Search, RefreshCw, UserPlus, Filter, IndianRupee, Printer, History, CheckCircle2, Eye, Trash2, FilePlus, ChevronDown, ChevronUp } from 'lucide-react';
 import { paymentTransactionService, PaymentTransaction } from '@/services/payment-transactions';
 
 // Group prescriptions by patient name to create a patient list
@@ -912,27 +912,32 @@ const ViewPatients = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-gray-500">{formatDate(patient.latestVisit)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-gray-500">{patient.totalVisits}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => openPatientDetails(patient)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#176e56] text-white rounded-lg text-xs font-semibold hover:bg-[#155944] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition shadow-xs cursor-pointer"
+                            className="p-2 bg-[#176e56] text-white rounded-lg hover:bg-[#155944] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition shadow-xs cursor-pointer inline-flex items-center justify-center"
+                            title="View details"
+                            aria-label="View details"
                           >
-                            <Eye size={14} className="shrink-0" />
-                            <span>View details</span>
+                            <Eye size={16} className="shrink-0" />
                           </button>
                           {isAdmin && (
                             <button
                               onClick={() => handleDelete(patient)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-rose-700 border border-rose-200 rounded-lg text-xs font-semibold hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 transition shadow-2xs cursor-pointer"
+                              className="p-2 bg-white text-rose-700 border border-rose-200 rounded-lg hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 transition shadow-2xs cursor-pointer inline-flex items-center justify-center"
+                              title="Delete patient"
+                              aria-label="Delete patient"
                             >
-                              <Trash2 size={14} className="shrink-0" />
-                              <span>Delete</span>
+                              <Trash2 size={16} className="shrink-0" />
                             </button>
                           )}
                           <Link href={`/admin/prescription?patientName=${encodeURIComponent(patient.name)}&phone=${encodeURIComponent(patient.phone_number)}&age=${patient.age}&sex=${patient.sex}&medicalHistory=${encodeURIComponent(patient.prescriptions[0]?.medical_history || '')}`}>
-                            <button className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-semibold hover:bg-emerald-100/70 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition shadow-2xs cursor-pointer">
-                              <FilePlus size={14} className="shrink-0" />
-                              <span>New prescription</span>
+                            <button
+                              className="p-2 bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-lg hover:bg-emerald-100/70 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition shadow-2xs cursor-pointer inline-flex items-center justify-center"
+                              title="New prescription"
+                              aria-label="New prescription"
+                            >
+                              <FilePlus size={16} className="shrink-0" />
                             </button>
                           </Link>
                         </div>
