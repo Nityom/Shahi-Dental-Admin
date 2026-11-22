@@ -493,7 +493,7 @@ export default function AddInventoryPage() {
             onClick={() => setSelectedSubdivision('ALL')}
             className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
               selectedSubdivision === 'ALL'
-                ? 'bg-blue-600 text-white shadow'
+                ? 'bg-[#176e56] text-white shadow'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -505,7 +505,7 @@ export default function AddInventoryPage() {
               onClick={() => setSelectedSubdivision(sub)}
               className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
                 selectedSubdivision === sub
-                  ? 'bg-blue-600 text-white shadow'
+                  ? 'bg-[#176e56] text-white shadow'
                   : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
@@ -716,7 +716,7 @@ export default function AddInventoryPage() {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-2/3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow transition flex items-center justify-center gap-1"
+                    className="w-2/3 px-4 py-2 bg-[#176e56] hover:bg-[#155944] text-white rounded-lg text-xs font-semibold shadow transition flex items-center justify-center gap-1 cursor-pointer"
                   >
                     {isLoading ? (
                       <RefreshCw size={14} className="animate-spin" />
@@ -1137,7 +1137,7 @@ export default function AddInventoryPage() {
               <div className="flex items-center gap-2">
                 <Link
                   href="/admin/registers?tab=MATERIAL"
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+                  className="px-3 py-1.5 bg-[#176e56] hover:bg-[#155944] text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition"
                 >
                   <ExternalLink size={13} />
                   Open Full Registers Hub

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Manrope:wght@400..800&family=Geist+Mono:wght@400..700&display=swap");
 
 @custom-variant dark (&:is(.dark *));
 
@@ -10,10 +11,21 @@
 }
 
 @theme inline {
+  --color-emerald-50: #eff7f1;
+  --color-emerald-100: #dceee1;
+  --color-emerald-200: #bee0ca;
+  --color-emerald-300: #91c9a8;
+  --color-emerald-400: #62ad83;
+  --color-emerald-500: #369568;
+  --color-emerald-600: #247e5d;
+  --color-emerald-700: #176e56;
+  --color-emerald-800: #155944;
+  --color-emerald-900: #164a3a;
+  --color-emerald-950: #12372c;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -50,6 +62,9 @@
 }
 
 :root {
+  --font-dm-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-manrope: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-geist-mono: "Geist Mono", monospace;
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -57,7 +72,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --primary: #176e56;
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -82,6 +97,13 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+}
+
+body {
+  font-family: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 .dark {
@@ -143,3 +165,116 @@ aside *::-webkit-scrollbar {
   height: 0 !important;
 }
 
+/* Shared admin workspace polish */
+.admin-page-content {
+  background: #ffffff;
+  color: #193d32;
+  font-family: var(--font-dm-sans), sans-serif;
+}
+.admin-page-content h1 {
+  color: #183e32 !important;
+  font-size: 2rem !important;
+  line-height: 1.2 !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.045em !important;
+  font-family: var(--font-manrope), sans-serif !important;
+}
+.admin-page-content h1 + p {
+  color: #71847a;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.admin-page-content header:has(h1) {
+  border-color: #e2ebe4 !important;
+  box-shadow: 0 5px 18px rgb(27 74 52 / 5%) !important;
+}
+.admin-page-content .bg-white.rounded-xl.border,
+.admin-page-content .bg-white.rounded-2xl.border,
+.admin-page-content .bg-white.rounded-3xl.border {
+  border-color: #e4ece5 !important;
+  box-shadow: 0 4px 16px rgb(27 74 52 / 4%);
+}
+.admin-page-content table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.admin-page-content thead th {
+  background-color: #f3f8f4;
+  color: #667b6f;
+  border-color: #e4ece5;
+}
+.admin-page-content tbody tr {
+  border-color: #edf2ee;
+  transition: background-color 150ms ease;
+}
+.admin-page-content tbody tr:hover {
+  background-color: #f7fbf8;
+}
+.admin-page-content input:not([type="checkbox"]):not([type="radio"]),
+.admin-page-content select,
+.admin-page-content textarea {
+  border-color: #d9e4db;
+}
+.admin-page-content input:focus,
+.admin-page-content select:focus,
+.admin-page-content textarea:focus {
+  border-color: #4c9b76;
+  outline-color: #4c9b76;
+  --tw-ring-color: rgb(76 155 118 / 20%);
+}
+
+/* Sidebar hierarchy and active state */
+aside.bg-white {
+  background: #f5f8f5;
+  border-color: #e2eae3;
+}
+aside li {
+  margin-bottom: 0.15rem !important;
+}
+aside li a {
+  min-height: 42px;
+  border-radius: 0.75rem;
+}
+aside li a[title] {
+  margin-inline: 0.1rem;
+}
+aside h3 {
+  color: #96a89c !important;
+  font-size: 0.62rem !important;
+  letter-spacing: 0.14em !important;
+  padding-top: 0.35rem;
+}
+
+/* Match the Svaasth HMS workspace frame and type system. */
+html, body { min-height: 100%; }
+body { background: #f3f7f3; font-family: var(--font-dm-sans), sans-serif; }
+
+/* Consistent premium action buttons across clinical workflows. */
+.svasth-action {
+  display: inline-flex;
+  min-height: 64px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  padding: 14px 22px;
+  font-family: var(--font-dm-sans), sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease, border-color 160ms ease;
+  cursor: pointer;
+}
+.svasth-action:not(:disabled):hover { transform: translateY(-2px); }
+.svasth-action:focus-visible { outline: 3px solid rgb(98 173 131 / 40%); outline-offset: 3px; }
+.svasth-action-primary { color: #fff; background: #176e56; box-shadow: 0 8px 18px rgb(23 110 86 / 18%); }
+.svasth-action-primary:not(:disabled):hover { background: #155944; box-shadow: 0 11px 22px rgb(23 110 86 / 23%); }
+.svasth-action-secondary { color: #256746; background: #eef6f0; border-color: #d9e9dc; box-shadow: 0 5px 14px rgb(35 86 58 / 7%); }
+.svasth-action-secondary:not(:disabled):hover { background: #e4f1e7; border-color: #c6dfce; }
+.svasth-action-tertiary { color: #fff; background: #155944; box-shadow: 0 8px 18px rgb(21 89 68 / 16%); }
+.svasth-action-tertiary:not(:disabled):hover { background: #104b3a; }
+@media (max-width: 640px) {
+  .svasth-action { min-height: 54px; padding: 12px 16px; font-size: 14px; border-radius: 13px; }
+}

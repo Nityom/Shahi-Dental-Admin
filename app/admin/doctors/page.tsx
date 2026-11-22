@@ -483,7 +483,7 @@ export default function DoctorManagementPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={openNewDoctorModal}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-medium shadow-sm transition-all text-sm"
+            className="flex items-center gap-2 bg-[#176e56] hover:bg-[#155944] text-white px-4 py-2.5 rounded-xl font-medium shadow-sm transition-all text-sm cursor-pointer"
           >
             <Plus size={18} />
             <span>Add Doctor</span>
@@ -920,7 +920,7 @@ export default function DoctorManagementPage() {
                                 </button>
                                 <button
                                   onClick={() => openRecordPayoutModal(doc)}
-                                  className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 rounded-lg font-semibold transition-all shadow-sm"
+                                  className="text-xs bg-[#176e56] hover:bg-[#155944] text-white px-2.5 py-1.5 rounded-lg font-semibold transition-all shadow-sm cursor-pointer"
                                 >
                                   Payout
                                 </button>
@@ -964,7 +964,7 @@ export default function DoctorManagementPage() {
 
             <button
               onClick={openNewDoctorModal}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-medium shadow-sm transition-all text-sm"
+              className="flex items-center gap-2 bg-[#176e56] hover:bg-[#155944] text-white px-4 py-2.5 rounded-xl font-medium shadow-sm transition-all text-sm cursor-pointer"
             >
               <Plus size={18} />
               <span>Add New Doctor</span>
@@ -1389,7 +1389,7 @@ export default function DoctorManagementPage() {
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-sm shadow-sm transition-all"
+                    className="px-5 py-2.5 bg-[#176e56] hover:bg-[#155944] text-white font-medium rounded-xl text-sm shadow-sm transition-all cursor-pointer"
                   >
                     {isEditDoctor ? 'Update Doctor' : 'Save Doctor'}
                   </button>

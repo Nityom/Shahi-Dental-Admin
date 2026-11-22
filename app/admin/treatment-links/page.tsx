@@ -1009,7 +1009,7 @@ export default function TreatmentLinksPage() {
             <span className="text-slate-800 font-semibold">Treatment Auto-Link</span>
           </div>
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
-            <span className="p-2.5 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-500/20">
+            <span className="p-2.5 bg-[#176e56] text-white rounded-2xl shadow-lg shadow-emerald-700/20">
               <Link2 size={24} />
             </span>
             Treatment Auto-Link & Registers
@@ -1023,15 +1023,15 @@ export default function TreatmentLinksPage() {
           <Button
             variant="outline"
             onClick={handleSyncAllPrescriptionTreatments}
-            className="border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-xl h-10 shadow-sm transition"
+            className="border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-xl h-10 shadow-sm transition"
           >
-            <Sparkles size={15} className="mr-1.5 text-blue-600" />
+            <Sparkles size={15} className="mr-1.5 text-emerald-600" />
             Sync All Prescription Treatments
           </Button>
 
           <Button
             onClick={handleAddNew}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl h-10 px-4 shadow-md shadow-blue-600/20 transition flex items-center gap-1.5"
+            className="bg-[#176e56] hover:bg-[#155944] text-white text-xs font-semibold rounded-xl h-10 px-4 shadow-md shadow-emerald-700/20 transition flex items-center gap-1.5 cursor-pointer"
           >
             <Plus size={16} />
             Add Custom Rule
@@ -1271,7 +1271,7 @@ export default function TreatmentLinksPage() {
             </Button>
             <Button
               onClick={handleAddNew}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-xl"
+              className="bg-[#176e56] hover:bg-[#155944] text-white text-xs rounded-xl cursor-pointer"
             >
               <Plus size={14} className="mr-1.5" />
               Add Custom Rule
@@ -1658,8 +1658,8 @@ export default function TreatmentLinksPage() {
                           }}
                           className={`text-[11px] px-2 py-0.5 rounded-md transition flex items-center gap-1 ${
                             formTreatmentName === p.name
-                              ? 'bg-blue-600 text-white font-bold'
-                              : 'bg-white hover:bg-blue-50 hover:text-blue-600 text-slate-600 border border-slate-200'
+                              ? 'bg-[#176e56] text-white font-bold'
+                              : 'bg-white hover:bg-emerald-50 hover:text-emerald-800 text-slate-600 border border-slate-200'
                           }`}
                         >
                           {p.isCrownOrCap && <Crown size={10} />}
@@ -1773,7 +1773,7 @@ export default function TreatmentLinksPage() {
                   type="button"
                   onClick={() => setFormEnabled(!formEnabled)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    formEnabled ? 'bg-blue-600' : 'bg-slate-300'
+                    formEnabled ? 'bg-[#176e56]' : 'bg-slate-300'
                   }`}
                 >
                   <span
@@ -1811,7 +1811,7 @@ export default function TreatmentLinksPage() {
                 <Button
                   type="submit"
                   disabled={isSaving}
-                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs h-10 px-5 font-semibold shadow-md shadow-blue-600/20"
+                  className="bg-[#176e56] hover:bg-[#155944] text-white rounded-xl text-xs h-10 px-5 font-semibold shadow-md shadow-emerald-700/20 cursor-pointer"
                 >
                   {isSaving ? (
                     <RefreshCw size={14} className="animate-spin mr-1.5" />

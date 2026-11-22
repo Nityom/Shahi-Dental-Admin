@@ -145,22 +145,22 @@ export default function InvestigationsPage() {
           onClick={() => setTypeFilter(typeFilter === 'OPG' ? 'ALL' : 'OPG')}
           className={`p-5 rounded-2xl border cursor-pointer transition-all shadow-sm ${
             typeFilter === 'OPG'
-              ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-600'
-              : 'bg-white border-gray-200 hover:border-blue-300'
+              ? 'bg-[#176e56] text-white border-[#176e56] ring-2 ring-[#176e56]'
+              : 'bg-white border-gray-200 hover:border-emerald-300'
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className={`text-xs font-semibold uppercase tracking-wider ${typeFilter === 'OPG' ? 'text-blue-100' : 'text-gray-500'}`}>
+            <p className={`text-xs font-semibold uppercase tracking-wider ${typeFilter === 'OPG' ? 'text-emerald-100' : 'text-gray-500'}`}>
               OPG Count
             </p>
-            <span className={`text-xs px-2 py-0.5 rounded font-bold ${typeFilter === 'OPG' ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-700'}`}>
+            <span className={`text-xs px-2 py-0.5 rounded font-bold ${typeFilter === 'OPG' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-800'}`}>
               Full Mouth
             </span>
           </div>
           <p className={`text-3xl font-black mt-3 ${typeFilter === 'OPG' ? 'text-white' : 'text-gray-900'}`}>
             {reportData.totalOpg}
           </p>
-          <p className={`text-xs mt-1 ${typeFilter === 'OPG' ? 'text-blue-100' : 'text-gray-400'}`}>
+          <p className={`text-xs mt-1 ${typeFilter === 'OPG' ? 'text-emerald-100' : 'text-gray-400'}`}>
             Auto-detected from prescriptions
           </p>
         </div>
@@ -236,7 +236,7 @@ export default function InvestigationsPage() {
                 onClick={() => applyDatePreset(preset.id as any)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   dateRangePreset === preset.id
-                    ? 'bg-blue-600 text-white shadow-xs'
+                    ? 'bg-[#176e56] text-white shadow-xs'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
@@ -413,7 +413,7 @@ export default function InvestigationsPage() {
                     <td className="px-5 py-4 text-right">
                       <Link
                         href={`/admin/prescription?patientId=${rec.prescription_id}&reference=${rec.reference_number || ''}`}
-                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-semibold bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition"
+                        className="inline-flex items-center gap-1 text-xs text-emerald-800 hover:text-emerald-950 font-semibold bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg transition"
                       >
                         <span>View Rx</span>
                         <ExternalLink size={12} />

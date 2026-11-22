@@ -718,7 +718,7 @@ const ViewPatients = () => {
 
                 <button
                   onClick={() => fetchPatients()}
-                  className="px-3.5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs sm:text-sm font-medium transition shadow-sm flex items-center gap-1.5"
+                  className="px-3.5 py-2 bg-[#176e56] text-white rounded-lg hover:bg-[#155944] text-xs sm:text-sm font-medium transition shadow-sm flex items-center gap-1.5"
                 >
                   <RefreshCw size={16} />
                   <span>Refresh</span>
@@ -739,7 +739,7 @@ const ViewPatients = () => {
               }}
               className={`px-3 py-1 rounded-full font-medium transition ${
                 dateFilterMode === 'ALL'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-[#176e56] text-white shadow-xs'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
@@ -753,7 +753,7 @@ const ViewPatients = () => {
               }}
               className={`px-3 py-1 rounded-full font-medium transition ${
                 dateFilterMode === 'TODAY'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-[#176e56] text-white shadow-xs'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
@@ -767,7 +767,7 @@ const ViewPatients = () => {
               }}
               className={`px-3 py-1 rounded-full font-medium transition ${
                 dateFilterMode === 'YESTERDAY'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-[#176e56] text-white shadow-xs'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
@@ -780,7 +780,7 @@ const ViewPatients = () => {
               }}
               className={`px-3 py-1 rounded-full font-medium transition ${
                 dateFilterMode === 'THIS_MONTH'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-[#176e56] text-white shadow-xs'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
@@ -788,7 +788,7 @@ const ViewPatients = () => {
             </button>
 
             {dateFilterMode !== 'ALL' && (
-              <span className="ml-auto text-blue-700 bg-blue-50 border border-blue-200 px-3 py-0.5 rounded-full font-medium flex items-center gap-1.5">
+              <span className="ml-auto text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-0.5 rounded-full font-medium flex items-center gap-1.5">
                 <span>
                   Showing <b>{filteredPatients.length}</b> patient{filteredPatients.length !== 1 ? 's' : ''}
                   {dateFilterMode === 'TODAY' && ' for Today'}
@@ -801,7 +801,7 @@ const ViewPatients = () => {
                     setDateFilterMode('ALL');
                     setSelectedDate('');
                   }}
-                  className="hover:text-blue-900"
+                  className="hover:text-emerald-950"
                   title="Clear filter"
                 >
                   <X size={13} />
@@ -813,9 +813,9 @@ const ViewPatients = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm">
-            <h4 className="text-xs font-semibold text-blue-800 uppercase tracking-wider mb-1">Total Patients</h4>
-            <p className="text-2xl md:text-3xl font-bold text-blue-700">{patients.length}</p>
+          <div className="bg-emerald-50 p-5 rounded-xl border border-emerald-100 shadow-sm">
+            <h4 className="text-xs font-semibold text-emerald-800 uppercase tracking-wider mb-1">Total Patients</h4>
+            <p className="text-2xl md:text-3xl font-bold text-emerald-700">{patients.length}</p>
           </div>
 
           <div className="bg-purple-50 p-5 rounded-xl border border-purple-100 shadow-sm">
@@ -846,7 +846,7 @@ const ViewPatients = () => {
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
           {loading ? (
             <div className="p-10 text-center">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-[#176e56] border-t-transparent"></div>
               <p className="mt-2 text-gray-600">Loading patient data...</p>
             </div>
           ) : error ? (
@@ -854,14 +854,14 @@ const ViewPatients = () => {
               <p>{error}</p>
               <button
                 onClick={() => fetchPatients()}
-                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="mt-4 px-4 py-2 bg-[#176e56] text-white rounded-lg hover:bg-[#155944]"
               >
                 Try Again
               </button>
             </div>
           ) : filteredPatients.length === 0 ? (
             <div className="p-12 text-center text-gray-600">
-              <div className="inline-flex p-3 bg-blue-50 text-blue-600 rounded-full mb-3">
+              <div className="inline-flex p-3 bg-emerald-50 text-emerald-700 rounded-full mb-3">
                 <CalendarIcon size={24} />
               </div>
               <p className="text-base font-semibold text-gray-800">No patients found</p>
@@ -876,7 +876,7 @@ const ViewPatients = () => {
                     setDateFilterMode('ALL');
                     setSelectedDate('');
                   }}
-                  className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition"
+                  className="mt-4 px-4 py-2 bg-[#176e56] hover:bg-[#155944] text-white rounded-lg text-xs font-semibold transition"
                 >
                   Clear All Filters
                 </button>
@@ -915,7 +915,7 @@ const ViewPatients = () => {
                         <div className="flex space-x-2">
                           <button
                             onClick={() => openPatientDetails(patient)}
-                            className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition"
+                            className="px-3 py-1 bg-[#176e56] text-white rounded hover:bg-[#155944] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition"
                           >
                             View Details
                           </button>
@@ -980,7 +980,7 @@ const ViewPatients = () => {
                           key={pageNum}
                           onClick={() => paginate(pageNum)}
                           className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium ${currentPage === pageNum
-                            ? 'z-10 bg-blue-50 border-blue-600 text-blue-600'
+                            ? 'z-10 bg-emerald-50 border-emerald-600 text-emerald-700'
                             : 'text-gray-500 hover:bg-gray-50'
                             }`}
                         >
@@ -1025,7 +1025,7 @@ const ViewPatients = () => {
                 aria-labelledby="modal-headline"
               >
                 {/* Modal Header */}
-                <div className="bg-blue-600 px-6 py-4 flex justify-between items-center">
+                <div className="bg-[#176e56] px-6 py-4 flex justify-between items-center">
                   <h3 className="text-xl font-semibold text-white" id="modal-headline">
                     Patient Details
                   </h3>
@@ -1043,8 +1043,8 @@ const ViewPatients = () => {
                 <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                   <div className="mb-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="bg-blue-50 p-4 rounded-lg">
-                        <h4 className="text-lg font-semibold text-blue-800 mb-3">Patient Information</h4>
+                      <div className="bg-emerald-50 p-4 rounded-lg">
+                        <h4 className="text-lg font-semibold text-emerald-800 mb-3">Patient Information</h4>
                         <div className="space-y-2">
                           <p><span className="font-medium">Name:</span> {selectedPatient.name}</p>
                           <p><span className="font-medium">Phone:</span> {selectedPatient.phone_number}</p>
@@ -1121,7 +1121,7 @@ const ViewPatients = () => {
                                         });
                                         window.open(`/print-bill/statement?${params.toString()}`, '_blank');
                                       }}
-                                      className="flex-1 inline-flex justify-center items-center gap-1.5 rounded-lg px-3.5 py-2.5 bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 shadow-sm transition"
+                                      className="flex-1 inline-flex justify-center items-center gap-1.5 rounded-lg px-3.5 py-2.5 bg-[#176e56] text-sm font-medium text-white hover:bg-[#155944] shadow-sm transition"
                                     >
                                       <Printer size={16} />
                                       <span>Print All Bills ({allIds.length})</span>
@@ -1231,7 +1231,7 @@ const ViewPatients = () => {
                             });
                             window.open(`/print-bill/statement?${params.toString()}`, '_blank');
                           }}
-                          className="mt-3 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                          className="mt-3 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-[#176e56] text-base font-medium text-white hover:bg-[#155944] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                         >
                           Print All Bills ({allBillIds.length})
                         </button>

@@ -250,7 +250,7 @@ export default function AddMedicinePage() {
           </header>
           <Link
             href="/admin/stockists"
-            className="inline-flex items-center space-x-2 px-4 py-2.5 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-xl text-sm font-semibold transition-all shadow-xs"
+            className="inline-flex items-center space-x-2 px-4 py-2.5 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-sm font-semibold transition-all shadow-xs"
           >
             <ReceiptText size={18} />
             <span>Stockist Bills & Dues →</span>
@@ -451,7 +451,7 @@ export default function AddMedicinePage() {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center"
+                    className="px-4 py-2 bg-[#176e56] text-white rounded-md hover:bg-[#155944] focus:outline-none focus:ring-2 focus:ring-emerald-500 flex items-center cursor-pointer"
                   >
                     {isLoading ? (
                       <>
@@ -473,9 +473,9 @@ export default function AddMedicinePage() {
             <div className="bg-white rounded-lg shadow-md p-6 mt-6">
               <h2 className="text-xl font-bold text-gray-800 mb-4">Inventory Stats</h2>
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <p className="text-sm text-blue-700">Total Medicines</p>
-                  <p className="text-2xl font-bold text-blue-800">{sortedMedicines.length}</p>
+                <div className="bg-emerald-50 p-4 rounded-lg">
+                  <p className="text-sm text-emerald-800">Total Medicines</p>
+                  <p className="text-2xl font-bold text-emerald-700">{sortedMedicines.length}</p>
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg">
                   <p className="text-sm text-green-700">Total Value (Selling)</p>
@@ -633,7 +633,7 @@ export default function AddMedicinePage() {
                                 Number(medicine.profit_margin || 0) > 30
                                   ? 'bg-green-100 text-green-800'
                                   : Number(medicine.profit_margin || 0) > 10
-                                    ? 'bg-blue-100 text-blue-800'
+                                    ? 'bg-teal-100 text-teal-800'
                                     : 'bg-gray-100 text-gray-800'
                                 }`}>
                                 {medicine.profit_margin ? Number(medicine.profit_margin).toFixed(1) : '0.0'}%
@@ -643,7 +643,7 @@ export default function AddMedicinePage() {
                               <div className="flex items-center justify-end gap-2">
                                 <button
                                   onClick={() => handleEdit(medicine)}
-                                  className="text-blue-600 hover:text-blue-900"
+                                  className="text-emerald-700 hover:text-emerald-900"
                                   title="Edit Medicine"
                                 >
                                   <Edit size={18} />
@@ -677,9 +677,9 @@ export default function AddMedicinePage() {
             <div className="bg-white rounded-lg shadow-md p-6 mt-6">
               <h3 className="text-lg font-bold text-gray-800 mb-3">Quick Tips</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h4 className="text-sm font-semibold text-blue-700 mb-2">Managing Inventory</h4>
-                  <ul className="text-sm text-blue-600 space-y-1">
+                <div className="bg-emerald-50 p-4 rounded-lg">
+                  <h4 className="text-sm font-semibold text-emerald-800 mb-2">Managing Inventory</h4>
+                  <ul className="text-sm text-emerald-700 space-y-1">
                     <li>• Items with less than 5 units are highlighted in red</li>
                     <li>• Click column headers to sort your inventory</li>
                     <li>• Use search to quickly find medicines</li>

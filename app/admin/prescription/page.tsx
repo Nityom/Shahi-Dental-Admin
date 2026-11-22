@@ -2270,7 +2270,7 @@ const PrescriptionPage = () => {
                     type="button"
                     onClick={handleAddNewDisease}
                     disabled={!newDiseaseName.trim()}
-                    className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 disabled:opacity-50 transition"
+                    className="px-4 py-2.5 bg-[#176e56] text-white rounded-lg text-xs font-bold hover:bg-[#155944] disabled:opacity-50 transition cursor-pointer"
                   >
                     Save Disease
                   </button>
@@ -2381,7 +2381,7 @@ const PrescriptionPage = () => {
                       type="button"
                       onClick={handleAddTeeth}
                       disabled={!selectedDisease}
-                      className="w-full p-3 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 shadow-md shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+                      className="w-full p-3 bg-[#176e56] text-white rounded-xl text-xs font-bold hover:bg-[#155944] shadow-md shadow-emerald-700/20 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2 cursor-pointer"
                     >
                       {selectedTeethNumbers?.length
                         ? `✓ Add Diagnosis for ${selectedTeethNumbers.length} Selected Tooth/Teeth`
@@ -3233,7 +3233,7 @@ const PrescriptionPage = () => {
             <div className="flex flex-col md:flex-row justify-center gap-4 mt-4">
               <button
                 type="submit"
-                className="px-8 py-3 bg-blue-600 text-white text-lg font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 focus:ring-offset-2 disabled:opacity-50 transition shadow-md"
+                className="px-8 py-3 bg-[#176e56] text-white text-lg font-medium rounded-lg hover:bg-[#155944] focus:outline-none focus:ring-4 focus:ring-emerald-300 focus:ring-offset-2 disabled:opacity-50 transition shadow-md cursor-pointer"
                 disabled={loading || saving}
               >
                 {loading ? 'Saving...' : saving ? 'Saving Prescription...' : isEditMode ? 'Update Prescription' : 'Save Prescription'}
@@ -3808,7 +3808,7 @@ const PrescriptionPage = () => {
                     type="button"
                     disabled={submittingBill}
                     onClick={handlePrintBill}
-                    className="px-5 py-2 bg-blue-600 disabled:bg-blue-400 disabled:cursor-not-allowed text-white rounded-lg hover:bg-blue-700 text-xs sm:text-sm font-semibold shadow-sm transition flex items-center gap-1.5"
+                    className="px-5 py-2 bg-[#176e56] disabled:bg-[#176e56]/50 disabled:cursor-not-allowed text-white rounded-lg hover:bg-[#155944] text-xs sm:text-sm font-semibold shadow-sm transition flex items-center gap-1.5 cursor-pointer"
                   >
                     {submittingBill ? (
                       <>

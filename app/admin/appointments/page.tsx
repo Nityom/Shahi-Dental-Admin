@@ -22,25 +22,50 @@ const formatDateForDisplay = (dateStr: string) => {
   }).format(new Date(dateStr));
 };
 
-const normalizeAppointmentTime = (time: string) => {
-  const trimmedTime = time.trim();
-
-  if (!trimmedTime) return trimmedTime;
-
-  const timeMatch = trimmedTime.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  if (!timeMatch) return trimmedTime;
-
-  let hours = Number(timeMatch[1]);
-  const minutes = timeMatch[2];
-  const meridiem = timeMatch[3].toUpperCase();
-
-  if (meridiem === 'AM') {
-    if (hours === 12) hours = 0;
-  } else if (hours !== 12) {
-    hours += 12;
+const to24Hour = (timeStr: string): string => {
+  if (!timeStr) return '';
+  const trimmed = timeStr.trim();
+  const match12 = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (match12) {
+    let hours = parseInt(match12[1], 10);
+    const minutes = match12[2];
+    const meridiem = match12[3].toUpperCase();
+    if (meridiem === 'AM') {
+      if (hours === 12) hours = 0;
+    } else {
+      if (hours !== 12) hours += 12;
+    }
+    return `${String(hours).padStart(2, '0')}:${minutes}`;
   }
+  const match24 = trimmed.match(/^(\d{1,2}):(\d{2})$/);
+  if (match24) {
+    const hours = parseInt(match24[1], 10);
+    const minutes = match24[2];
+    return `${String(hours).padStart(2, '0')}:${minutes}`;
+  }
+  return trimmed;
+};
 
-  return `${String(hours).padStart(2, '0')}:${minutes}`;
+const to12Hour = (timeStr: string): string => {
+  if (!timeStr) return '';
+  const trimmed = timeStr.trim();
+  const match12 = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (match12) {
+    const hours = parseInt(match12[1], 10);
+    const minutes = match12[2];
+    const meridiem = match12[3].toUpperCase();
+    return `${hours}:${minutes} ${meridiem}`;
+  }
+  const match24 = trimmed.match(/^(\d{1,2}):(\d{2})$/);
+  if (match24) {
+    let hours = parseInt(match24[1], 10);
+    const minutes = match24[2];
+    const meridiem = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    if (hours === 0) hours = 12;
+    return `${hours}:${minutes} ${meridiem}`;
+  }
+  return trimmed;
 };
 
 export default function AppointmentsPage() {
@@ -82,7 +107,7 @@ export default function AppointmentsPage() {
           typeof a.date === 'string' && typeof a.time === 'string',
       )
       .filter(a => a.date === selectedDate)
-      .sort((a, b) => a.time.localeCompare(b.time));
+      .sort((a, b) => to24Hour(a.time).localeCompare(to24Hour(b.time)));
   }, [allAppointments, selectedDate]);
 
   const appointmentsByDate = useMemo(() => {
@@ -121,7 +146,7 @@ export default function AppointmentsPage() {
       setFormData({
         name: appt.name,
         phone: appt.phone,
-        time: appt.time,
+        time: to24Hour(appt.time),
         doctor_name: appt.doctor_name || 'Dr. Kautilya Swaroop',
         duration_minutes: appt.duration_minutes || 30,
         dental_problem: appt.dental_problem || '',
@@ -149,7 +174,7 @@ export default function AppointmentsPage() {
         name: formData.name,
         phone: formData.phone,
         date: selectedDate,
-        time: normalizeAppointmentTime(formData.time),
+        time: to12Hour(formData.time),
         doctor_name: formData.doctor_name,
         duration_minutes: formData.duration_minutes,
         dental_problem: formData.dental_problem || undefined,
@@ -214,11 +239,11 @@ export default function AppointmentsPage() {
         <div 
           key={dateString} 
           onClick={() => setSelectedDate(dateString)}
-          className={`relative p-1 sm:p-2 border border-gray-100 min-h-[48px] sm:min-h-[100px] cursor-pointer transition-colors group flex flex-col items-center pt-2 sm:pt-3 hover:bg-blue-50
-            ${isSelected ? 'bg-blue-50/80 border-blue-200' : 'bg-white'}`}
+          className={`relative p-1 sm:p-2 border border-gray-100 min-h-[48px] sm:min-h-[100px] cursor-pointer transition-colors group flex flex-col items-center pt-2 sm:pt-3 hover:bg-emerald-50
+            ${isSelected ? 'bg-emerald-50/80 border-emerald-200' : 'bg-white'}`}
         >
           <span className={`w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-full text-xs sm:text-sm font-medium mb-0.5 sm:mb-1
-            ${isSelected ? 'bg-blue-600 text-white shadow-md' : isToday ? 'bg-blue-100 text-blue-800' : 'text-gray-700 group-hover:text-blue-600'}`}>
+            ${isSelected ? 'bg-[#176e56] text-white shadow-md' : isToday ? 'bg-emerald-100 text-emerald-800' : 'text-gray-700 group-hover:text-emerald-700'}`}>
             {i}
           </span>
           {count > 0 && (
@@ -253,14 +278,14 @@ export default function AppointmentsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-6 gap-4">
         <div>
           <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-            <CalendarIcon className="w-8 h-8 text-blue-600" />
+            <CalendarIcon className="w-8 h-8 text-[#176e56]" />
             Appointments
           </h2>
           <p className="text-gray-500 mt-1">Manage patient bookings and schedule</p>
         </div>
         <button
           onClick={() => handleOpenModal()}
-          className="px-5 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition shadow-sm flex items-center"
+          className="px-5 py-2.5 bg-[#176e56] text-white font-medium rounded-lg hover:bg-[#155944] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition shadow-sm flex items-center cursor-pointer"
         >
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -308,11 +333,11 @@ export default function AppointmentsPage() {
             ) : (
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-0.5">Schedule</p>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-[#176e56] mb-0.5">Schedule</p>
                   <div className="flex items-center gap-2">
                     <h3 className="text-base font-bold text-gray-900 leading-tight">{formatDateForDisplay(selectedDate)}</h3>
                     {appointmentsForDate && appointmentsForDate.length > 0 && (
-                      <span className="text-xs font-bold bg-blue-600 text-white rounded-full px-2 py-0.5">{appointmentsForDate.length}</span>
+                      <span className="text-xs font-bold bg-[#176e56] text-white rounded-full px-2 py-0.5">{appointmentsForDate.length}</span>
                     )}
                   </div>
                 </div>
@@ -365,8 +390,8 @@ export default function AppointmentsPage() {
                             {typeof appt.date === 'string' ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(appt.date)) : '—'}
                           </span>
                           {typeof appt.time === 'string' && (
-                            <span className="text-xs text-blue-600 flex items-center gap-1">
-                              <Clock className="w-3 h-3" />{appt.time}
+                            <span className="text-xs text-emerald-700 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />{to12Hour(appt.time)}
                             </span>
                           )}
                         </div>
@@ -382,26 +407,26 @@ export default function AppointmentsPage() {
               </div>
             ) : appointmentsForDate === undefined ? (
               <div className="py-10 text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-[#176e56] border-t-transparent"></div>
               </div>
             ) : appointmentsForDate.length === 0 ? (
               <div className="py-12 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200">
                 <CalendarIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
                 <p>No appointments for this date.</p>
-                <button onClick={() => handleOpenModal()} className="mt-4 text-blue-600 font-medium hover:underline text-sm">Create one now</button>
+                <button onClick={() => handleOpenModal()} className="mt-4 text-emerald-700 font-medium hover:underline text-sm">Create one now</button>
               </div>
             ) : (
               appointmentsForDate.map((appt, index) => {
                 const initials = (appt.name || '?').split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase();
                 const avatarColors = [
-                  'bg-blue-100 text-blue-700',
-                  'bg-violet-100 text-violet-700',
-                  'bg-emerald-100 text-emerald-700',
-                  'bg-amber-100 text-amber-700',
-                  'bg-rose-100 text-rose-700',
-                  'bg-cyan-100 text-cyan-700',
+                  'bg-emerald-100 text-emerald-800',
+                  'bg-teal-100 text-teal-800',
+                  'bg-slate-100 text-slate-800',
+                  'bg-amber-100 text-amber-800',
+                  'bg-rose-100 text-rose-800',
+                  'bg-cyan-100 text-cyan-800',
                 ];
-                const accentColors = ['border-blue-400', 'border-violet-400', 'border-emerald-400', 'border-amber-400', 'border-rose-400', 'border-cyan-400'];
+                const accentColors = ['border-[#176e56]', 'border-teal-500', 'border-emerald-400', 'border-amber-400', 'border-rose-400', 'border-cyan-400'];
                 const color = avatarColors[index % avatarColors.length];
                 const accent = accentColors[index % accentColors.length];
 
@@ -410,8 +435,8 @@ export default function AppointmentsPage() {
                     {/* Top row: time + actions */}
                     <div className="flex items-center justify-between px-4 pt-3 pb-2">
                       <div className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-blue-500" />
-                        <span className="text-sm font-bold text-blue-600 tracking-tight">{appt.time}</span>
+                        <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="text-sm font-bold text-emerald-800 tracking-tight">{to12Hour(appt.time)}</span>
                         {appt.duration_minutes && (
                           <span className="text-xs text-gray-400 font-medium">· {appt.duration_minutes}min</span>
                         )}
@@ -419,7 +444,7 @@ export default function AppointmentsPage() {
                       <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => handleOpenModal(appt)}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition"
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 transition"
                           title="Edit"
                         >
                           <Pencil className="w-3.5 h-3.5" />
@@ -443,7 +468,7 @@ export default function AppointmentsPage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-gray-900 text-sm leading-tight truncate">{appt.name}</p>
-                        <a href={`tel:${appt.phone}`} className="text-xs text-gray-500 hover:text-blue-600 transition flex items-center gap-1 mt-0.5">
+                        <a href={`tel:${appt.phone}`} className="text-xs text-gray-500 hover:text-emerald-700 transition flex items-center gap-1 mt-0.5">
                           <Phone className="w-3 h-3" />{appt.phone}
                         </a>
                       </div>
@@ -480,35 +505,35 @@ export default function AppointmentsPage() {
               <div className="grid grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Name</label>
-                  <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
+                  <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 focus:bg-white transition" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Phone</label>
-                  <input required type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
+                  <input required type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 focus:bg-white transition" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Time</label>
-                  <input required type="time" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
+                  <input required type="time" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 focus:bg-white transition" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Doctor</label>
-                  <input type="text" value={formData.doctor_name} onChange={e => setFormData({...formData, doctor_name: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
+                  <input type="text" value={formData.doctor_name} onChange={e => setFormData({...formData, doctor_name: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 focus:bg-white transition" />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Dental Problem</label>
-                <input type="text" value={formData.dental_problem} onChange={e => setFormData({...formData, dental_problem: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition" placeholder="e.g. Checkup, Toothache, Root Canal" />
+                <input type="text" value={formData.dental_problem} onChange={e => setFormData({...formData, dental_problem: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 focus:bg-white transition" placeholder="e.g. Checkup, Toothache, Root Canal" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Notes</label>
-                <textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition resize-none" rows={3}></textarea>
+                <textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 focus:bg-white transition resize-none" rows={3}></textarea>
               </div>
               
               <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition">Cancel</button>
-                <button type="submit" className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 shadow-sm transition">Save Appointment</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition cursor-pointer">Cancel</button>
+                <button type="submit" className="px-6 py-2.5 bg-[#176e56] text-white font-medium rounded-xl hover:bg-[#155944] shadow-sm transition cursor-pointer">Save Appointment</button>
               </div>
             </form>
           </div>

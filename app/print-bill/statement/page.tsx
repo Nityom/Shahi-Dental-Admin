@@ -220,7 +220,7 @@ function StatementContent() {
         </div>
         <button
           onClick={() => window.print()}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg"
+          className="w-full bg-[#176e56] hover:bg-[#155944] text-white font-semibold py-2 px-6 rounded-lg cursor-pointer"
         >
           Print All Bills
         </button>
@@ -242,7 +242,7 @@ function StatementContent() {
       <div className="no-print flex justify-center mt-6 mb-8">
         <button
           onClick={() => window.print()}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg shadow-lg"
+          className="bg-[#176e56] hover:bg-[#155944] text-white font-semibold py-3 px-8 rounded-lg shadow-lg cursor-pointer"
         >
           Print All Bills
         </button>

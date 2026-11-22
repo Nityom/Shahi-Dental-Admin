@@ -294,13 +294,13 @@ export default function CrownManagementPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-md shadow-blue-500/20">
+            <div className="p-3 bg-[#176e56] text-white rounded-2xl shadow-md shadow-emerald-700/20">
               <Crown size={26} />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-black text-gray-900 tracking-tight">Crown Patients & Revenue</h1>
-                <span className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded text-xs border border-blue-200 flex items-center gap-1">
+                <span className="bg-emerald-50 text-emerald-800 font-bold px-2 py-0.5 rounded text-xs border border-emerald-200 flex items-center gap-1">
                   <Sparkles size={12} /> Auto-Linked from Prescriptions
                 </span>
               </div>
@@ -325,7 +325,7 @@ export default function CrownManagementPage() {
                   setLoading(false);
                 }
               }}
-              className="p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition text-xs font-semibold flex items-center gap-1.5"
+              className="p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
               title="Clean up erroneous records created from plain RCT prescriptions"
             >
               <Trash2 size={14} className="text-rose-500" />
@@ -333,14 +333,14 @@ export default function CrownManagementPage() {
             </button>
             <button
               onClick={() => fetchCrowns()}
-              className="p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition"
+              className="p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition cursor-pointer"
               title="Refresh"
             >
               <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
             </button>
             <button
               onClick={openAddModal}
-              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs md:text-sm font-bold shadow-sm transition"
+              className="flex items-center gap-2 px-4 py-2.5 bg-[#176e56] hover:bg-[#155944] text-white rounded-xl text-xs md:text-sm font-bold shadow-sm transition cursor-pointer"
             >
               <Plus size={16} />
               Add Crown Entry
@@ -351,9 +351,9 @@ export default function CrownManagementPage() {
         {/* Financial & Status KPI Cards (Single Crown Revenue & 4 Statuses) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
           {/* Total Crown Revenue */}
-          <div className="bg-blue-600 text-white p-4.5 rounded-2xl shadow-sm">
+          <div className="bg-[#176e56] text-white p-4.5 rounded-2xl shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-blue-100">Crown Revenue</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-100">Crown Revenue</span>
               <span className="p-1.5 bg-white/20 text-white rounded-lg">
                 <IndianRupee size={16} />
               </span>
@@ -361,7 +361,7 @@ export default function CrownManagementPage() {
             <div className="text-2xl md:text-3xl font-black text-white mt-2">
               ₹{metrics.totalRevenue.toLocaleString('en-IN')}
             </div>
-            <p className="text-[11px] text-blue-100 mt-1">From {metrics.totalRecords} crown records</p>
+            <p className="text-[11px] text-emerald-100 mt-1">From {metrics.totalRecords} crown records</p>
           </div>
 
           {/* 1. Crown Cutting */}
@@ -483,7 +483,7 @@ export default function CrownManagementPage() {
                   onClick={() => setStatusFilter(chip.id)}
                   className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                     statusFilter === chip.id
-                      ? 'bg-blue-600 text-white shadow-xs'
+                      ? 'bg-[#176e56] text-white shadow-xs'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/60'
                   }`}
                 >
@@ -552,7 +552,7 @@ export default function CrownManagementPage() {
                   onClick={() => setDateFilterType('cutting_date')}
                   className={`px-2.5 py-1 rounded-md text-xs font-bold transition ${
                     dateFilterType === 'cutting_date'
-                      ? 'bg-blue-600 text-white shadow-xs'
+                      ? 'bg-[#176e56] text-white shadow-xs'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
@@ -1084,7 +1084,7 @@ export default function CrownManagementPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl"
+                  className="px-4 py-2 bg-[#176e56] hover:bg-[#155944] text-white font-semibold rounded-xl cursor-pointer"
                 >
                   {isEditMode ? 'Update' : 'Save'}
                 </button>

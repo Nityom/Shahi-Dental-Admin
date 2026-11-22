@@ -310,7 +310,7 @@ export default function InstallmentsPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => loadData()}
-              className="px-3.5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs sm:text-sm font-medium transition shadow-sm flex items-center gap-1.5"
+              className="px-3.5 py-2 bg-[#176e56] text-white rounded-lg hover:bg-[#155944] text-xs sm:text-sm font-medium transition shadow-sm flex items-center gap-1.5 cursor-pointer"
             >
               <RefreshCw size={15} />
               <span>Refresh</span>
@@ -330,7 +330,7 @@ export default function InstallmentsPage() {
               placeholder="Search patient name, phone, bill no..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-8 text-xs sm:text-sm h-10 border-gray-300 focus:ring-2 focus:ring-blue-500"
+              className="pl-9 pr-8 text-xs sm:text-sm h-10 border-gray-300 focus:ring-2 focus:ring-emerald-500"
             />
             {searchQuery && (
               <button
@@ -343,8 +343,8 @@ export default function InstallmentsPage() {
           </div>
 
           {/* Calendar Date Picker */}
-          <div className="flex items-center gap-2 bg-gray-50 border border-gray-300 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
-            <CalendarIcon size={16} className="text-blue-600 shrink-0" />
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-300 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-transparent">
+            <CalendarIcon size={16} className="text-[#176e56] shrink-0" />
             <span className="text-xs font-semibold text-gray-700 whitespace-nowrap">Filter Date:</span>
             <input
               type="date"
@@ -382,7 +382,7 @@ export default function InstallmentsPage() {
             }}
             className={`px-3 py-1 rounded-full font-medium transition ${
               dateFilterMode === 'ALL'
-                ? 'bg-blue-600 text-white shadow-xs'
+                ? 'bg-[#176e56] text-white shadow-xs'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
@@ -395,7 +395,7 @@ export default function InstallmentsPage() {
             }}
             className={`px-3 py-1 rounded-full font-medium transition ${
               dateFilterMode === 'TODAY'
-                ? 'bg-blue-600 text-white shadow-xs'
+                ? 'bg-[#176e56] text-white shadow-xs'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
@@ -408,7 +408,7 @@ export default function InstallmentsPage() {
             }}
             className={`px-3 py-1 rounded-full font-medium transition ${
               dateFilterMode === 'YESTERDAY'
-                ? 'bg-blue-600 text-white shadow-xs'
+                ? 'bg-[#176e56] text-white shadow-xs'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
@@ -421,7 +421,7 @@ export default function InstallmentsPage() {
             }}
             className={`px-3 py-1 rounded-full font-medium transition ${
               dateFilterMode === 'THIS_MONTH'
-                ? 'bg-blue-600 text-white shadow-xs'
+                ? 'bg-[#176e56] text-white shadow-xs'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
@@ -429,7 +429,7 @@ export default function InstallmentsPage() {
           </button>
 
           {dateFilterMode !== 'ALL' && (
-            <span className="ml-auto text-blue-700 bg-blue-50 border border-blue-200 px-3 py-0.5 rounded-full font-medium flex items-center gap-1.5">
+            <span className="ml-auto text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-0.5 rounded-full font-medium flex items-center gap-1.5">
               <span>
                 Showing <b>{filteredBills.length}</b> bills
                 {dateFilterMode === 'TODAY' && ' for Today'}
@@ -477,13 +477,13 @@ export default function InstallmentsPage() {
         </div>
 
         {/* Total Collected */}
-        <div className="bg-blue-50 p-4 rounded-xl border border-blue-200/80 shadow-xs">
+        <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200/80 shadow-xs">
           <div className="flex items-center justify-between mb-1">
-            <h4 className="text-xs font-semibold text-blue-800 uppercase tracking-wider">Total Collected</h4>
-            <IndianRupee className="h-4 w-4 text-blue-600" />
+            <h4 className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">Total Collected</h4>
+            <IndianRupee className="h-4 w-4 text-emerald-600" />
           </div>
-          <p className="text-2xl font-bold text-blue-700">₹{totalCollected.toLocaleString('en-IN')}</p>
-          <p className="text-xs text-blue-600/90 mt-1">Cash + Online total</p>
+          <p className="text-2xl font-bold text-emerald-700">₹{totalCollected.toLocaleString('en-IN')}</p>
+          <p className="text-xs text-emerald-600/90 mt-1">Cash + Online total</p>
         </div>
 
         {/* Total Pending */}
@@ -607,7 +607,7 @@ export default function InstallmentsPage() {
                 setDateFilterMode('ALL');
                 setSelectedDate('');
               }}
-              className="mt-4 px-4 py-2 bg-blue-50 text-blue-700 font-medium text-xs rounded-lg hover:bg-blue-100 transition"
+              className="mt-4 px-4 py-2 bg-emerald-50 text-emerald-800 font-medium text-xs rounded-lg hover:bg-emerald-100 transition cursor-pointer"
             >
               Reset All Filters
             </button>
@@ -634,7 +634,7 @@ export default function InstallmentsPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {paginatedBills.map((bill) => (
-                      <tr key={bill.id} className="hover:bg-blue-50/40 transition">
+                      <tr key={bill.id} className="hover:bg-emerald-50/40 transition">
                         <td className="p-3 font-semibold text-gray-900">
                           {bill.patient_name || 'N/A'}
                         </td>
@@ -689,7 +689,7 @@ export default function InstallmentsPage() {
                             </button>
                             <button
                               onClick={() => window.open(`/print-dues?billId=${bill.id}`, '_blank')}
-                              className="px-2.5 py-1 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition flex items-center gap-1"
+                              className="px-2.5 py-1 text-xs font-medium text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded transition flex items-center gap-1"
                               title="Print Dues Slip"
                             >
                               <Printer size={13} />

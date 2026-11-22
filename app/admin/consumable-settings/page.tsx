@@ -218,7 +218,7 @@ const ConsumableSettingsPage = () => {
         </div>
         <Link
           href="/admin/treatment-links"
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-md shadow-blue-500/20 transition self-start sm:self-auto"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#176e56] hover:bg-[#155944] text-white text-xs font-semibold rounded-xl shadow-md shadow-emerald-700/20 transition self-start sm:self-auto"
         >
           <Link2 size={16} />
           Go to Treatment Auto-Link
@@ -226,9 +226,9 @@ const ConsumableSettingsPage = () => {
         </Link>
       </div>
 
-      <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 flex items-center justify-between gap-4">
+      <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/80 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-sm">
+          <div className="p-2.5 bg-[#176e56] text-white rounded-xl shadow-sm">
             <Link2 size={20} />
           </div>
           <div>

@@ -1,6 +1,52 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
+export function to24Hour(timeStr: string): string {
+  if (!timeStr) return "";
+  const trimmed = timeStr.trim();
+  const match12 = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (match12) {
+    let hours = parseInt(match12[1], 10);
+    const minutes = match12[2];
+    const meridiem = match12[3].toUpperCase();
+    if (meridiem === "AM") {
+      if (hours === 12) hours = 0;
+    } else {
+      if (hours !== 12) hours += 12;
+    }
+    return `${String(hours).padStart(2, "0")}:${minutes}`;
+  }
+  const match24 = trimmed.match(/^(\d{1,2}):(\d{2})$/);
+  if (match24) {
+    const hours = parseInt(match24[1], 10);
+    const minutes = match24[2];
+    return `${String(hours).padStart(2, "0")}:${minutes}`;
+  }
+  return trimmed;
+}
+
+export function to12Hour(timeStr: string): string {
+  if (!timeStr) return "";
+  const trimmed = timeStr.trim();
+  const match12 = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (match12) {
+    const hours = parseInt(match12[1], 10);
+    const minutes = match12[2];
+    const meridiem = match12[3].toUpperCase();
+    return `${hours}:${minutes} ${meridiem}`;
+  }
+  const match24 = trimmed.match(/^(\d{1,2}):(\d{2})$/);
+  if (match24) {
+    let hours = parseInt(match24[1], 10);
+    const minutes = match24[2];
+    const meridiem = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    if (hours === 0) hours = 12;
+    return `${hours}:${minutes} ${meridiem}`;
+  }
+  return trimmed;
+}
+
 /** One-time migration – run via: npx convex run appointments:migrateFields */
 export const migrateFields = mutation({
   args: {},
@@ -37,20 +83,54 @@ export const migrateFields = mutation({
   },
 });
 
+/** Normalizes all appointment times to standard 12-hour format */
+export const normalizeAllAppointmentTimes = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("appointments").collect();
+    let updated = 0;
+    for (const doc of all) {
+      if (!doc.time) continue;
+      const normalized = to12Hour(doc.time);
+      if (normalized !== doc.time) {
+        await ctx.db.patch(doc._id, {
+          time: normalized,
+          updated_at: Date.now(),
+        });
+        updated++;
+      }
+    }
+    return { total: all.length, updated };
+  },
+});
+
 export const getBookedSlots = query({
   args: {
     date: v.string(),
     doctor_name: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    let q = ctx.db.query("appointments").withIndex("by_date", (q) => q.eq("date", args.date));
+    const q = ctx.db.query("appointments").withIndex("by_date", (q) => q.eq("date", args.date));
     const appointments = await q.collect();
     
     // Filter out CANCELLED appointments and match doctor if provided
-    return appointments
-      .filter((a) => typeof a.time === "string")
-      .filter(a => !args.doctor_name || a.doctor_name === args.doctor_name)
-      .map(a => a.time);
+    const bookedTimes = new Set<string>();
+    for (const a of appointments) {
+      if (!a.time || a.status === "CANCELLED") continue;
+      if (args.doctor_name && a.doctor_name && a.doctor_name !== args.doctor_name) continue;
+      
+      const h12 = to12Hour(a.time);
+      if (h12) {
+        bookedTimes.add(h12);
+        const parts = h12.split(":");
+        if (parts[0].length === 1) {
+          bookedTimes.add(`0${h12}`);
+        }
+      }
+      const h24 = to24Hour(a.time);
+      if (h24) bookedTimes.add(h24);
+    }
+    return Array.from(bookedTimes);
   },
 });
 
@@ -67,23 +147,33 @@ export const create = mutation({
     is_offline: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    // Check for double booking
+    const canonicalTime = to12Hour(args.time);
+    const target24 = to24Hour(args.time);
+
+    // Check for double booking against active appointments on the same date
     const existing = await ctx.db
       .query("appointments")
-      .withIndex("by_doctor_date_time", (q) => 
-        q.eq("doctor_name", args.doctor_name)
-         .eq("date", args.date)
-         .eq("time", args.time)
-      )
+      .withIndex("by_date", (q) => q.eq("date", args.date))
       .collect();
     
-    if (existing.length > 0) {
+    const isDoubleBooked = existing.some((a) => {
+      if (a.status === "CANCELLED") return false;
+      if (!a.time) return false;
+      if (to24Hour(a.time) !== target24) return false;
+      if (!args.doctor_name || !a.doctor_name || args.doctor_name === a.doctor_name) {
+        return true;
+      }
+      return false;
+    });
+
+    if (isDoubleBooked) {
       throw new Error("This slot is already booked for this doctor.");
     }
     
     const now = Date.now();
     const appointmentId = await ctx.db.insert("appointments", {
       ...args,
+      time: canonicalTime,
       created_at: now,
       updated_at: now,
     });
@@ -157,24 +247,39 @@ export const update = mutation({
       const newDoctor = updates.doctor_name ?? current.doctor_name;
       const newStatus = updates.status ?? current.status;
       
-      const existing = await ctx.db
-        .query("appointments")
-        .withIndex("by_doctor_date_time", (q) => 
-          q.eq("doctor_name", newDoctor)
-           .eq("date", newDate)
-           .eq("time", newTime)
-        )
-        .collect();
-        
-      if (existing.some(a => a._id !== id)) {
-        throw new Error("This slot is already booked for this doctor.");
+      if (newStatus !== "CANCELLED" && newDate && newTime) {
+        const target24 = to24Hour(newTime);
+        const existing = await ctx.db
+          .query("appointments")
+          .withIndex("by_date", (q) => q.eq("date", newDate))
+          .collect();
+
+        const isConflict = existing.some((a) => {
+          if (a._id === id) return false;
+          if (a.status === "CANCELLED") return false;
+          if (!a.time) return false;
+          if (to24Hour(a.time) !== target24) return false;
+          if (!newDoctor || !a.doctor_name || newDoctor === a.doctor_name) {
+            return true;
+          }
+          return false;
+        });
+
+        if (isConflict) {
+          throw new Error("This slot is already booked for this doctor.");
+        }
       }
     }
     
-    await ctx.db.patch(id, {
+    const patchPayload: Record<string, any> = {
       ...updates,
       updated_at: Date.now(),
-    });
+    };
+    if (updates.time) {
+      patchPayload.time = to12Hour(updates.time);
+    }
+
+    await ctx.db.patch(id, patchPayload);
     return id;
   },
 });

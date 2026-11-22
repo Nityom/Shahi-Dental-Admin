@@ -119,7 +119,7 @@ function PrintDuesContent() {
           <p className="text-gray-600 mb-4">{error || 'Bill not found'}</p>
           <button
             onClick={() => window.history.back()}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-medium"
+            className="px-4 py-2 bg-[#176e56] text-white rounded hover:bg-[#155944] transition font-medium cursor-pointer"
           >
             Go Back
           </button>

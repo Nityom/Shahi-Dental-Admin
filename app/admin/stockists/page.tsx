@@ -616,7 +616,7 @@ export default function StockistBillsPage() {
 
           <button
             onClick={handleOpenNewBill}
-            className="flex items-center space-x-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm hover:shadow transition-all"
+            className="flex items-center space-x-1.5 px-4 py-2 text-sm font-medium text-white bg-[#176e56] hover:bg-[#155944] rounded-xl shadow-sm hover:shadow transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>+ Add Purchase Bill</span>
@@ -822,7 +822,7 @@ export default function StockistBillsPage() {
               </p>
               <button
                 onClick={handleOpenNewBill}
-                className="inline-flex items-center space-x-1.5 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
+                className="inline-flex items-center space-x-1.5 px-4 py-2 bg-[#176e56] text-white rounded-xl text-sm font-medium hover:bg-[#155944] transition-colors shadow-sm cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>+ Add First Purchase Bill</span>
@@ -1491,7 +1491,7 @@ export default function StockistBillsPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-all flex items-center space-x-1.5"
+                  className="px-5 py-2 text-sm font-semibold text-white bg-[#176e56] hover:bg-[#155944] rounded-xl shadow-sm transition-all flex items-center space-x-1.5 cursor-pointer"
                 >
                   {submitting && <RefreshCw className="w-4 h-4 animate-spin" />}
                   <span>{editingBill ? 'Save Changes' : 'Save Purchase Bill'}</span>
@@ -1729,7 +1729,7 @@ export default function StockistBillsPage() {
               <div className="flex items-center space-x-2">
                 <button
                   onClick={handlePrintLedger}
-                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#176e56] text-white rounded-xl text-xs font-semibold hover:bg-[#155944] transition-colors shadow-sm cursor-pointer"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>Print Slip</span>
@@ -2010,7 +2010,7 @@ export default function StockistBillsPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-all flex items-center space-x-1.5"
+                  className="px-5 py-2 text-sm font-semibold text-white bg-[#176e56] hover:bg-[#155944] rounded-xl shadow-sm transition-all flex items-center space-x-1.5 cursor-pointer"
                 >
                   {submitting && <RefreshCw className="w-4 h-4 animate-spin" />}
                   <span>Save Stockist</span>

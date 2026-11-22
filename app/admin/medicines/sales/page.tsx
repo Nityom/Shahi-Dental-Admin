@@ -687,7 +687,7 @@ export default function SalesReportPage() {
                       onClick={() => handlePeriodChange(p, setReportType, setStartDate, setEndDate)}
                       className={`px-3 py-1 text-xs rounded-full border transition font-medium cursor-pointer ${
                         active
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                          ? 'bg-[#176e56] text-white border-[#176e56] shadow-sm'
                           : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
                       }`}
                     >
@@ -701,7 +701,7 @@ export default function SalesReportPage() {
                 <button
                   onClick={fetchSalesReport}
                   disabled={isLoading}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center transition disabled:opacity-50 cursor-pointer"
+                  className="px-6 py-2 bg-[#176e56] text-white rounded-md hover:bg-[#155944] focus:outline-none focus:ring-2 focus:ring-emerald-500 flex items-center transition disabled:opacity-50 cursor-pointer"
                 >
                   <RefreshCw size={16} className={`mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                   {isLoading ? 'Refreshing Report...' : 'Refresh Report'}
@@ -1026,7 +1026,7 @@ export default function SalesReportPage() {
                       onClick={() => handlePeriodChange(p, setPatientReportType, setPatientStartDate, setPatientEndDate)}
                       className={`px-3 py-1 text-xs rounded-full border transition font-medium cursor-pointer ${
                         active
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                          ? 'bg-[#176e56] text-white border-[#176e56] shadow-sm'
                           : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
                       }`}
                     >
@@ -1040,7 +1040,7 @@ export default function SalesReportPage() {
                 <button
                   onClick={fetchPatientSalesReport}
                   disabled={isLoadingPatients}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center transition disabled:opacity-50 cursor-pointer"
+                  className="px-6 py-2 bg-[#176e56] text-white rounded-md hover:bg-[#155944] focus:outline-none focus:ring-2 focus:ring-emerald-500 flex items-center transition disabled:opacity-50 cursor-pointer"
                 >
                   <RefreshCw size={16} className={`mr-2 ${isLoadingPatients ? 'animate-spin' : ''}`} />
                   {isLoadingPatients ? 'Refreshing Report...' : 'Refresh Report'}
@@ -1263,7 +1263,7 @@ export default function SalesReportPage() {
                       onClick={() => handlePeriodChange(p, setInventoryReportType, setInventoryStartDate, setInventoryEndDate)}
                       className={`px-3 py-1 text-xs rounded-full border transition font-medium cursor-pointer ${
                         active
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                          ? 'bg-[#176e56] text-white border-[#176e56] shadow-sm'
                           : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
                       }`}
                     >
@@ -1277,7 +1277,7 @@ export default function SalesReportPage() {
                 <button
                   onClick={fetchInventorySalesReport}
                   disabled={isLoadingInventory}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center transition disabled:opacity-50 cursor-pointer"
+                  className="px-6 py-2 bg-[#176e56] text-white rounded-md hover:bg-[#155944] focus:outline-none focus:ring-2 focus:ring-emerald-500 flex items-center transition disabled:opacity-50 cursor-pointer"
                 >
                   <RefreshCw size={16} className={`mr-2 ${isLoadingInventory ? 'animate-spin' : ''}`} />
                   {isLoadingInventory ? 'Refreshing Report...' : 'Refresh Report'}
@@ -1359,7 +1359,7 @@ export default function SalesReportPage() {
                     onClick={() => setInventoryViewMode('items')}
                     className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
                       inventoryViewMode === 'items'
-                        ? 'bg-blue-600 text-white shadow-sm'
+                        ? 'bg-[#176e56] text-white shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
@@ -1370,7 +1370,7 @@ export default function SalesReportPage() {
                     onClick={() => setInventoryViewMode('daily')}
                     className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
                       inventoryViewMode === 'daily'
-                        ? 'bg-blue-600 text-white shadow-sm'
+                        ? 'bg-[#176e56] text-white shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
@@ -1381,7 +1381,7 @@ export default function SalesReportPage() {
 
               {isLoadingInventory ? (
                 <div className="p-8 text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#176e56] mx-auto"></div>
                   <p className="mt-4 text-gray-600 font-medium">Loading inventory sales & usage data...</p>
                 </div>
               ) : inventoryError ? (
@@ -1390,7 +1390,7 @@ export default function SalesReportPage() {
                   <p className="text-sm">{inventoryError}</p>
                   <button
                     onClick={fetchInventorySalesReport}
-                    className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    className="mt-4 px-4 py-2 bg-[#176e56] text-white rounded-md hover:bg-[#155944]"
                   >
                     Try Again
                   </button>
@@ -1522,7 +1522,7 @@ export default function SalesReportPage() {
                   type="button"
                   onClick={fetchDiagnosticReport}
                   disabled={isLoadingDiagnostics}
-                  className="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center transition disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-1.5 bg-[#176e56] text-white text-sm font-medium rounded-md hover:bg-[#155944] focus:outline-none focus:ring-2 focus:ring-emerald-500 flex items-center transition disabled:opacity-50 cursor-pointer"
                 >
                   <RefreshCw size={14} className={`mr-1.5 ${isLoadingDiagnostics ? 'animate-spin' : ''}`} />
                   {isLoadingDiagnostics ? 'Refreshing...' : 'Refresh Report'}
@@ -1613,7 +1613,7 @@ export default function SalesReportPage() {
                       onClick={() => handlePeriodChange(p, setDiagnosticReportType, setDiagnosticStartDate, setDiagnosticEndDate)}
                       className={`px-3 py-1 text-xs rounded-full border transition font-medium cursor-pointer ${
                         active
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                          ? 'bg-[#176e56] text-white border-[#176e56] shadow-sm'
                           : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
                       }`}
                     >

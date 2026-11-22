@@ -435,7 +435,7 @@ function RegistersContent() {
               </button>
               <button
                 onClick={openAddModal}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs md:text-sm font-semibold shadow-sm transition"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-[#176e56] hover:bg-[#155944] text-white rounded-xl text-xs md:text-sm font-semibold shadow-sm transition cursor-pointer"
               >
                 <IndianRupee size={16} />
                 Record Payment
@@ -444,7 +444,7 @@ function RegistersContent() {
           ) : (
             <button
               onClick={openAddModal}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs md:text-sm font-semibold shadow-sm transition"
+              className="flex items-center gap-2 px-4 py-2 bg-[#176e56] hover:bg-[#155944] text-white rounded-xl text-xs md:text-sm font-semibold shadow-sm transition cursor-pointer"
             >
               <Plus size={16} />
               Add Entry
@@ -472,9 +472,9 @@ function RegistersContent() {
                   setSearchTerm('');
                   router.push(`/admin/registers?tab=${newTab}`);
                 }}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition ${
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
                   isActive
-                    ? 'bg-blue-600 text-white shadow-sm'
+                    ? 'bg-[#176e56] text-white shadow-sm'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }`}
               >
@@ -1381,7 +1381,7 @@ function RegistersContent() {
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border rounded-xl hover:bg-gray-100">
                   Cancel
                 </button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl">
+                <button type="submit" className="px-4 py-2 bg-[#176e56] hover:bg-[#155944] text-white font-semibold rounded-xl cursor-pointer">
                   {isEditMode ? 'Update' : 'Save'}
                 </button>
               </div>
