@@ -119,6 +119,7 @@ function PrintBillContent() {
         const explicitDoc = searchParams.get('doctorName');
         let docName = explicitDoc || doctorNameParam;
         let sigUrl = explicitSig || signatureParam;
+        let resolvedFromDoctors = false;
 
         if (bill.prescription_id) {
           try {
@@ -131,20 +132,26 @@ function PrintBillContent() {
                 const match = (allDocs || []).find((d: any) => d.name.toLowerCase() === rxDocName.toLowerCase());
                 if (match?.signature_url) {
                   sigUrl = match.signature_url;
+                  resolvedFromDoctors = true;
                 } else if (rxDocName.toLowerCase().includes('anjali')) {
                   sigUrl = 'sign1.png';
+                  resolvedFromDoctors = true;
                 }
               }
             }
           } catch (e) {
             console.error('Error resolving prescription doctor for bill:', e);
           }
-        } else if (!explicitSig || explicitSig === 'sign.png') {
+        }
+
+        if (!resolvedFromDoctors && (!explicitSig || explicitSig === 'sign.png')) {
           try {
             const allDocs = await convex.query(api.doctors.list, {});
             const match = (allDocs || []).find((d: any) => d.name.toLowerCase() === docName.toLowerCase());
             if (match?.signature_url) {
               sigUrl = match.signature_url;
+            } else if (docName.toLowerCase().includes('anjali')) {
+              sigUrl = 'sign1.png';
             }
           } catch {}
         }

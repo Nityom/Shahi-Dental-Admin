@@ -60,14 +60,19 @@ export function BillHistoryWithPayments({
 
   const clearSelection = () => setSelectedBillIds(new Set());
 
+  const safeSignatureParam =
+    defaultSignature && !defaultSignature.startsWith('data:') && defaultSignature.length <= 256
+      ? defaultSignature
+      : null;
+
   const handlePrintSelected = () => {
     const ids = Array.from(selectedBillIds);
     if (ids.length === 0) return;
     const params = new URLSearchParams({
       billIds: ids.join(','),
-      signature: defaultSignature,
       doctorName: defaultDoctorName,
     });
+    if (safeSignatureParam) params.set('signature', safeSignatureParam);
     window.open(`/print-bill/statement?${params.toString()}`, '_blank');
   };
 
@@ -75,9 +80,9 @@ export function BillHistoryWithPayments({
     const ids = fullList.map((b) => b.id).filter(Boolean) as string[];
     const params = new URLSearchParams({
       billIds: ids.join(','),
-      signature: defaultSignature,
       doctorName: defaultDoctorName,
     });
+    if (safeSignatureParam) params.set('signature', safeSignatureParam);
     window.open(`/print-bill/statement?${params.toString()}`, '_blank');
   };
 
@@ -209,7 +214,14 @@ export function BillHistoryWithPayments({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => window.open(`/print-dues?billId=${bill.id}&signature=${defaultSignature}&doctorName=${encodeURIComponent(defaultDoctorName)}`, '_blank')}
+                      onClick={() => {
+                        const params = new URLSearchParams({
+                          billId: String(bill.id),
+                          doctorName: defaultDoctorName,
+                        });
+                        if (safeSignatureParam) params.set('signature', safeSignatureParam);
+                        window.open(`/print-dues?${params.toString()}`, '_blank');
+                      }}
                       className="mt-1 text-xs flex items-center gap-1 border-emerald-300 text-emerald-800 hover:bg-emerald-50"
                       title="Print clinic-ready extraction/park dues report"
                     >

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { getAllMedicines, deductMedicineStock } from '@/services/medicine';
 import { Medicine } from '@/services/medicine';
 import { addPrescription, Prescription, getPrescriptionById, updatePrescription } from '@/services/prescription';
@@ -13,7 +13,7 @@ import { createBill, Bill, getBillByPrescriptionId, updateBill } from '@/service
 import { paymentTransactionService } from '@/services/payment-transactions';
 import { deductInventoryStock } from '@/services/inventory';
 import { getEnabledConsumablesForDeduction } from '@/services/consumables';
-import { deductStockForTreatments } from '@/services/treatmentLinks';
+import { deductStockForTreatments, getAllTreatmentLinks } from '@/services/treatmentLinks';
 import { materialTransactionService } from '@/services/registers';
 import { doctorService } from '@/services/doctors';
 import { Doctor } from '@/types/doctor';
@@ -84,6 +84,10 @@ const TEETH_BY_QUADRANT = {
     ...['A', 'B', 'C', 'D', 'E'].map((letter) => ({ number: letter, name: `Tooth ${letter}` }))
   ]
 };
+
+// Storage keys for auto-saved dental procedures catalog
+const PROCEDURE_CATALOG_STORAGE_KEY = 'shahi_custom_procedures_v1';
+const PROCEDURE_REMOVED_STORAGE_KEY = 'shahi_removed_procedures_v1';
 
 // Default dental procedures with prices (for Treatment Done section)
 const DEFAULT_DENTAL_PROCEDURES = [
@@ -229,9 +233,16 @@ const PrescriptionPage = () => {
   const [newDiseaseName, setNewDiseaseName] = useState<string>('');
   const [showAddDiseaseForm, setShowAddDiseaseForm] = useState<boolean>(false);
   const [dentalProcedures, setDentalProcedures] = useState<{ id: number; name: string; price: number }[]>(DEFAULT_DENTAL_PROCEDURES);
-  const [newTreatmentName, setNewTreatmentName] = useState<string>('');
-  const [newTreatmentPrice, setNewTreatmentPrice] = useState<string>('');
-  const [showAddTreatmentForm, setShowAddTreatmentForm] = useState<boolean>(false);
+  const [selectedTreatmentName, setSelectedTreatmentName] = useState<string>('');
+  const [selectedTreatmentPrice, setSelectedTreatmentPrice] = useState<string>('');
+  const [selectedTreatmentQty, setSelectedTreatmentQty] = useState<number>(1);
+  const [selectedTreatmentDate, setSelectedTreatmentDate] = useState<string>('');
+  const [showProcedureSuggestions, setShowProcedureSuggestions] = useState<boolean>(false);
+  const [highlightedProcedureIdx, setHighlightedProcedureIdx] = useState<number>(-1);
+  const [procedureCatalogNotice, setProcedureCatalogNotice] = useState<string>('');
+  const procedureComboboxRef = useRef<HTMLDivElement>(null);
+  const procedureInputRef = useRef<HTMLInputElement>(null);
+  const procedureNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [medicineOptions, setMedicineOptions] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -585,21 +596,214 @@ const PrescriptionPage = () => {
     }
   };
 
-  // Handler for adding a new treatment to the list
-  const handleAddNewTreatment = () => {
-    if (newTreatmentName.trim() && newTreatmentPrice.trim()) {
-      const price = parseFloat(newTreatmentPrice) || 0;
-      const newId = Math.max(...dentalProcedures.map(p => p.id), 0) + 1;
-      const newProcedure = {
-        id: newId,
-        name: newTreatmentName.trim(),
-        price
-      };
-      setDentalProcedures([...dentalProcedures, newProcedure]);
-      setNewTreatmentName('');
-      setNewTreatmentPrice('');
-      setShowAddTreatmentForm(false);
+  // Load persisted procedure catalog + merge all default procedures & treatment links for auto-suggest
+  useEffect(() => {
+    let isMounted = true;
+
+    const mergeProcedureCatalog = (
+      savedList: { id: number; name: string; price: number }[],
+      extraNames: { name: string; price: number }[],
+      removedNames: Set<string>
+    ) => {
+      const merged: { id: number; name: string; price: number }[] = [];
+      const seen = new Set<string>();
+
+      for (const item of savedList) {
+        if (!item || typeof item.name !== 'string') continue;
+        const trimmed = item.name.trim();
+        const key = trimmed.toLowerCase();
+        if (!trimmed || seen.has(key) || removedNames.has(key)) continue;
+        seen.add(key);
+        merged.push({
+          id: Number(item.id) || merged.length + 1,
+          name: trimmed,
+          price: Number(item.price) || 0,
+        });
+      }
+
+      let nextId = Math.max(...merged.map((p) => p.id), 0) + 1;
+      for (const def of [...DEFAULT_DENTAL_PROCEDURES, ...extraNames]) {
+        const trimmed = def.name.trim();
+        const key = trimmed.toLowerCase();
+        if (!trimmed || seen.has(key) || removedNames.has(key)) continue;
+        seen.add(key);
+        merged.push({
+          id: nextId++,
+          name: trimmed,
+          price: Number(def.price) || 0,
+        });
+      }
+
+      return merged;
+    };
+
+    let savedList: { id: number; name: string; price: number }[] = [];
+    const removedNames = new Set<string>();
+    try {
+      const savedProcs = localStorage.getItem(PROCEDURE_CATALOG_STORAGE_KEY);
+      if (savedProcs) {
+        const parsed = JSON.parse(savedProcs);
+        if (Array.isArray(parsed)) savedList = parsed;
+      }
+      const removedRaw = localStorage.getItem(PROCEDURE_REMOVED_STORAGE_KEY);
+      if (removedRaw) {
+        const parsedRemoved = JSON.parse(removedRaw);
+        if (Array.isArray(parsedRemoved)) {
+          parsedRemoved.forEach((n: any) => {
+            if (typeof n === 'string' && n.trim()) removedNames.add(n.trim().toLowerCase());
+          });
+        }
+      }
+    } catch {
+      // Ignore malformed localStorage state
     }
+
+    setDentalProcedures(mergeProcedureCatalog(savedList, [], removedNames));
+
+    getAllTreatmentLinks()
+      .then((links) => {
+        if (!isMounted || !Array.isArray(links)) return;
+        const linkProcs = links
+          .filter((l) => l && l.treatment_name && l.treatment_name.trim())
+          .map((l) => ({ name: l.treatment_name.trim(), price: 0 }));
+        if (linkProcs.length > 0) {
+          setDentalProcedures((prev) => mergeProcedureCatalog(prev, linkProcs, removedNames));
+        }
+      })
+      .catch(() => {
+        // Ignore offline/network failures for treatment links
+      });
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        procedureComboboxRef.current &&
+        !procedureComboboxRef.current.contains(e.target as Node)
+      ) {
+        setShowProcedureSuggestions(false);
+        setHighlightedProcedureIdx(-1);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      isMounted = false;
+      document.removeEventListener('mousedown', handleClickOutside);
+      if (procedureNoticeTimerRef.current) {
+        clearTimeout(procedureNoticeTimerRef.current);
+      }
+    };
+  }, []);
+
+  const triggerProcedureNotice = useCallback((message: string) => {
+    setProcedureCatalogNotice(message);
+    if (procedureNoticeTimerRef.current) {
+      clearTimeout(procedureNoticeTimerRef.current);
+    }
+    procedureNoticeTimerRef.current = setTimeout(() => {
+      setProcedureCatalogNotice('');
+    }, 2500);
+  }, []);
+
+  // Auto-save new or updated procedures to the catalog and localStorage (like Cortex-Admin)
+  const saveProcedureToCatalog = useCallback(
+    (name: string, price: number) => {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      const safePrice = Number.isFinite(price) && price >= 0 ? price : 0;
+
+      const existingIdx = dentalProcedures.findIndex(
+        (p) => p.name.trim().toLowerCase() === trimmed.toLowerCase()
+      );
+      let updated: { id: number; name: string; price: number }[];
+      let notice = '';
+
+      if (existingIdx >= 0) {
+        if (dentalProcedures[existingIdx].price === safePrice) {
+          return;
+        }
+        updated = [...dentalProcedures];
+        updated[existingIdx] = { ...updated[existingIdx], price: safePrice };
+        notice = `Updated "${updated[existingIdx].name}" (₹${safePrice}) in suggestions`;
+      } else {
+        const newId = Math.max(...dentalProcedures.map((p) => p.id), 0) + 1;
+        updated = [{ id: newId, name: trimmed, price: safePrice }, ...dentalProcedures];
+        notice = `Auto-saved "${trimmed}" (₹${safePrice}) to suggestions`;
+      }
+
+      setDentalProcedures(updated);
+      try {
+        localStorage.setItem(PROCEDURE_CATALOG_STORAGE_KEY, JSON.stringify(updated));
+        const removedRaw = localStorage.getItem(PROCEDURE_REMOVED_STORAGE_KEY);
+        if (removedRaw) {
+          const parsedRemoved = JSON.parse(removedRaw);
+          if (Array.isArray(parsedRemoved)) {
+            const nextRemoved = parsedRemoved.filter(
+              (n: any) => typeof n === 'string' && n.trim().toLowerCase() !== trimmed.toLowerCase()
+            );
+            localStorage.setItem(PROCEDURE_REMOVED_STORAGE_KEY, JSON.stringify(nextRemoved));
+          }
+        }
+      } catch {
+        // Ignore storage quota errors
+      }
+      if (notice) {
+        triggerProcedureNotice(notice);
+      }
+    },
+    [dentalProcedures, triggerProcedureNotice]
+  );
+
+  // Filtered auto-suggest options for Treatment Done
+  const filteredProcedureSuggestions = useMemo(() => {
+    const q = selectedTreatmentName.trim().toLowerCase();
+    if (!q) return dentalProcedures;
+    return dentalProcedures.filter((proc) =>
+      proc.name.toLowerCase().includes(q)
+    );
+  }, [dentalProcedures, selectedTreatmentName]);
+
+  const handleSelectProcedureSuggestion = (proc: { id: number; name: string; price: number }) => {
+    setSelectedTreatmentName(proc.name);
+    setSelectedTreatmentPrice(String(proc.price));
+    setShowProcedureSuggestions(false);
+    setHighlightedProcedureIdx(-1);
+  };
+
+  // Add item to Treatment Done table and auto-save procedure to catalog
+  const handleAddTreatmentItem = () => {
+    const nameTrimmed = selectedTreatmentName.trim();
+    if (!nameTrimmed) return;
+
+    const matched = dentalProcedures.find(
+      (p) => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase()
+    );
+    const parsedPrice = parseFloat(selectedTreatmentPrice);
+    const priceNum =
+      selectedTreatmentPrice.trim() !== '' && !Number.isNaN(parsedPrice)
+        ? Math.max(0, parsedPrice)
+        : matched?.price ?? 0;
+    const qtyNum = Math.max(1, Number(selectedTreatmentQty) || 1);
+
+    const newItem: TreatmentItem = {
+      id: Date.now(),
+      description: nameTrimmed,
+      quantity: qtyNum,
+      unitPrice: priceNum,
+      total: priceNum * qtyNum,
+      date: selectedTreatmentDate || formData.date || new Date().toISOString().slice(0, 10),
+    };
+
+    setTreatmentItems((prev) => [...prev, newItem]);
+    saveProcedureToCatalog(nameTrimmed, priceNum);
+
+    setSelectedTreatmentName('');
+    setSelectedTreatmentPrice('');
+    setSelectedTreatmentQty(1);
+    setShowProcedureSuggestions(false);
+    setHighlightedProcedureIdx(-1);
+    setTimeout(() => {
+      procedureInputRef.current?.focus();
+    }, 10);
   };
 
   // Handler for removing a disease from the list
@@ -607,9 +811,27 @@ const PrescriptionPage = () => {
     setDentalDiseases(dentalDiseases.filter(d => d !== disease));
   };
 
-  // Handler for removing a treatment from the list
+  // Handler for removing a treatment from the catalog & persisting
   const handleRemoveTreatment = (treatmentId: number) => {
-    setDentalProcedures(dentalProcedures.filter(t => t.id !== treatmentId));
+    const target = dentalProcedures.find((t) => t.id === treatmentId);
+    const updated = dentalProcedures.filter((t) => t.id !== treatmentId);
+    setDentalProcedures(updated);
+    try {
+      localStorage.setItem(PROCEDURE_CATALOG_STORAGE_KEY, JSON.stringify(updated));
+      if (target?.name) {
+        const removedRaw = localStorage.getItem(PROCEDURE_REMOVED_STORAGE_KEY);
+        const existingRemoved: string[] = removedRaw ? JSON.parse(removedRaw) : [];
+        const key = target.name.trim().toLowerCase();
+        if (Array.isArray(existingRemoved) && !existingRemoved.includes(key)) {
+          localStorage.setItem(
+            PROCEDURE_REMOVED_STORAGE_KEY,
+            JSON.stringify([...existingRemoved, key])
+          );
+        }
+      }
+    } catch {
+      // Ignore storage errors
+    }
   };
 
 
@@ -1250,7 +1472,15 @@ const PrescriptionPage = () => {
     const docObj = availableDoctors.find((d) => d.name.toLowerCase() === (selectedDoctorName || '').toLowerCase());
     const docName = docObj?.name || selectedDoctorName || (selectedDoctor === 'anjali' ? 'Dr. Anjali Swaroop' : 'Dr. Kautilya Swaroop');
     const sigFile = docObj?.signature_url || (docName.toLowerCase().includes('anjali') ? 'sign1.png' : 'sign.png');
-    window.open(`/print-prescription?prescriptionId=${prescriptionId}&signature=${encodeURIComponent(sigFile)}&doctorName=${encodeURIComponent(docName)}`, '_blank');
+    const printParams = new URLSearchParams({
+      prescriptionId: String(prescriptionId),
+      doctorName: docName,
+    });
+    // Never append large base64 data URIs to URL query params (triggers 414 URI_TOO_LONG); print page resolves signature from Convex by doctorName
+    if (sigFile && !sigFile.startsWith('data:') && sigFile.length <= 256) {
+      printParams.set('signature', sigFile);
+    }
+    window.open(`/print-prescription?${printParams.toString()}`, '_blank');
   };
 
   // Toggle select all items in bill payment modal
@@ -1605,9 +1835,16 @@ const PrescriptionPage = () => {
       const docObj = availableDoctors.find((d) => d.name.toLowerCase() === (selectedDoctorName || '').toLowerCase());
       const docName = docObj?.name || selectedDoctorName || 'Dr. Kautilya Swaroop';
       const sigFile = docObj?.signature_url || (docName.toLowerCase().includes('anjali') ? 'sign1.png' : 'sign.png');
+      const billParams = new URLSearchParams({
+        billId: String(currentBill.id),
+        doctorName: docName,
+      });
+      if (sigFile && !sigFile.startsWith('data:') && sigFile.length <= 256) {
+        billParams.set('signature', sigFile);
+      }
 
       // Open new printable bill page
-      window.open(`/print-bill?billId=${currentBill.id}&signature=${encodeURIComponent(sigFile)}&doctorName=${encodeURIComponent(docName)}`, '_blank');
+      window.open(`/print-bill?${billParams.toString()}`, '_blank');
     } catch (error) {
       console.error('Error updating bill:', error);
       alert('Failed to update bill payment details.');
@@ -2761,54 +2998,267 @@ const PrescriptionPage = () => {
 
             {/* Treatment Done Section */}
             <div className="bg-teal-50 p-6 rounded-lg border border-teal-100">
-              <div className="flex items-center justify-between mb-4 gap-3">
+              <div className="flex flex-wrap items-center justify-between mb-2 gap-3">
                 <h3 className="text-xl font-semibold text-teal-800">Treatment Done</h3>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddTreatmentForm(prev => !prev);
-                    if (showAddTreatmentForm) {
-                      setNewTreatmentName('');
-                      setNewTreatmentPrice('');
-                    }
-                  }}
-                  className="px-4 py-2 bg-teal-100 text-teal-700 rounded-lg hover:bg-teal-200 transition border border-teal-300 font-medium whitespace-nowrap"
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition ${
+                    procedureCatalogNotice
+                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                      : 'bg-white/80 text-teal-700 border-teal-200'
+                  }`}
                 >
-                  {showAddTreatmentForm ? 'Close' : '+ Add New Treatment'}
-                </button>
+                  {procedureCatalogNotice ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                      <span>{procedureCatalogNotice}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                      <span>Auto-suggest &amp; Auto-save</span>
+                    </>
+                  )}
+                </div>
               </div>
-              <p className="text-sm text-gray-600 mb-4">Add treatments/services completed during this visit. Bills will be auto-generated from these items.</p>
+              <p className="text-sm text-gray-600 mb-4">
+                Type to search saved treatments or enter any new treatment with price — new items and price updates are auto-saved for future visits. Bills will be auto-generated from these items.
+              </p>
 
-              {/* Add Treatment/Service */}
-              <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200">
-                <h4 className="font-medium text-gray-700 mb-3">Add Service/Procedure</h4>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Service/Procedure</label>
-                    <select
-                      value=""
-                      onChange={(e) => {
-                        const selected = dentalProcedures.find(p => p.name === e.target.value);
-                        if (selected) {
-                          const newItem: TreatmentItem = {
-                            id: treatmentItems.length + 1,
-                            description: selected.name,
-                            quantity: 1,
-                            unitPrice: selected.price,
-                            total: selected.price,
-                            date: new Date().toISOString().slice(0, 10)
-                          };
-                          setTreatmentItems([...treatmentItems, newItem]);
+              {/* Inline Procedure Entry Row with Auto-Suggest & Auto-Save */}
+              <div className="mb-5 grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                <div className="md:col-span-5 relative" ref={procedureComboboxRef}>
+                  <label
+                    htmlFor="treatment-procedure-input"
+                    className="block text-sm font-medium text-teal-900 mb-1"
+                  >
+                    Treatment / Procedure Name
+                  </label>
+                  <input
+                    id="treatment-procedure-input"
+                    ref={procedureInputRef}
+                    type="text"
+                    role="combobox"
+                    aria-expanded={showProcedureSuggestions}
+                    aria-controls="treatment-procedure-listbox"
+                    aria-autocomplete="list"
+                    aria-activedescendant={
+                      showProcedureSuggestions && highlightedProcedureIdx >= 0
+                        ? `treatment-proc-opt-${highlightedProcedureIdx}`
+                        : undefined
+                    }
+                    autoComplete="off"
+                    value={selectedTreatmentName}
+                    onFocus={() => setShowProcedureSuggestions(true)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSelectedTreatmentName(val);
+                      setShowProcedureSuggestions(true);
+                      setHighlightedProcedureIdx(0);
+                      const matched = dentalProcedures.find(
+                        (p) => p.name.trim().toLowerCase() === val.trim().toLowerCase()
+                      );
+                      if (matched) {
+                        setSelectedTreatmentPrice(String(matched.price));
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        if (!showProcedureSuggestions) {
+                          setShowProcedureSuggestions(true);
+                          setHighlightedProcedureIdx(0);
+                        } else if (filteredProcedureSuggestions.length > 0) {
+                          setHighlightedProcedureIdx((prev) =>
+                            prev < filteredProcedureSuggestions.length - 1 ? prev + 1 : 0
+                          );
                         }
-                      }}
-                      className="mt-1 block w-full p-3 border border-gray-300 rounded-lg"
-                    >
-                      <option value="">Select Service</option>
-                      {dentalProcedures.map(proc => (
-                        <option key={proc.id} value={proc.name}>{proc.name} - ₹{proc.price}</option>
-                      ))}
-                    </select>
-                  </div>
+                        return;
+                      }
+                      if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        if (showProcedureSuggestions && filteredProcedureSuggestions.length > 0) {
+                          setHighlightedProcedureIdx((prev) =>
+                            prev > 0 ? prev - 1 : filteredProcedureSuggestions.length - 1
+                          );
+                        }
+                        return;
+                      }
+                      if (e.key === 'Escape') {
+                        setShowProcedureSuggestions(false);
+                        setHighlightedProcedureIdx(-1);
+                        return;
+                      }
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (
+                          showProcedureSuggestions &&
+                          highlightedProcedureIdx >= 0 &&
+                          filteredProcedureSuggestions[highlightedProcedureIdx]
+                        ) {
+                          const picked = filteredProcedureSuggestions[highlightedProcedureIdx];
+                          if (
+                            selectedTreatmentName.trim().toLowerCase() ===
+                            picked.name.trim().toLowerCase()
+                          ) {
+                            handleAddTreatmentItem();
+                          } else {
+                            handleSelectProcedureSuggestion(picked);
+                          }
+                        } else if (selectedTreatmentName.trim()) {
+                          handleAddTreatmentItem();
+                        }
+                      }
+                    }}
+                    placeholder="Type or select treatment (e.g. IOPAR, RCT, Sugar Test)..."
+                    className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
+                  />
+
+                  {showProcedureSuggestions && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-teal-200 rounded-lg shadow-xl z-30 overflow-hidden">
+                      <ul
+                        id="treatment-procedure-listbox"
+                        role="listbox"
+                        aria-label="Saved procedures and treatments"
+                        className="max-h-60 overflow-y-auto divide-y divide-gray-100"
+                      >
+                        {filteredProcedureSuggestions.map((proc, idx) => (
+                          <li
+                            key={proc.id}
+                            id={`treatment-proc-opt-${idx}`}
+                            role="option"
+                            aria-selected={idx === highlightedProcedureIdx}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onMouseEnter={() => setHighlightedProcedureIdx(idx)}
+                            onClick={() => handleSelectProcedureSuggestion(proc)}
+                            className={`px-3 py-2 text-sm cursor-pointer flex items-center justify-between gap-2 transition ${
+                              idx === highlightedProcedureIdx
+                                ? 'bg-teal-50 text-teal-900 font-medium'
+                                : 'hover:bg-gray-50 text-gray-800'
+                            }`}
+                          >
+                            <span className="truncate">{proc.name}</span>
+                            <span className="flex items-center gap-2 shrink-0">
+                              <span className="text-xs font-semibold text-teal-700">
+                                ₹{proc.price}
+                              </span>
+                              <button
+                                type="button"
+                                aria-label={`Remove ${proc.name} from saved suggestions`}
+                                title="Remove from saved suggestions"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveTreatment(proc.id);
+                                }}
+                                className="text-gray-400 hover:text-red-600 px-1 rounded focus-visible:outline-2 focus-visible:outline-teal-600"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          </li>
+                        ))}
+                        {filteredProcedureSuggestions.length === 0 && (
+                          <li className="px-3 py-2 text-xs text-gray-500">
+                            No saved match yet
+                          </li>
+                        )}
+                      </ul>
+                      {selectedTreatmentName.trim() &&
+                        !dentalProcedures.some(
+                          (p) =>
+                            p.name.trim().toLowerCase() ===
+                            selectedTreatmentName.trim().toLowerCase()
+                        ) && (
+                          <div className="px-3 py-1.5 bg-teal-50 border-t border-teal-100 text-xs text-teal-800">
+                            New treatment: click <strong>+ Add</strong> or press{' '}
+                            <strong>Enter</strong> to add &amp; auto-save &ldquo;
+                            {selectedTreatmentName.trim()}&rdquo;
+                          </div>
+                        )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="treatment-price-input"
+                    className="block text-sm font-medium text-teal-900 mb-1"
+                  >
+                    Price (₹)
+                  </label>
+                  <input
+                    id="treatment-price-input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={selectedTreatmentPrice}
+                    onChange={(e) => setSelectedTreatmentPrice(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddTreatmentItem();
+                      }
+                    }}
+                    placeholder="0"
+                    className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-900 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="treatment-qty-input"
+                    className="block text-sm font-medium text-teal-900 mb-1"
+                  >
+                    Qty
+                  </label>
+                  <input
+                    id="treatment-qty-input"
+                    type="number"
+                    min="1"
+                    value={selectedTreatmentQty}
+                    onChange={(e) =>
+                      setSelectedTreatmentQty(Math.max(1, parseInt(e.target.value, 10) || 1))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddTreatmentItem();
+                      }
+                    }}
+                    className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm text-center font-semibold text-gray-900 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="treatment-date-input"
+                    className="block text-sm font-medium text-teal-900 mb-1"
+                  >
+                    Date
+                  </label>
+                  <input
+                    id="treatment-date-input"
+                    type="date"
+                    value={selectedTreatmentDate || formData.date || new Date().toISOString().slice(0, 10)}
+                    onChange={(e) => setSelectedTreatmentDate(e.target.value)}
+                    className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
+                  />
+                </div>
+
+                <div className="md:col-span-1">
+                  <button
+                    type="button"
+                    onClick={handleAddTreatmentItem}
+                    disabled={!selectedTreatmentName.trim()}
+                    className="w-full px-3 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition whitespace-nowrap"
+                  >
+                    + Add
+                  </button>
                 </div>
               </div>
 
@@ -2818,13 +3268,13 @@ const PrescriptionPage = () => {
                   <table className="min-w-full divide-y divide-gray-200 border border-slate-200/80 rounded-lg overflow-hidden">
                     <thead className="bg-slate-50/75 border-b border-slate-200/80">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">S.No</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Description</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Date</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Qty</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Unit price (₹)</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Total (₹)</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Actions</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-slate-600">S.No</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Description</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Date</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Qty</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Unit price (₹)</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Total (₹)</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -2834,11 +3284,20 @@ const PrescriptionPage = () => {
                           <td className="px-4 py-3 whitespace-nowrap">
                             <input
                               type="text"
+                              aria-label={`Description for treatment ${index + 1}`}
                               value={item.description}
                               onChange={(e) => {
                                 const newItems = [...treatmentItems];
-                                newItems[index].description = e.target.value;
+                                newItems[index] = {
+                                  ...newItems[index],
+                                  description: e.target.value,
+                                };
                                 setTreatmentItems(newItems);
+                              }}
+                              onBlur={() => {
+                                if (item.description.trim()) {
+                                  saveProcedureToCatalog(item.description, item.unitPrice);
+                                }
                               }}
                               className="w-full p-1 border border-gray-300 rounded"
                             />
@@ -2846,10 +3305,14 @@ const PrescriptionPage = () => {
                           <td className="px-4 py-3 whitespace-nowrap">
                             <input
                               type="date"
+                              aria-label={`Date for treatment ${index + 1}`}
                               value={item.date || ''}
                               onChange={(e) => {
                                 const newItems = [...treatmentItems];
-                                newItems[index].date = e.target.value;
+                                newItems[index] = {
+                                  ...newItems[index],
+                                  date: e.target.value,
+                                };
                                 setTreatmentItems(newItems);
                               }}
                               className="p-1 border border-gray-300 rounded text-sm"
@@ -2858,11 +3321,16 @@ const PrescriptionPage = () => {
                           <td className="px-4 py-3 whitespace-nowrap">
                             <input
                               type="number"
+                              aria-label={`Quantity for treatment ${index + 1}`}
                               value={item.quantity}
                               onChange={(e) => {
+                                const qty = parseInt(e.target.value, 10) || 1;
                                 const newItems = [...treatmentItems];
-                                newItems[index].quantity = parseInt(e.target.value) || 1;
-                                newItems[index].total = newItems[index].quantity * newItems[index].unitPrice;
+                                newItems[index] = {
+                                  ...newItems[index],
+                                  quantity: qty,
+                                  total: qty * newItems[index].unitPrice,
+                                };
                                 setTreatmentItems(newItems);
                               }}
                               className="w-20 p-1 border border-gray-300 rounded"
@@ -2872,12 +3340,22 @@ const PrescriptionPage = () => {
                           <td className="px-4 py-3 whitespace-nowrap">
                             <input
                               type="number"
+                              aria-label={`Unit price for treatment ${index + 1}`}
                               value={item.unitPrice}
                               onChange={(e) => {
+                                const unitPrice = parseFloat(e.target.value) || 0;
                                 const newItems = [...treatmentItems];
-                                newItems[index].unitPrice = parseFloat(e.target.value) || 0;
-                                newItems[index].total = newItems[index].quantity * newItems[index].unitPrice;
+                                newItems[index] = {
+                                  ...newItems[index],
+                                  unitPrice,
+                                  total: newItems[index].quantity * unitPrice,
+                                };
                                 setTreatmentItems(newItems);
+                              }}
+                              onBlur={() => {
+                                if (item.description.trim()) {
+                                  saveProcedureToCatalog(item.description, item.unitPrice);
+                                }
                               }}
                               className="w-24 p-1 border border-gray-300 rounded"
                               min="0"
@@ -2889,10 +3367,11 @@ const PrescriptionPage = () => {
                           <td className="px-4 py-3 whitespace-nowrap">
                             <button
                               type="button"
+                              aria-label={`Remove ${item.description || `treatment ${index + 1}`}`}
                               onClick={() => {
                                 setTreatmentItems(treatmentItems.filter((_, i) => i !== index));
                               }}
-                              className="text-red-600 hover:text-red-900 focus:outline-none"
+                              className="text-red-600 hover:text-red-900 focus-visible:outline-2 focus-visible:outline-red-600 rounded"
                             >
                               Remove
                             </button>
@@ -2909,70 +3388,6 @@ const PrescriptionPage = () => {
                       </tr>
                     </tfoot>
                   </table>
-                </div>
-              )}
-
-              {/* Add New Treatment to List Form */}
-              {showAddTreatmentForm && (
-                <div className="mt-6 p-4 bg-teal-50 rounded-lg border border-teal-200">
-                  <h4 className="font-medium text-teal-800 mb-3">Add New Treatment to List:</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3">
-                    <input
-                      type="text"
-                      value={newTreatmentName}
-                      onChange={(e) => setNewTreatmentName(e.target.value)}
-                      placeholder="Treatment name"
-                      className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                      autoFocus
-                    />
-                    <input
-                      type="number"
-                      value={newTreatmentPrice}
-                      onChange={(e) => setNewTreatmentPrice(e.target.value)}
-                      placeholder="Price (₹)"
-                      className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                      min="0"
-                      step="0.01"
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={handleAddNewTreatment}
-                        disabled={!newTreatmentName.trim() || !newTreatmentPrice.trim()}
-                        className="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                      >
-                        Add
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowAddTreatmentForm(false);
-                          setNewTreatmentName('');
-                          setNewTreatmentPrice('');
-                        }}
-                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-
-                  {dentalProcedures.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {dentalProcedures.map((procedure) => (
-                        <div key={procedure.id} className="bg-white px-3 py-1 rounded-full border border-teal-300 flex items-center gap-2 text-sm">
-                          <span>{procedure.name} (₹{procedure.price})</span>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveTreatment(procedure.id)}
-                            className="text-red-600 hover:text-red-800 font-bold"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               )}
             </div>
